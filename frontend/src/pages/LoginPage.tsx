@@ -41,7 +41,7 @@ const LoginPage = () => {
       localStorage.setItem("role", data.role);
       localStorage.setItem("username", data.username);
 
-      navigate("/");
+      navigate("/dashboard");
     } catch {
       setError("Server error, please try again later");
     }
