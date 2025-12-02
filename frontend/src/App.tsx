@@ -9,6 +9,7 @@ import ReservationsPage from "./pages/ReservationsPage";
 import UsersPage from "./pages/UsersPage";
 import SettingsPage from "./pages/SettingsPage";
 import NotFoundPage from "./pages/NotFoundPage";
+import Layout from "./components/Layout";
 
 function App() {
   return (
@@ -16,17 +17,18 @@ function App() {
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<LoginPage />} />
-
         <Route element={<ProtectedRoute />}>
-          <Route path="/dashboard" element={<DashboardPage />} />
-          <Route path="/statistics" element={<StatisPage />} />
-          <Route path="/billing" element={<BillPage />} />
-          <Route path="/users" element={<UsersPage />} />
-          <Route path="/reservations" element={<ReservationsPage />} />
-          <Route path="/settings" element={<SettingsPage />} />
+          <Route element={<Layout />}>
+            <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/statistics" element={<StatisPage />} />
+            <Route path="/billing" element={<BillPage />} />
+            <Route path="/users" element={<UsersPage />} />
+            <Route path="/reservations" element={<ReservationsPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
+          </Route>
         </Route>
 
-        <Route path="*" element={<NotFoundPage/>} />
+        <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </BrowserRouter>
   );
