@@ -1,6 +1,6 @@
-import RoomPic from "../assets/Room.jpg";
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
+  Alert,
   Avatar,
   Box,
   Button,
@@ -9,14 +9,17 @@ import {
   IconButton,
   InputLabel,
   OutlinedInput,
+  Snackbar,
   TextField,
   Typography,
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
-import hotelPic from "../assets/Hotel.jpg";
-import logo from "../assets/Logo.png";
+import hotelPic from "../../assets/Hotel.jpg";
+import logo from "../../assets/Logo.png";
+import RoomPic from "../../assets/Room.jpg";
 import Visibility from "@mui/icons-material/Visibility";
 import VisibilityOff from "@mui/icons-material/VisibilityOff";
+import "./LoginPage.css";
 
 const LoginPage = () => {
   // These Hooks For Password Text Field For Handling Show And Hide Password.
@@ -38,7 +41,6 @@ const LoginPage = () => {
   // End Password Field Codes.
 
   // Start Mustafa Back-End Work.
-
   const apiUrl = import.meta.env.VITE_API_URL;
   const [error, setError] = useState("");
 
@@ -84,6 +86,18 @@ const LoginPage = () => {
   };
   // End Mustafa Back-End Work.
 
+  // Start Ibrahim Front-End
+
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    if (error) {
+      setOpen(true);
+    }
+  }, [error]);
+
+  // End Ibrahim Front-End
+
   return (
     <Container
       sx={{
@@ -95,15 +109,18 @@ const LoginPage = () => {
         backgroundSize: "cover",
         backgroundPosition: "center",
         minWidth: "100%",
+        padding: "30px",
+        position: "relative",
       }}
     >
       <Container
+        className="login-page-main-container"
         sx={{
-          minHeight: "100vh",
+          height: "600px",
+          width: "fit-content",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          padding: "20px",
         }}
       >
         <Box
@@ -139,14 +156,16 @@ const LoginPage = () => {
           </Typography>
         </Box>
         <Box
+          className="login-box"
           sx={{
-            padding: "40px",
+            padding: { xs: "25px", md: "40px" },
             display: "flex",
             flexDirection: "column",
             justifyContent: "center",
             alignItems: "center",
+            position: "relative",
             backgroundColor: "#fff",
-            height: "600px",
+            height: { xs: "500px", sm: "600px" },
             borderRadius: {
               xs: "25px 25px 25px 25px",
               lg: "0 25px 25px 0",
@@ -166,21 +185,26 @@ const LoginPage = () => {
           >
             Welcome To AMI
           </Typography>
-          <form onSubmit={onSubmit}>
+          <form onSubmit={onSubmit} autoComplete="off">
             <TextField
               fullWidth
               label="Email"
               name="email"
-              type="email"
+              // type="email" / Its Not Good Because Its Annoy When User Write Email It Keep Show Miss @ After Every Letter He Is Type.
               inputRef={identifierRef}
               required
-              margin="normal"
+              sx={{
+                "& .MuiInputLabel-asterisk": {
+                  display: "none",
+                },
+              }}
             />
-            <FormControl sx={{ mt: "10px", width: "100%" }} variant="outlined">
+            <FormControl sx={{ mt: "30px", width: "100%" }} variant="outlined">
               <InputLabel htmlFor="outlined-adornment-password">
                 Password
               </InputLabel>
               <OutlinedInput
+                required
                 inputRef={passwordRef}
                 id="outlined-adornment-password"
                 type={showPassword ? "text" : "password"}
@@ -215,20 +239,26 @@ const LoginPage = () => {
               color="primary"
               type="submit"
               size="large"
-              sx={{ mb: 2 }}
+              sx={{ mt: "10px" }}
             >
               Log In
             </Button>
           </form>
-          {error && (
-            <Typography
-              sx={{ color: "red", fontSize: "14px", textAlign: "center" }}
-            >
-              {error}
-            </Typography>
-          )}
         </Box>
       </Container>
+      <Snackbar
+        open={open}
+        autoHideDuration={5000}
+        onClose={() => {
+          setOpen(false);
+          setError("");
+        }}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        <Alert severity="error" variant="filled">
+          Invalid Email Or Passowrd
+        </Alert>
+      </Snackbar>
     </Container>
   );
 };
