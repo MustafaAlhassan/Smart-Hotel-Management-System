@@ -190,7 +190,7 @@ const LoginPage = () => {
               fullWidth
               label="Email"
               name="email"
-              // type="email" / Its Not Good Because Its Annoy When User Write Email It Keep Show Miss @ After Every Letter He Is Type.
+              type="email"
               inputRef={identifierRef}
               required
               sx={{
@@ -254,8 +254,11 @@ const LoginPage = () => {
           setError("");
         }}
         anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+        sx={{
+          mb: "50px",
+        }}
       >
-        <Alert severity="error" variant="filled">
+        <Alert severity="error" variant="filled" sx={{ fontSize: "15px" }}>
           Invalid Email Or Passowrd
         </Alert>
       </Snackbar>
