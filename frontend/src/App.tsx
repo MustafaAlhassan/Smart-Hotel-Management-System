@@ -1,7 +1,7 @@
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import ProtectedRoute from "./components/ProtectedRoute";
 import HomePage from "./pages/HomePage";
-import LoginPage from "./pages/LoginPage";
+import LoginPage from "./pages/LoginPage/LoginPage";
 import DashboardPage from "./pages/DashboardPage";
 import StatisPage from "./pages/StatisPage";
 import BillPage from "./pages/BillPage";
@@ -27,7 +27,6 @@ function App() {
             <Route path="/settings" element={<SettingsPage />} />
           </Route>
         </Route>
-
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </BrowserRouter>
