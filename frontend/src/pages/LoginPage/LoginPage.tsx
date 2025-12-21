@@ -164,7 +164,7 @@ const LoginPage = () => {
             justifyContent: "center",
             alignItems: "center",
             position: "relative",
-            backgroundColor: "#fff",
+            backgroundColor: "background.paper",
             height: { xs: "500px", sm: "600px" },
             borderRadius: {
               xs: "25px 25px 25px 25px",
