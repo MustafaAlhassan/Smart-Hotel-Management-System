@@ -12,8 +12,17 @@ export interface IRoomType extends Document {
 const roomTypeSchema = new Schema<IRoomType>(
   {
     name: { type: String, required: true, unique: true },
-    basePrice: { type: Number, required: true },
-    capacity: { type: Number, required: true },
+    basePrice: {
+      type: Number,
+      required: true,
+      min: [0, "price cannot be less than zero"],
+    },
+    capacity: {
+      type: Number,
+      required: true,
+      min: [1, "room must accommodate at least one person"],
+      max: [10, "The room cannot accommodate more than 10"],
+    },
     description: { type: String },
     amenities: { type: [String], default: [] },
   },
