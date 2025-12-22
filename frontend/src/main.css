@@ -3,3 +3,6 @@
   padding: 0;
   box-sizing: border-box;
 }
+.css-18p5xg2-MuiNotchedOutlined-root-MuiOutlinedInput-notchedOutline {
+  border-color: rgba(0, 131, 143, 1) !important;
+}

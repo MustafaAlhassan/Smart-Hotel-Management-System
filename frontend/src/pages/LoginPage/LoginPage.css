@@ -19,7 +19,7 @@
     top: -5px;
     -webkit-box-shadow: -10px -10px 30px 2px rgba(149, 241, 44, 0.55),
       10px 10px 30px 5px rgba(86, 168, 249, 0.55);
-    box-shadow: -10px -10px 30px 2px rgba(149, 241, 44, 0.55),
-      10px 10px 30px 5px rgba(86, 168, 249, 0.55);
+    box-shadow: -10px -10px 30px 2px rgba(0, 131, 143, 1),
+      10px 10px 30px 5px rgba(92, 107, 192, 1);
   }
 }

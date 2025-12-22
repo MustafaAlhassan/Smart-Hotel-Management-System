@@ -10,26 +10,49 @@ import UsersPage from "./pages/UsersPage";
 import SettingsPage from "./pages/SettingsPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import Layout from "./components/Layout";
+import React, { useState } from "react";
+import {
+  createTheme,
+  CssBaseline,
+  ThemeProvider,
+  type PaletteMode,
+} from "@mui/material";
+import getDesignTokens from "./theme/MyTheme";
 
 function App() {
+  // Start Theme
+  const [mode, setMyMode] = useState<PaletteMode>(
+    localStorage.getItem("currentMode") === null
+      ? "light"
+      : localStorage.getItem("currentMode") === "light"
+      ? "light"
+      : "dark"
+  );
+
+  const theme = React.useMemo(() => createTheme(getDesignTokens(mode)), [mode]);
+  // End Theme
+
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route element={<ProtectedRoute />}>
-          <Route element={<Layout />}>
-            <Route path="/dashboard" element={<DashboardPage />} />
-            <Route path="/statistics" element={<StatisPage />} />
-            <Route path="/billing" element={<BillPage />} />
-            <Route path="/users" element={<UsersPage />} />
-            <Route path="/reservations" element={<ReservationsPage />} />
-            <Route path="/settings" element={<SettingsPage />} />
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route element={<ProtectedRoute />}>
+            <Route element={<Layout setMyMode={setMyMode} />}>
+              <Route path="/dashboard" element={<DashboardPage />} />
+              <Route path="/statistics" element={<StatisPage />} />
+              <Route path="/billing" element={<BillPage />} />
+              <Route path="/users" element={<UsersPage />} />
+              <Route path="/reservations" element={<ReservationsPage />} />
+              <Route path="/settings" element={<SettingsPage />} />
+            </Route>
           </Route>
-        </Route>
-        <Route path="*" element={<NotFoundPage />} />
-      </Routes>
-    </BrowserRouter>
+          <Route path="*" element={<NotFoundPage />} />
+        </Routes>
+      </BrowserRouter>
+    </ThemeProvider>
   );
 }
 
