@@ -18,6 +18,7 @@ import {
   type PaletteMode,
 } from "@mui/material";
 import getDesignTokens from "./theme/MyTheme";
+export const sidebarWidth = 240;
 
 function App() {
   // Start Theme

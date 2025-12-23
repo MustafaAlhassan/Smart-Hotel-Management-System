@@ -1,11 +1,16 @@
 import { Outlet } from "react-router-dom";
 import Navbar from "./Navbar";
 import Sidebar from "./Sidebar";
+import type { PaletteMode } from "@mui/material";
 
-export const Layout = ({ setMyMode }) => {
+interface LayoutProps {
+  setMyMode: React.Dispatch<React.SetStateAction<PaletteMode>>;
+}
+
+export const Layout = ({ setMyMode }: LayoutProps) => {
   return (
     <>
-      <Navbar />
+      <Navbar setMyMode={setMyMode} />
       <Sidebar />
       <Outlet />
     </>
