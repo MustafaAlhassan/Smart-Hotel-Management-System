@@ -1,5 +1,4 @@
-import { Button, ListItem, useTheme, type PaletteMode } from "@mui/material";
-import { useNavigate } from "react-router-dom";
+import { ListItem, useTheme, type PaletteMode } from "@mui/material";
 import { Brightness4, Brightness7 } from "@mui/icons-material";
 import * as React from "react";
 import { styled, alpha } from "@mui/material/styles";
@@ -7,22 +6,23 @@ import AppBar from "@mui/material/AppBar";
 import Box from "@mui/material/Box";
 import Toolbar from "@mui/material/Toolbar";
 import IconButton from "@mui/material/IconButton";
-import Typography from "@mui/material/Typography";
 import InputBase from "@mui/material/InputBase";
 import Badge from "@mui/material/Badge";
 import MenuItem from "@mui/material/MenuItem";
-import Menu from "@mui/material/Menu";
 import MenuIcon from "@mui/icons-material/Menu";
 import SearchIcon from "@mui/icons-material/Search";
 import AccountCircle from "@mui/icons-material/AccountCircle";
 import MailIcon from "@mui/icons-material/Mail";
 import NotificationsIcon from "@mui/icons-material/Notifications";
 import MoreIcon from "@mui/icons-material/MoreVert";
-import { sidebarWidth } from "../App";
+import Menu from "@mui/material/Menu";
 
 // Defining prop type
 interface NavbarProps {
   setMyMode: React.Dispatch<React.SetStateAction<PaletteMode>>;
+  sidebarWidth: number;
+  setDrawerType: React.Dispatch<React.SetStateAction<string>>;
+  setnoneORblock: React.Dispatch<React.SetStateAction<string>>;
 }
 
 // Start MUI code
@@ -67,19 +67,12 @@ const StyledInputBase = styled(InputBase)(({ theme }) => ({
 }));
 // End MUI code
 
-const Navbar = ({ setMyMode }: NavbarProps) => {
-  // Start Mustafa Work
-  const navigate = useNavigate();
-
-  const handleLogout = () => {
-    localStorage.removeItem("role");
-    localStorage.removeItem("token");
-    localStorage.removeItem("username");
-    navigate("/login");
-  };
-
-  // End Mustafa Work
-
+const Navbar = ({
+  setMyMode,
+  sidebarWidth,
+  setDrawerType,
+  setnoneORblock,
+}: NavbarProps) => {
   // Start Ibrahim Work
   const theme = useTheme();
 
@@ -195,28 +188,20 @@ const Navbar = ({ setMyMode }: NavbarProps) => {
         <AppBar
           position="fixed"
           sx={{
-            width: `calc(100% - ${sidebarWidth}px)`,
+            width: { sm: `calc(100% - ${sidebarWidth}px)` },
             ml: `${sidebarWidth}px`,
           }}
         >
           <Toolbar>
             <IconButton
-              size="large"
-              edge="start"
-              color="inherit"
-              aria-label="open drawer"
-              sx={{ mr: 2 }}
+              onClick={() => {
+                setDrawerType("temporary");
+                setnoneORblock("block");
+              }}
+              sx={{ display: { sm: "none" }, mr: "9px" }}
             >
               <MenuIcon />
             </IconButton>
-            <Typography
-              variant="h6"
-              noWrap
-              component="div"
-              sx={{ display: { xs: "none", sm: "block" } }}
-            >
-              MUI
-            </Typography>
             <Search>
               <SearchIconWrapper>
                 <SearchIcon />
@@ -300,9 +285,6 @@ const Navbar = ({ setMyMode }: NavbarProps) => {
         {renderMobileMenu}
         {renderMenu}
       </Box>
-      <Button variant="outlined" onClick={handleLogout}>
-        Logout
-      </Button>
     </>
   );
 };
