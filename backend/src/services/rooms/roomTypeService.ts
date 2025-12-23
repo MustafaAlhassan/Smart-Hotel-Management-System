@@ -1,29 +1,20 @@
-import { RoomTypeModel } from "../../models/rooms/roomTypeModel";
+import { IRoomType, RoomTypeModel } from "../../models/rooms/roomTypeModel";
 
-interface AddRoomType {
-  name: string;
-  basePrice: number;
-  capacity: number;
-  description: string;
-  amenities: string[];
-}
-
-export const addRoomType = async ({
-  name,
-  basePrice,
-  capacity,
-  description,
-  amenities,
-}: AddRoomType) => {
-  const newRoomType = new RoomTypeModel({
-    name,
-    basePrice,
-    capacity,
-    description,
-    amenities,
-  });
+export const addRoomType = async (data: Omit<IRoomType, "_id" | "createdAt" | "updatedAt">) => {
+  const newRoomType = new RoomTypeModel(data);
   await newRoomType.save();
   return newRoomType;
+};
+
+export const getRoomTypeById = async (id: string) => {
+  return await RoomTypeModel.findById(id);
+};
+
+export const updateRoomTypeInfo = async (id: string, updateData: Partial<IRoomType>) => {
+  return await RoomTypeModel.findByIdAndUpdate(id, updateData, {
+    new: true,
+    runValidators: true,
+  });
 };
 
 export const removeRoomType = async (id: string) => {
