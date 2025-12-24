@@ -3,6 +3,9 @@ import mongoose from "mongoose";
 import dotenv from "dotenv";
 import cors from "cors";
 import authRouter from "./routers/authRoute";
+import roomRouter from "./routers/rooms/roomRoute";
+import { requireAuth } from "./middlewares/requireAuth";
+import roomTypeRouter from "./routers/rooms/roomTypeRoute";
 
 dotenv.config();
 
@@ -14,6 +17,8 @@ const MONGODB_URI = process.env.MONGODB_URI;
 app.use(express.json());
 app.use(cors());
 app.use("/api/auth", authRouter);
+app.use("/api/room-types", requireAuth, roomTypeRouter);
+app.use("/api/rooms", requireAuth, roomRouter);
 
 app.get("/", (req: Request, res: Response) => {
   res.send("Hotel Management System API is running (TypeScript)...");

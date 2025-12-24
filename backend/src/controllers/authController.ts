@@ -7,7 +7,7 @@ const createToken = (id: string, role: string) => {
   if (!process.env.JWT_SECRET) {
     throw new Error("JWT_SECRET is not defined in .env file");
   }
-  return jwt.sign({ id, role }, process.env.JWT_SECRET, { expiresIn: "1d" });
+  return jwt.sign({ id, role }, process.env.JWT_SECRET, { expiresIn: "3d" });
 };
 
 export const loginUser = async (req: Request, res: Response) => {
