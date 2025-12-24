@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 import {
   addRoomType,
   getRoomTypeById,
+  findAllRoomTypes,
   removeRoomType,
   updateRoomTypeInfo,
 } from "../../services/rooms/roomTypeService";
@@ -38,6 +39,37 @@ export const createRoomType = async (req: Request, res: Response) => {
   }
 };
 
+export const getAllRoomType = async (req: Request, res: Response) => {
+  try {
+    const roomTypeInfo = await findAllRoomTypes();
+    res.status(200).json({
+      data: roomTypeInfo,
+      message: "All room types fetched successfully",
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Server Error" });
+  }
+};
+
+export const getSingleRoomType = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid ID format" });
+    }
+    const roomTypeInfo = await getRoomTypeById(id);
+
+    if (!roomTypeInfo)
+      return res.status(404).json({ message: "Room Type not found" });
+
+    res
+      .status(200)
+      .json({ data: roomTypeInfo, message: "Room Type Get Successfully" });
+  } catch (error) {
+    res.status(500).json({ message: "Server Error" });
+  }
+};
+
 export const updateRoomType = async (req: Request, res: Response) => {
   try {
     const updateData = req.body;
@@ -56,7 +88,7 @@ export const updateRoomType = async (req: Request, res: Response) => {
       .json({ data: response, message: "The Room Type Updated Successfully" });
   } catch (error: any) {
     if (error.code === 11000) {
-        return res.status(409).json({ message: "Room Type name already exists" });
+      return res.status(409).json({ message: "Room Type name already exists" });
     }
     if (error.name === "ValidationError") {
       const messages = Object.values(error.errors).map((val: any) => {
