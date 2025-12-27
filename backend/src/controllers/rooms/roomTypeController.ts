@@ -30,6 +30,14 @@ const handleError = (error: any, res: Response) => {
   res.status(500).json({ message: "Server Error" });
 };
 
+const isIdInvalid = (id: string, res: Response) => {
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    res.status(400).json({ message: "Invalid ID format" });
+    return true;
+  }
+  return false;
+};
+
 export const createRoomType = async (req: Request, res: Response) => {
   try {
     const roomTypeData = req.body;
@@ -58,9 +66,9 @@ export const getAllRoomTypes = async (req: Request, res: Response) => {
 export const getSingleRoomType = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({ message: "Invalid ID format" });
-    }
+
+    if (isIdInvalid(id, res)) return;
+
     const roomTypeInfo = await getRoomTypeById(id);
 
     if (!roomTypeInfo)
@@ -79,9 +87,7 @@ export const updateRoomType = async (req: Request, res: Response) => {
     const updateData = req.body;
     const { id } = req.params;
 
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({ message: "Invalid ID format" });
-    }
+    if (isIdInvalid(id, res)) return;
 
     const response = await updateRoomTypeInfo(id, updateData);
 
@@ -99,9 +105,8 @@ export const deleteRoomType = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({ message: "Invalid ID format" });
-    }
+    if (isIdInvalid(id, res)) return;
+
     const deletedRoom = await removeRoomType(id);
 
     if (!deletedRoom)
