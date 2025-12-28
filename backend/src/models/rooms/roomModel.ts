@@ -30,6 +30,7 @@ const roomSchema = new Schema<IRoom>(
       enum: Object.values(RoomStatus),
       required: true,
       default: RoomStatus.AVAILABLE,
+      trim: true,
     },
     floor: {
       type: Number,
