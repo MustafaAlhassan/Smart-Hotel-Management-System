@@ -11,7 +11,7 @@ export interface IRoomType extends Document {
 
 const roomTypeSchema = new Schema<IRoomType>(
   {
-    name: { type: String, required: true, unique: true },
+    name: { type: String, required: true, unique: true, trim: true },
     basePrice: {
       type: Number,
       required: true,

@@ -6,6 +6,7 @@ import authRouter from "./routers/authRoute";
 import roomRouter from "./routers/rooms/roomRoute";
 import { requireAuth } from "./middlewares/requireAuth";
 import roomTypeRouter from "./routers/rooms/roomTypeRoute";
+import guestRouter from "./routers/guestRoute";
 
 dotenv.config();
 
@@ -19,6 +20,8 @@ app.use(cors());
 app.use("/api/auth", authRouter);
 app.use("/api/room-types", requireAuth, roomTypeRouter);
 app.use("/api/rooms", requireAuth, roomRouter);
+app.use("/api/guests", requireAuth, guestRouter);
+
 
 app.get("/", (req: Request, res: Response) => {
   res.send("Hotel Management System API is running (TypeScript)...");
