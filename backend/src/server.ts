@@ -7,6 +7,7 @@ import roomRouter from "./routers/rooms/roomRoute";
 import { requireAuth } from "./middlewares/requireAuth";
 import roomTypeRouter from "./routers/rooms/roomTypeRoute";
 import guestRouter from "./routers/guestRoute";
+import serviceRouter from "./routers/serviceRoute";
 
 dotenv.config();
 
@@ -21,6 +22,7 @@ app.use("/api/auth", authRouter);
 app.use("/api/room-types", requireAuth, roomTypeRouter);
 app.use("/api/rooms", requireAuth, roomRouter);
 app.use("/api/guests", requireAuth, guestRouter);
+app.use("/api/service", requireAuth, serviceRouter);
 
 
 app.get("/", (req: Request, res: Response) => {
