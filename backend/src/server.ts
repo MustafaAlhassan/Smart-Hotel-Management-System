@@ -22,7 +22,7 @@ app.use("/api/auth", authRouter);
 app.use("/api/room-types", requireAuth, roomTypeRouter);
 app.use("/api/rooms", requireAuth, roomRouter);
 app.use("/api/guests", requireAuth, guestRouter);
-app.use("/api/service", requireAuth, serviceRouter);
+app.use("/api/services", requireAuth, serviceRouter);
 
 
 app.get("/", (req: Request, res: Response) => {
