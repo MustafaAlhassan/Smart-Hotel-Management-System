@@ -23,10 +23,7 @@ const handleError = (error: any, res: Response) => {
     });
   }
 
-  if (
-    error.message === "Room is already booked" ||
-    error.message.includes("Check-out")
-  ) {
+  if (error.message === "Room is already booked in these dates") {
     return res.status(409).json({
       message: error.message,
     });
