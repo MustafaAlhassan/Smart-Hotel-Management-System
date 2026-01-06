@@ -39,10 +39,59 @@ export const addBooking = async (
     { path: "guest", select: "firstName lastName email phoneNumber address" },
     {
       path: "room",
+      select: "roomNumber roomType status floor",
       populate: {
         path: "roomType",
         select: "name basePrice capacity",
       },
     },
   ]);
+};
+
+export const getBookingById = async (id: string) => {
+  return await BookingModel.findById(id).populate([
+    { path: "guest", select: "firstName lastName email phoneNumber address" },
+    {
+      path: "room",
+      populate: {
+        path: "roomType",
+        select: "name basePrice capacity",
+      },
+    },
+  ]);
+};
+
+export const findAllBooking = async () => {
+  return await BookingModel.find().populate([
+    { path: "guest", select: "firstName lastName email phoneNumber address" },
+    {
+      path: "room",
+      select: "roomNumber roomType status floor",
+      populate: {
+        path: "roomType",
+        select: "name basePrice capacity",
+      },
+    },
+  ]);
+};
+
+export const updateBookingInfo = async (
+  id: string,
+  updateData: Partial<IBooking>
+) => {
+  return await BookingModel.findByIdAndUpdate(id, updateData, {
+    new: true,
+    runValidators: true,
+  });
+};
+
+export const cancelBookingService = async (id: string) => {
+  const booking = await BookingModel.findByIdAndUpdate(
+    id, 
+    { status: "Cancelled" }, // نغير الحالة فقط
+    { new: true }
+  );
+  
+  if (!booking) throw new Error("Booking not found");
+  return booking;
 };

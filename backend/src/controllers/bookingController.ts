@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import mongoose from "mongoose";
-import { addBooking } from "../services/bookingService";
+import { addBooking, cancelBookingService, findAllBooking, getBookingById, updateBookingInfo } from "../services/bookingService";
 
 const handleError = (error: any, res: Response) => {
   if (error.code === 11000) {
@@ -29,6 +29,12 @@ const handleError = (error: any, res: Response) => {
     });
   }
 
+  if (error.message === "Booking not found") {
+    return res.status(409).json({
+      message: error.message,
+    });
+  }
+
   console.error("Server Error:", error);
   res.status(500).json({ message: "Server Error" });
 };
@@ -50,6 +56,69 @@ export const createBooking = async (req: Request, res: Response) => {
       .status(201)
       .json({ data: booking, message: "The Booking Create Successfully" });
   } catch (error: any) {
+    handleError(error, res);
+  }
+};
+
+export const getAllBooking = async (req: Request, res: Response) => {
+  try {
+    const booking = await findAllBooking();
+    res.status(200).json({
+      data: booking,
+      message: "All booking fetched successfully",
+    });
+  } catch (error) {
+    handleError(error, res);
+  }
+};
+
+export const getSingleBooking = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    if (isIdInvalid(id, res)) return;
+
+    const bookingInfo = await getBookingById(id);
+
+    if (!bookingInfo) return res.status(404).json({ message: "Booking not found" });
+
+    res.status(200).json({ data: bookingInfo, message: "Booking Get Successfully" });
+  } catch (error) {
+    handleError(error, res);
+  }
+};
+
+export const updateBooking = async (req: Request, res: Response) => {
+  try {
+    const updateData = req.body;
+    const { id } = req.params;
+
+    if (isIdInvalid(id, res)) return;
+
+    const response = await updateBookingInfo(id, updateData);
+
+    if (!response)
+      return res.status(404).json({ message: "Booking not found" });
+    res
+      .status(200)
+      .json({ data: response, message: "The Booking Updated Successfully" });
+  } catch (error: any) {
+    handleError(error, res);
+  }
+};
+
+export const deleteBooking = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    if (isIdInvalid(id, res)) return;
+
+    const deletedBooking = await cancelBookingService(id);
+
+    res
+      .status(200)
+      .json({ data: deletedBooking, message: "Booking Cancelled Successfully" });
+  } catch (error) {
     handleError(error, res);
   }
 };
