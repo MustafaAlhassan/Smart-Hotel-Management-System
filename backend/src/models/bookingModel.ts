@@ -52,11 +52,11 @@ const bookingSchema = new Schema<IBooking>(
   { timestamps: true }
 );
 
-bookingSchema.path('checkOutDate').validate(function(value: Date) {
-    if (this.checkInDate) {
-        return value > this.checkInDate;
-    }
-    return true;
-}, 'Check-out date must be after check-in date.');
+bookingSchema.path("checkOutDate").validate(function (value: Date) {
+  if (this.checkInDate) {
+    return value > this.checkInDate;
+  }
+  return true;
+}, "Check-out date must be after check-in date.");
 
 export const BookingModel = mongoose.model<IBooking>("Booking", bookingSchema);
