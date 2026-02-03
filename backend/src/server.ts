@@ -9,6 +9,7 @@ import roomTypeRouter from "./routers/rooms/roomTypeRoute";
 import guestRouter from "./routers/guestRoute";
 import serviceRouter from "./routers/serviceRoute";
 import bookingRouter from "./routers/bookingRoute";
+import invoiceRouter from "./routers/invoiceRoute";
 
 dotenv.config();
 
@@ -25,7 +26,7 @@ app.use("/api/rooms", requireAuth, roomRouter);
 app.use("/api/guests", requireAuth, guestRouter);
 app.use("/api/services", requireAuth, serviceRouter);
 app.use("/api/booking", requireAuth, bookingRouter);
-
+app.use("/api/invoice", requireAuth, invoiceRouter);
 
 app.get("/", (req: Request, res: Response) => {
   res.send("Hotel Management System API is running (TypeScript)...");
