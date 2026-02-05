@@ -16,6 +16,7 @@ import MailIcon from "@mui/icons-material/Mail";
 import NotificationsIcon from "@mui/icons-material/Notifications";
 import MoreIcon from "@mui/icons-material/MoreVert";
 import Menu from "@mui/material/Menu";
+import { width } from "@mui/system";
 
 // Defining prop type
 interface NavbarProps {
@@ -141,25 +142,31 @@ const Navbar = ({
       onClose={handleMobileMenuClose}
       sx={{ top: "49px" }}
     >
-      <MenuItem>
-        <IconButton size="large" aria-label="show 4 new mails" color="inherit">
-          <Badge badgeContent={4} color="error">
-            <MailIcon />
-          </Badge>
-        </IconButton>
-        <p>Messages</p>
-      </MenuItem>
-      <MenuItem>
-        <IconButton
-          size="large"
-          aria-label="show 17 new notifications"
-          color="inherit"
+      <MenuItem
+        onClick={() => {
+          localStorage.setItem(
+            "currentMode",
+            theme.palette.mode === "dark" ? "light" : "dark",
+          );
+          setMyMode(theme.palette.mode === "light" ? "dark" : "light");
+        }}
+        color="inherit"
+      >
+        <ListItem
+          sx={{
+            ml: "-12px",
+            mr: "-12px",
+          }}
         >
-          <Badge badgeContent={17} color="error">
-            <NotificationsIcon />
-          </Badge>
-        </IconButton>
-        <p>Notifications</p>
+          <IconButton>
+            {theme.palette.mode === "dark" ? (
+              <Brightness7 sx={{ color: "orange" }} />
+            ) : (
+              <Brightness4 />
+            )}
+          </IconButton>
+        </ListItem>
+        <p>Display</p>
       </MenuItem>
       <MenuItem onClick={handleProfileMenuOpen}>
         <IconButton
@@ -202,13 +209,14 @@ const Navbar = ({
             >
               <MenuIcon />
             </IconButton>
-            <Search>
+            <Search sx={{ width: { sm: "500px" } }}>
               <SearchIconWrapper>
                 <SearchIcon />
               </SearchIconWrapper>
               <StyledInputBase
-                placeholder="Search…"
+                placeholder="Search"
                 inputProps={{ "aria-label": "search" }}
+                sx={{ width: { maxWidth: "500px" } }}
               />
             </Search>
             <Box sx={{ flexGrow: 1 }} />
@@ -223,10 +231,10 @@ const Navbar = ({
                   onClick={() => {
                     localStorage.setItem(
                       "currentMode",
-                      theme.palette.mode === "dark" ? "light" : "dark"
+                      theme.palette.mode === "dark" ? "light" : "dark",
                     );
                     setMyMode(
-                      theme.palette.mode === "light" ? "dark" : "light"
+                      theme.palette.mode === "light" ? "dark" : "light",
                     );
                   }}
                   color="inherit"
@@ -238,24 +246,6 @@ const Navbar = ({
                   )}
                 </IconButton>
               </ListItem>
-              <IconButton
-                size="large"
-                aria-label="show 4 new mails"
-                color="inherit"
-              >
-                <Badge badgeContent={4} color="error">
-                  <MailIcon />
-                </Badge>
-              </IconButton>
-              <IconButton
-                size="large"
-                aria-label="show 17 new notifications"
-                color="inherit"
-              >
-                <Badge badgeContent={17} color="error">
-                  <NotificationsIcon />
-                </Badge>
-              </IconButton>
               <IconButton
                 size="large"
                 edge="end"

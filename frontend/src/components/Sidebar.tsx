@@ -6,12 +6,14 @@ import ListItemButton from "@mui/material/ListItemButton";
 import ListItemIcon from "@mui/material/ListItemIcon";
 import ListItemText from "@mui/material/ListItemText";
 import { useLocation, useNavigate } from "react-router-dom";
-import HomeIcon from "@mui/icons-material/Home";
-import CreateIcon from "@mui/icons-material/Create";
-import AccountCircleIcon from "@mui/icons-material/AccountCircle";
+import DescriptionIcon from "@mui/icons-material/Description";
+import GroupIcon from "@mui/icons-material/Group";
 import SettingsIcon from "@mui/icons-material/Settings";
 import { Box } from "@mui/system";
 import Logo from "../assets/Logo.png";
+import AssessmentIcon from "@mui/icons-material/Assessment";
+import DashboardIcon from "@mui/icons-material/Dashboard";
+import BookOnlineIcon from "@mui/icons-material/BookOnline";
 // Start Ibrhaim Work
 interface SidebarProps {
   sidebarWidth: number;
@@ -45,11 +47,11 @@ const Sidebar = ({
   const theme = useTheme();
   const currentLocation = useLocation();
   const myList = [
-    { text: "Dahsboard", icon: <HomeIcon />, path: "/dashboard" },
-    { text: "Statistics", icon: <CreateIcon />, path: "/statistics" },
-    { text: "Billing", icon: <AccountCircleIcon />, path: "/billing" },
-    { text: "Users", icon: <SettingsIcon />, path: "/users" },
-    { text: "Reservations", icon: <SettingsIcon />, path: "/reservations" },
+    { text: "Dahsboard", icon: <DashboardIcon />, path: "/dashboard" },
+    { text: "Statistics", icon: <AssessmentIcon />, path: "/statistics" },
+    { text: "Billing", icon: <DescriptionIcon />, path: "/billing" },
+    { text: "Users", icon: <GroupIcon />, path: "/users" },
+    { text: "Reservations", icon: <BookOnlineIcon />, path: "/reservations" },
     { text: "Settings", icon: <SettingsIcon />, path: "/settings" },
   ];
 
