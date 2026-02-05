@@ -1,6 +1,7 @@
 import { InvoiceModel, IInvoiceServiceItem } from "../models/invoiceModel";
 import { BookingModel } from "../models/bookingModel";
 import { ServiceModel, IService } from "../models/serviceModel";
+import { markRoomAsDirty } from "./rooms/roomService";
 
 const calculateNights = (checkIn: Date, checkOut: Date): number => {
   const diffTime = Math.abs(
@@ -96,9 +97,17 @@ export const updateInvoiceStatus = async (
   paymentStatus: "Paid" | "Pending" | "Partially Paid",
   paymentMethod?: string
 ) => {
-  return await InvoiceModel.findByIdAndUpdate(
+  const invoice = await InvoiceModel.findByIdAndUpdate(
     id,
     { paymentStatus, paymentMethod },
     { new: true, runValidators: true }
-  );
+  ).populate("booking");
+
+  if (!invoice) throw new Error("Invoice not found");
+
+  if (paymentStatus === "Paid" && invoice.booking) {
+    const booking: any = invoice.booking; 
+    await markRoomAsDirty(booking.room);
+  }
+  return invoice;
 };

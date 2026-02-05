@@ -3,10 +3,12 @@ import mongoose from "mongoose";
 import {
   addRoom,
   getRoomById,
-  findAllRoom,
+  findAllRooms,
   removeRoom,
   updateRoomInfo,
+  updateRoomStatus,
 } from "../../services/rooms/roomService";
+import { RoomStatus } from "../../models/rooms/roomModel";
 
 const handleError = (error: any, res: Response) => {
   if (error.code === 11000) {
@@ -53,13 +55,11 @@ export const createRoom = async (req: Request, res: Response) => {
 
 export const getAllRoom = async (req: Request, res: Response) => {
   try {
-    const room = await findAllRoom();
-    res.status(200).json({
-      data: room,
-      message: "All room fetched successfully",
-    });
-  } catch (error) {
-    handleError(error, res);
+    const status = req.query.status as RoomStatus;
+    const rooms = await findAllRooms(status);
+    res.status(200).json(rooms);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -95,6 +95,22 @@ export const updateRoom = async (req: Request, res: Response) => {
       .json({ data: updatedData, message: "The Room Updated Successfully" });
   } catch (error: any) {
     handleError(error, res);
+  }
+};
+
+export const changeRoomStatus = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    if (!Object.values(RoomStatus).includes(status)) {
+      return res.status(400).json({ message: "Invalid room status" });
+    }
+
+    const updatedRoom = await updateRoomStatus(id, status);
+    res.status(200).json(updatedRoom);
+  } catch (error: any) {
+    res.status(404).json({ message: error.message });
   }
 };
 

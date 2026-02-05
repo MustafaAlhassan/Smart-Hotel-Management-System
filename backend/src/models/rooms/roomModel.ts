@@ -3,7 +3,8 @@ import mongoose, { Schema, Document, Types } from "mongoose";
 export enum RoomStatus {
   AVAILABLE = "Available",
   OCCUPIED = "Occupied",
-  CLEANING = "Cleaning",
+  DIRTY = "Dirty",
+  MAINTENANCE = "Maintenance",
 }
 
 export interface IRoom extends Document {
