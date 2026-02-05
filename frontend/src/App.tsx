@@ -18,6 +18,7 @@ import {
   type PaletteMode,
 } from "@mui/material";
 import getDesignTokens from "./theme/MyTheme";
+const sidebarWidth = 240;
 
 function App() {
   // Start Theme
@@ -32,6 +33,10 @@ function App() {
   const theme = React.useMemo(() => createTheme(getDesignTokens(mode)), [mode]);
   // End Theme
 
+  // Start Drawer
+
+  // End Drawer
+
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
@@ -40,7 +45,11 @@ function App() {
           <Route path="/" element={<HomePage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route element={<ProtectedRoute />}>
-            <Route element={<Layout setMyMode={setMyMode} />}>
+            <Route
+              element={
+                <Layout setMyMode={setMyMode} sidebarWidth={sidebarWidth} />
+              }
+            >
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/statistics" element={<StatisPage />} />
               <Route path="/billing" element={<BillPage />} />
