@@ -1,11 +1,16 @@
 import { Types } from "mongoose";
 import { BookingModel, IBooking } from "../models/bookingModel";
+import {
+  markRoomAsOccupied,
+  markRoomAsDirty,
+  markRoomAsClean,
+} from "./rooms/roomService";
 
 export const checkRoomAvailability = async (
   roomId: string | Types.ObjectId,
   checkIn: Date | string,
   checkOut: Date | string,
-  excludeBookingId?: string
+  excludeBookingId?: string,
 ): Promise<boolean> => {
   const checkInDate = new Date(checkIn);
   const checkOutDate = new Date(checkOut);
@@ -27,7 +32,7 @@ export const checkRoomAvailability = async (
 };
 
 export const addBooking = async (
-  data: Omit<IBooking, "_id" | "createdAt" | "updatedAt">
+  data: Omit<IBooking, "_id" | "createdAt" | "updatedAt">,
 ) => {
   const checkIn = new Date(data.checkInDate);
   const checkOut = new Date(data.checkOutDate);
@@ -38,13 +43,16 @@ export const addBooking = async (
   const isAvailable = await checkRoomAvailability(
     data.room,
     data.checkInDate,
-    data.checkOutDate
+    data.checkOutDate,
   );
 
   if (!isAvailable) throw new Error("Room is already booked in these dates");
 
   const newBooking = new BookingModel(data);
   await newBooking.save();
+
+  await markRoomAsOccupied(data.room.toString());
+
   return newBooking.populate([
     { path: "guest", select: "firstName lastName email phoneNumber address" },
     {
@@ -88,7 +96,7 @@ export const findAllBooking = async () => {
 
 export const updateBookingInfo = async (
   id: string,
-  updateData: Partial<IBooking>
+  updateData: Partial<IBooking>,
 ) => {
   const currentBooking = await BookingModel.findById(id);
   if (!currentBooking) throw new Error("Booking not found");
@@ -98,15 +106,17 @@ export const updateBookingInfo = async (
     currentBooking.status === "Checked-Out"
   ) {
     throw new Error(
-      `Cannot update booking with status '${currentBooking.status}'. Create a new booking instead.`
+      `Cannot update booking with status '${currentBooking.status}'. Create a new booking instead.`,
     );
   }
   const now = new Date();
+
   if (updateData.status === "Checked-In") {
     const scheduledCheckIn = new Date(currentBooking.checkInDate);
     if (now.getTime() < scheduledCheckIn.getTime()) {
       updateData.checkInDate = now;
     }
+    await markRoomAsOccupied(currentBooking.room.toString());
   }
 
   if (updateData.status === "Checked-Out") {
@@ -120,6 +130,8 @@ export const updateBookingInfo = async (
     if (now.getTime() < scheduledCheckOut.getTime()) {
       updateData.checkOutDate = now;
     }
+
+    await markRoomAsDirty(currentBooking.room.toString());
   }
 
   const finalCheckIn = updateData.checkInDate
@@ -143,7 +155,7 @@ export const updateBookingInfo = async (
       roomId,
       checkIn,
       checkOut,
-      id
+      id,
     );
 
     if (!isAvailable) {
@@ -171,10 +183,13 @@ export const cancelBookingService = async (id: string) => {
   const booking = await BookingModel.findByIdAndUpdate(
     id,
     { status: "Cancelled" },
-    { new: true }
+    { new: true },
   );
 
   if (!booking) throw new Error("Booking not found");
+
+  await markRoomAsClean(booking.room.toString());
+
   return booking.populate([
     { path: "guest", select: "firstName lastName email phoneNumber address" },
     {
