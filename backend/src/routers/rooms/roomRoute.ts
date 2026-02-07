@@ -1,13 +1,43 @@
 import express from "express";
-import { changeRoomStatus, createRoom, deleteRoom, getAllRoom, getSingleRoom, updateRoom } from "../../controllers/rooms/roomController";
+import {
+  changeRoomStatus,
+  createRoom,
+  deleteRoom,
+  getAllRoom,
+  getSingleRoom,
+  updateRoom,
+} from "../../controllers/rooms/roomController";
+import { requireRole } from "../../middlewares/requireRole";
+import { UserRole } from "../../models/userModel";
 
 const roomRouter = express.Router();
 
-roomRouter.post("/", createRoom);
 roomRouter.get("/", getAllRoom);
-roomRouter.patch("/:id/status", changeRoomStatus);
 roomRouter.get("/:id", getSingleRoom);
-roomRouter.put("/:id", updateRoom);
-roomRouter.delete("/:id", deleteRoom);
+
+roomRouter.patch(
+  "/:id/status",
+  requireRole([
+    UserRole.HOUSEKEEPING,
+    UserRole.RECEPTIONIST,
+    UserRole.ADMIN,
+    UserRole.MANAGER,
+  ]),
+  changeRoomStatus,
+);
+
+roomRouter.post(
+  "/",
+  requireRole([UserRole.ADMIN, UserRole.MANAGER]),
+  createRoom,
+);
+
+roomRouter.put(
+  "/:id",
+  requireRole([UserRole.ADMIN, UserRole.MANAGER]),
+  updateRoom,
+);
+
+roomRouter.delete("/:id", requireRole([UserRole.ADMIN, UserRole.MANAGER]), deleteRoom);
 
 export default roomRouter;
