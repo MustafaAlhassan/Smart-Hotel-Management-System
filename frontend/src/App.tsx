@@ -8,6 +8,7 @@ import BillPage from "./pages/BillPage";
 import ReservationsPage from "./pages/ReservationsPage";
 import UsersPage from "./pages/UsersPage";
 import SettingsPage from "./pages/SettingsPage";
+import RoomsManagement from "./pages/RoomsManagement";
 import NotFoundPage from "./pages/NotFoundPage";
 import Layout from "./components/Layout";
 import React, { useState } from "react";
@@ -26,8 +27,8 @@ function App() {
     localStorage.getItem("currentMode") === null
       ? "light"
       : localStorage.getItem("currentMode") === "light"
-      ? "light"
-      : "dark"
+        ? "light"
+        : "dark",
   );
 
   const theme = React.useMemo(() => createTheme(getDesignTokens(mode)), [mode]);
@@ -56,6 +57,7 @@ function App() {
               <Route path="/users" element={<UsersPage />} />
               <Route path="/reservations" element={<ReservationsPage />} />
               <Route path="/settings" element={<SettingsPage />} />
+              <Route path="/rooms-management" element={<RoomsManagement />} />
             </Route>
           </Route>
           <Route path="*" element={<NotFoundPage />} />
