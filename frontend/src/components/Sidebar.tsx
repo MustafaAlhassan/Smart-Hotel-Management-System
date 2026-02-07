@@ -14,6 +14,7 @@ import Logo from "../assets/Logo.png";
 import AssessmentIcon from "@mui/icons-material/Assessment";
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import BookOnlineIcon from "@mui/icons-material/BookOnline";
+import NightShelterIcon from "@mui/icons-material/NightShelter";
 // Start Ibrhaim Work
 interface SidebarProps {
   sidebarWidth: number;
@@ -49,6 +50,11 @@ const Sidebar = ({
   const myList = [
     { text: "Dahsboard", icon: <DashboardIcon />, path: "/dashboard" },
     { text: "Statistics", icon: <AssessmentIcon />, path: "/statistics" },
+    {
+      text: "Rooms Management",
+      icon: <NightShelterIcon />,
+      path: "/rooms-management",
+    },
     { text: "Billing", icon: <DescriptionIcon />, path: "/billing" },
     { text: "Users", icon: <GroupIcon />, path: "/users" },
     { text: "Reservations", icon: <BookOnlineIcon />, path: "/reservations" },
