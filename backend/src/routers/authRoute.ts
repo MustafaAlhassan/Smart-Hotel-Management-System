@@ -10,6 +10,7 @@ import {
   deleteUser,
   updateUser,
   resetUserPassword,
+  changeMyPassword,
 } from "../controllers/authController";
 import { requireAuth } from "../middlewares/requireAuth";
 import { requireRole } from "../middlewares/requireRole";
@@ -67,6 +68,12 @@ userRoutes.patch(
   requireAuth,
   requireRole([UserRole.ADMIN]),
   resetUserPassword,
+);
+
+userRoutes.post(
+  "/change-password",
+  requireAuth,
+  changeMyPassword
 );
 
 export default userRoutes;
