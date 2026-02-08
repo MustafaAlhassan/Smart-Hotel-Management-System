@@ -13,8 +13,36 @@ export const getGuestById = async (id: string) => {
   return await GuestModel.findById(id);
 };
 
-export const findAllGuests = async () => {
-  return await GuestModel.find();
+export const findAllGuests = async (page: number, limit: number, search: string) => {
+  const skip = (page - 1) * limit;
+
+  let query: any = {};
+
+  if (search) {
+    const searchRegex = new RegExp(search, 'i');
+    query = {
+      $or: [
+        { firstName: searchRegex },
+        { lastName: searchRegex },
+        { email: searchRegex },
+        { phone: searchRegex },
+      ],
+    };
+  }
+
+  const [guests, total] = await Promise.all([
+    GuestModel.find(query)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit),
+    GuestModel.countDocuments(query)
+  ]);
+
+  return {
+    guests,
+    total,
+    totalPages: Math.ceil(total / limit)
+  };
 };
 
 export const updateGuestInfo = async (
