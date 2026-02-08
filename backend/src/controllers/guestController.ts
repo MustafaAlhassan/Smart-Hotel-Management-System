@@ -7,17 +7,21 @@ import {
   removeGuest,
   updateGuestInfo,
 } from "../services/guestService";
+import { GuestModel } from "../models/guestModel";
 
 const handleError = (error: any, res: Response) => {
   if (error.code === 11000) {
-    const field = Object.keys(error.keyPattern)[0]; 
-    const fieldName = field === 'idNumber' ? 'ID Number' : field.charAt(0).toUpperCase() + field.slice(1);
+    const field = Object.keys(error.keyPattern)[0];
+    const fieldName =
+      field === "idNumber"
+        ? "ID Number"
+        : field.charAt(0).toUpperCase() + field.slice(1);
 
     return res.status(409).json({
       message: `${fieldName} already exists`,
     });
   }
-  
+
   if (error.name === "ValidationError") {
     const messages = Object.values(error.errors).map((val: any) => val.message);
     return res.status(400).json({
@@ -25,7 +29,7 @@ const handleError = (error: any, res: Response) => {
       errors: messages,
     });
   }
-  
+
   console.error("Server Error:", error);
   res.status(500).json({ message: "Server Error" });
 };
@@ -53,13 +57,24 @@ export const createGuest = async (req: Request, res: Response) => {
 
 export const getAllGuests = async (req: Request, res: Response) => {
   try {
-    const guests = await findAllGuests();
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const search = (req.query.search as string) || "";
+
+    const result = await findAllGuests(page, limit, search);
+
     res.status(200).json({
-      data: guests,
-      message: "All Guests fetched successfully",
+      success: true,
+      data: result.guests,
+      pagination: {
+        totalItems: result.total,
+        currentPage: page,
+        totalPages: result.totalPages,
+        itemsPerPage: limit,
+      },
     });
-  } catch (error) {
-    handleError(error, res);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
   }
 };
 
