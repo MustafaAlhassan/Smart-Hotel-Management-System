@@ -13,6 +13,7 @@ export interface IRoom extends Document {
   roomType: Types.ObjectId;
   status: RoomStatus;
   floor: number;
+  image?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -39,6 +40,7 @@ const roomSchema = new Schema<IRoom>(
       min: [-5, "Floor cannot be less than minus 5"],
       max: [500, "Floor cannot accommodate more than 500"],
     },
+    image: { type: String, required: false },
   },
   { timestamps: true }
 );

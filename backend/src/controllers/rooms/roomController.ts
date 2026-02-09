@@ -8,7 +8,9 @@ import {
   updateRoomInfo,
   updateRoomStatus,
 } from "../../services/rooms/roomService";
-import { RoomStatus } from "../../models/rooms/roomModel";
+import { RoomModel, RoomStatus } from "../../models/rooms/roomModel";
+import path from "path";
+import fs from "fs";
 
 const handleError = (error: any, res: Response) => {
   if (error.code === 11000) {
@@ -42,14 +44,24 @@ const isIdInvalid = (id: string, res: Response) => {
 
 export const createRoom = async (req: Request, res: Response) => {
   try {
-    const roomData = req.body;
+    const { roomNumber, roomType, floor, status } = req.body;
 
-    const response = await addRoom(roomData);
-    res
-      .status(201)
-      .json({ data: response, message: "The Room Added Successfully" });
+    let imagePath = "";
+    if (req.file) {
+      imagePath = req.file.path;
+    }
+
+    const newRoom = await RoomModel.create({
+      roomNumber,
+      roomType,
+      floor: Number(floor),
+      status,
+      image: imagePath,
+    });
+
+    res.status(201).json(newRoom);
   } catch (error: any) {
-    handleError(error, res);
+    res.status(400).json({ error: error.message });
   }
 };
 
@@ -81,18 +93,42 @@ export const getSingleRoom = async (req: Request, res: Response) => {
 
 export const updateRoom = async (req: Request, res: Response) => {
   try {
-    const data = req.body;
     const { id } = req.params;
+    const data = { ...req.body };
 
     if (isIdInvalid(id, res)) return;
 
+    if (req.file) {
+      data.image = req.file.path;
+      const existingRoom = await RoomModel.findById(id);
+
+      if (existingRoom && existingRoom.image) {
+        try {
+          const oldFileName = existingRoom.image.split(/[/\\]/).pop();
+
+          if (oldFileName) {
+            const oldImagePath = path.join(process.cwd(), "uploads", oldFileName);
+
+            console.log("📍 Trying to delete:", oldImagePath);
+
+            if (fs.existsSync(oldImagePath)) {
+              fs.unlinkSync(oldImagePath);
+              console.log("✅ Deleted successfully.");
+            } else {
+              console.log("⚠️ File mismatch: Database says file exists, but disk says no.");
+            }
+          }
+        } catch (err) {
+          console.error("❌ Error deleting old image:", err);
+        }
+      }
+    }
     const updatedData = await updateRoomInfo(id, data);
 
     if (!updatedData)
       return res.status(404).json({ message: "Room not found" });
-    res
-      .status(200)
-      .json({ data: updatedData, message: "The Room Updated Successfully" });
+
+    res.status(200).json({ data: updatedData, message: "Room Updated Successfully" });
   } catch (error: any) {
     handleError(error, res);
   }
