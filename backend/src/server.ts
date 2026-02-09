@@ -13,6 +13,7 @@ import invoiceRouter from "./routers/invoiceRoute";
 import dashboardRouter from "./routers/dashboardRoute";
 import path from "path";
 import userRouter from "./routers/userRoute";
+import chatRouter from "./routers/chatRoute";
 
 dotenv.config();
 
@@ -32,6 +33,7 @@ app.use("/api/invoices", requireAuth, invoiceRouter);
 app.use("/api/dashboard", requireAuth, dashboardRouter);
 app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 app.use("/api/users", userRouter);
+app.use("/api/chat", chatRouter);
 
 app.get("/", (req: Request, res: Response) => {
   res.send("Hotel Management System API is running (TypeScript)...");
