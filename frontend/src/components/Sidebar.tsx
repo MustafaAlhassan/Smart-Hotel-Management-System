@@ -1,4 +1,4 @@
-import { Avatar, Divider, Drawer, useTheme } from "@mui/material";
+import { Avatar, Divider, Drawer, useTheme, Collapse } from "@mui/material";
 import List from "@mui/material/List";
 import LogoutIcon from "@mui/icons-material/Logout";
 import ListItem from "@mui/material/ListItem";
@@ -15,11 +15,17 @@ import AssessmentIcon from "@mui/icons-material/Assessment";
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import BookOnlineIcon from "@mui/icons-material/BookOnline";
 import NightShelterIcon from "@mui/icons-material/NightShelter";
+import ExpandLess from "@mui/icons-material/ExpandLess";
+import ExpandMore from "@mui/icons-material/ExpandMore";
+import MeetingRoomIcon from "@mui/icons-material/MeetingRoom";
+import CategoryIcon from "@mui/icons-material/Category";
+import React, { useState } from "react";
+
 // Start Ibrhaim Work
 interface SidebarProps {
   sidebarWidth: number;
   noneORblock: string;
-  drawereType: string;
+  drawereType: any;
   setDrawerType: React.Dispatch<React.SetStateAction<string>>;
   setnoneORblock: React.Dispatch<React.SetStateAction<string>>;
 }
@@ -41,26 +47,26 @@ const Sidebar = ({
     localStorage.removeItem("username");
     navigate("/login");
   };
-
   // End Mustafa Work
 
   // Start Ibrahim Work
   const theme = useTheme();
   const currentLocation = useLocation();
+
+  // State to manage the collapse of Rooms Management
+  const [roomsOpen, setRoomsOpen] = useState(true);
+
   const myList = [
     { text: "Dahsboard", icon: <DashboardIcon />, path: "/dashboard" },
     { text: "Statistics", icon: <AssessmentIcon />, path: "/statistics" },
-    {
-      text: "Rooms Management",
-      icon: <NightShelterIcon />,
-      path: "/rooms-management",
-    },
+  ];
+
+  const bottomList = [
     { text: "Billing", icon: <DescriptionIcon />, path: "/billing" },
     { text: "Users", icon: <GroupIcon />, path: "/users" },
     { text: "Reservations", icon: <BookOnlineIcon />, path: "/reservations" },
     { text: "Settings", icon: <SettingsIcon />, path: "/settings" },
   ];
-
   // End Ibrahim Work
 
   return (
@@ -96,30 +102,93 @@ const Sidebar = ({
         </Box>
         <Divider />
         <List sx={{ mt: "30px" }}>
-          {myList.map((item) => {
-            return (
-              <ListItem
-                key={item.text}
+          {/* Main Navigation Items */}
+          {myList.map((item) => (
+            <ListItem
+              key={item.text}
+              sx={{
+                bgcolor:
+                  currentLocation.pathname === item.path
+                    ? theme.palette.primary.main
+                    : null,
+              }}
+              disablePadding
+            >
+              <ListItemButton onClick={() => navigate(item.path)}>
+                <ListItemIcon>{item.icon}</ListItemIcon>
+                <ListItemText primary={item.text} />
+              </ListItemButton>
+            </ListItem>
+          ))}
+
+          {/* Rooms Management Section */}
+          <ListItem disablePadding>
+            <ListItemButton onClick={() => setRoomsOpen(!roomsOpen)}>
+              <ListItemIcon>
+                <NightShelterIcon />
+              </ListItemIcon>
+              <ListItemText primary="Rooms Management" />
+              {roomsOpen ? <ExpandLess /> : <ExpandMore />}
+            </ListItemButton>
+          </ListItem>
+
+          {/* Sub-menu Items */}
+          <Collapse in={roomsOpen} timeout="auto" unmountOnExit>
+            <List component="div" disablePadding>
+              <ListItemButton
                 sx={{
+                  pl: 4,
                   bgcolor:
-                    currentLocation.pathname === item.path
-                      ? theme.palette.primary.main
+                    currentLocation.pathname === "/rooms"
+                      ? "rgba(0, 0, 0, 0.08)"
                       : null,
                 }}
-                disablePadding
+                onClick={() => navigate("/rooms")}
               >
-                <ListItemButton
-                  onClick={() => {
-                    navigate(item.path);
-                  }}
-                >
-                  <ListItemIcon>{item.icon}</ListItemIcon>
-                  <ListItemText primary={item.text} />
-                </ListItemButton>
-              </ListItem>
-            );
-          })}
+                <ListItemIcon>
+                  <MeetingRoomIcon fontSize="small" />
+                </ListItemIcon>
+                <ListItemText primary="Rooms" />
+              </ListItemButton>
 
+              <ListItemButton
+                sx={{
+                  pl: 4,
+                  bgcolor:
+                    currentLocation.pathname === "/room-types"
+                      ? "rgba(0, 0, 0, 0.08)"
+                      : null,
+                }}
+                onClick={() => navigate("/room-types")}
+              >
+                <ListItemIcon>
+                  <CategoryIcon fontSize="small" />
+                </ListItemIcon>
+                <ListItemText primary="Room Types" />
+              </ListItemButton>
+            </List>
+          </Collapse>
+
+          {/* Bottom Navigation Items */}
+          {bottomList.map((item) => (
+            <ListItem
+              key={item.text}
+              sx={{
+                bgcolor:
+                  currentLocation.pathname === item.path
+                    ? theme.palette.primary.main
+                    : null,
+              }}
+              disablePadding
+            >
+              <ListItemButton onClick={() => navigate(item.path)}>
+                <ListItemIcon>{item.icon}</ListItemIcon>
+                <ListItemText primary={item.text} />
+              </ListItemButton>
+            </ListItem>
+          ))}
+
+          {/* Logout Button */}
           <ListItem disablePadding>
             <ListItemButton onClick={handleLogout}>
               <ListItemIcon>

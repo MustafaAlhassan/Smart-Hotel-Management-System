@@ -27,8 +27,8 @@ import {
   Edit as EditIcon,
   Delete as DeleteIcon,
 } from "@mui/icons-material";
-import { roomTypeService } from "../services/roomTypeService";
-import type { IRoomType } from "../types/types";
+import { roomTypeService } from "../../services/roomTypeService";
+import type { IRoomType } from "../../types/types";
 
 const RoomTypesPage = () => {
   const [roomTypes, setRoomTypes] = useState<IRoomType[]>([]);

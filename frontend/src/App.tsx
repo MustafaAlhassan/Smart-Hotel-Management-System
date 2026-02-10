@@ -8,7 +8,6 @@ import BillPage from "./pages/BillPage";
 import ReservationsPage from "./pages/ReservationsPage";
 import UsersPage from "./pages/UsersPage";
 import SettingsPage from "./pages/SettingsPage";
-import RoomsManagement from "./pages/RoomsManagement";
 import NotFoundPage from "./pages/NotFoundPage";
 import Layout from "./components/Layout";
 import React, { useState } from "react";
@@ -19,6 +18,8 @@ import {
   type PaletteMode,
 } from "@mui/material";
 import getDesignTokens from "./theme/MyTheme";
+import RoomsPage from "./pages/RoomsManagement/Rooms";
+import RoomTypesPage from "./pages/RoomsManagement/RoomType";
 const sidebarWidth = 240;
 
 function App() {
@@ -57,7 +58,8 @@ function App() {
               <Route path="/users" element={<UsersPage />} />
               <Route path="/reservations" element={<ReservationsPage />} />
               <Route path="/settings" element={<SettingsPage />} />
-              <Route path="/rooms-management" element={<RoomsManagement />} />
+              <Route path="/rooms" element={<RoomsPage />} />
+              <Route path="/room-types" element={<RoomTypesPage />} />
             </Route>
           </Route>
           <Route path="*" element={<NotFoundPage />} />
