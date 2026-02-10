@@ -1,313 +1,371 @@
-import React, { useState, useEffect, ChangeEvent } from "react";
-import axios from "axios";
+import { useState, useEffect } from "react";
 import {
-  Box,
-  Button,
+  Container,
   Typography,
+  Button,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
   Paper,
   IconButton,
-  Stack,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
   TextField,
-  MenuItem,
-  Grid,
-  Card,
-  CardMedia,
-  CardContent,
+  Box,
+  Alert,
+  Snackbar,
   Chip,
-  Divider,
-  Avatar,
+  Stack,
 } from "@mui/material";
 import {
   Add as AddIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
-  CloudUpload as UploadIcon,
-  People as CapacityIcon,
-  CheckCircle as ServiceIcon,
-  Hotel as BedIcon,
 } from "@mui/icons-material";
+import { roomTypeService } from "../services/roomTypeService";
+import type { IRoomType } from "../types/types";
 
-// 1. Updated Interface to match backend keys
-interface Room {
-  _id?: string; // MongoDB usually uses _id
-  roomNumber: string;
-  floor: string;
-  roomType: string;
-  status: "Available" | "Occupied" | "Maintenance";
-  image?: string; // URL from server
-  // Note: price/capacity usually come from the roomType object in advanced setups
-  price?: number;
-  capacity?: number;
-}
+const RoomTypesPage = () => {
+  const [roomTypes, setRoomTypes] = useState<IRoomType[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-const API_URL = "http://localhost:5000/api/rooms/";
+  const [openDialog, setOpenDialog] = useState(false);
+  const [editingItem, setEditingItem] = useState<IRoomType | null>(null);
 
-const RoomsManagement = () => {
-  const [rooms, setRooms] = useState<Room[]>([]);
-  const [open, setOpen] = useState(false);
-  const [editMode, setEditMode] = useState(false);
-  const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [idToDelete, setIdToDelete] = useState<string | null>(null);
 
-  // States for the form
-  const [formData, setFormData] = useState({
-    roomNumber: "",
-    floor: "",
-    roomType: "",
-    status: "Available",
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: "",
+    severity: "success" as "success" | "error",
   });
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [previewImage, setPreviewImage] = useState<string | null>(null);
 
-  // 2. Fetch Rooms from Backend
-  const fetchRooms = async () => {
+  const [formData, setFormData] = useState({
+    name: "",
+    basePrice: 0,
+    capacity: 1,
+    description: "",
+    amenitiesInput: "",
+  });
+
+  const fetchData = async () => {
     try {
-      const response = await axios.get(API_URL);
-      setRooms(response.data);
-    } catch (error) {
-      console.error("Error fetching rooms:", error);
+      setLoading(true);
+      const response = await roomTypeService.getAllRoomTypes();
+
+      console.log("API Response:", response);
+
+      if (Array.isArray(response)) {
+        setRoomTypes(response);
+      } else if (response && Array.isArray((response as any).data)) {
+        setRoomTypes((response as any).data);
+      } else if (response && Array.isArray((response as any).roomTypes)) {
+        setRoomTypes((response as any).roomTypes);
+      } else {
+        setRoomTypes([]);
+        console.error("Data received is not an array!", response);
+      }
+
+      setError(null);
+    } catch (err: any) {
+      console.error("Fetch Error:", err);
+      setError(err.response?.data?.message || "Failed to fetch room types");
+      setRoomTypes([]);
+    } finally {
+      setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchRooms();
+    fetchData();
   }, []);
 
-  const handleOpenAdd = () => {
-    setEditMode(false);
-    setFormData({
-      roomNumber: "",
-      floor: "",
-      roomType: "",
-      status: "Available",
-    });
-    setPreviewImage(null);
-    setSelectedFile(null);
-    setOpen(true);
-  };
-
-  const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setSelectedFile(file); // Store the actual file for the API
-      setPreviewImage(URL.createObjectURL(file)); // For UI preview
+  const handleOpenDialog = (item?: IRoomType) => {
+    if (item) {
+      setEditingItem(item);
+      setFormData({
+        name: item.name,
+        basePrice: item.basePrice,
+        capacity: item.capacity,
+        description: item.description || "",
+        amenitiesInput: item.amenities.join(", "),
+      });
+    } else {
+      setEditingItem(null);
+      setFormData({
+        name: "",
+        basePrice: 0,
+        capacity: 1,
+        description: "",
+        amenitiesInput: "",
+      });
     }
+    setOpenDialog(true);
   };
 
-  // 3. Save / Update Room Logic
-  const handleSave = async () => {
-    const data = new FormData();
-    data.append("roomNumber", formData.roomNumber);
-    data.append("floor", formData.floor);
-    data.append("roomType", formData.roomType);
-    data.append("status", formData.status);
-    if (selectedFile) data.append("image", selectedFile);
+  const handleCloseDialog = () => {
+    setOpenDialog(false);
+    setEditingItem(null);
+  };
 
+  const handleSubmit = async () => {
     try {
-      if (editMode && selectedRoom?._id) {
-        await axios.put(`${API_URL}${selectedRoom._id}`, data);
+      const amenitiesArray = formData.amenitiesInput
+        .split(",")
+        .map((item) => item.trim())
+        .filter((item) => item !== "");
+
+      const payload = {
+        name: formData.name,
+        basePrice: Number(formData.basePrice),
+        capacity: Number(formData.capacity),
+        description: formData.description,
+        amenities: amenitiesArray,
+      };
+
+      if (editingItem) {
+        await roomTypeService.updateRoomType(editingItem._id, payload);
+        setSnackbar({
+          open: true,
+          message: "Updated successfully",
+          severity: "success",
+        });
       } else {
-        await axios.post(API_URL, data);
+        await roomTypeService.createRoomType(payload);
+        setSnackbar({
+          open: true,
+          message: "Created successfully",
+          severity: "success",
+        });
       }
-      fetchRooms(); // Refresh list
-      setOpen(false);
-    } catch (error) {
-      alert("Failed to save room. Check console for details.");
-      console.error(error);
+      handleCloseDialog();
+      fetchData();
+    } catch (err: any) {
+      setSnackbar({
+        open: true,
+        message: err.response?.data?.message || "Operation failed",
+        severity: "error",
+      });
     }
   };
+
+  const handleDelete = async () => {
+    if (!idToDelete) return;
+    try {
+      await roomTypeService.deleteRoomType(idToDelete);
+      setSnackbar({
+        open: true,
+        message: "Deleted successfully",
+        severity: "success",
+      });
+      fetchData();
+    } catch (err: any) {
+      setSnackbar({
+        open: true,
+        message: err.response?.data?.message || "Delete failed",
+        severity: "error",
+      });
+    } finally {
+      setDeleteConfirmOpen(false);
+      setIdToDelete(null);
+    }
+  };
+
+  if (loading) return <Box sx={{ p: 4, textAlign: "center" }}>Loading...</Box>;
 
   return (
-    <Box sx={{ p: { xs: 2, md: 5 }, maxWidth: "1600px", margin: "0 auto" }}>
-      {/* Header Section */}
-      <Paper
-        elevation={0}
-        sx={{
-          p: 3,
-          mb: 5,
-          borderRadius: 4,
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          border: "1px solid",
-          borderColor: "divider",
-        }}
-      >
-        <Typography variant="h4" fontWeight="900">
-          Rooms Management
+    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+      <Box sx={{ display: "flex", justifyContent: "space-between", mb: 3 }}>
+        <Typography variant="h4" component="h1">
+          Room Types
         </Typography>
         <Button
           variant="contained"
           startIcon={<AddIcon />}
-          onClick={handleOpenAdd}
-          sx={{ borderRadius: 3, px: 4 }}
+          onClick={() => handleOpenDialog()}
         >
-          Add New Room
+          Add New Type
         </Button>
-      </Paper>
+      </Box>
 
-      {/* Grid Layout */}
-      <Grid container spacing={4}>
-        {rooms.map((room) => (
-          <Grid item xs={12} sm={6} lg={4} key={room._id}>
-            <Card
-              sx={{
-                borderRadius: 5,
-                border: "1px solid",
-                borderColor: "divider",
-              }}
-            >
-              <Box sx={{ position: "relative" }}>
-                <CardMedia
-                  component="img"
-                  height="260"
-                  image={
-                    room.image
-                      ? `http://localhost:5000/${room.image}`
-                      : "https://via.placeholder.com/400"
-                  }
-                />
-                <Chip
-                  label={room.status}
-                  color={room.status === "Available" ? "success" : "error"}
-                  sx={{ position: "absolute", top: 20, right: 20 }}
-                />
-              </Box>
-              <CardContent sx={{ p: 3 }}>
-                <Typography variant="h5" fontWeight="800">
-                  Room {room.roomNumber}
-                </Typography>
-                <Typography color="text.secondary">
-                  Floor: {room.floor}
-                </Typography>
-                <Divider sx={{ my: 2, borderStyle: "dashed" }} />
-                <Stack direction="row" spacing={1}>
-                  <Button fullWidth variant="outlined" startIcon={<EditIcon />}>
-                    Edit
-                  </Button>
-                  <IconButton color="error">
-                    <DeleteIcon />
-                  </IconButton>
-                </Stack>
-              </CardContent>
-            </Card>
-          </Grid>
-        ))}
-      </Grid>
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      )}
 
-      {/* Add/Edit Dialog */}
+      <TableContainer component={Paper}>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell>Name</TableCell>
+              <TableCell>Price ($)</TableCell>
+              <TableCell>Capacity</TableCell>
+              <TableCell>Amenities</TableCell>
+              <TableCell>Description</TableCell>
+              <TableCell align="right">Actions</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {Array.isArray(roomTypes) && roomTypes.length > 0 ? (
+              roomTypes.map((type) => (
+                <TableRow key={type._id}>
+                  <TableCell sx={{ fontWeight: "bold" }}>{type.name}</TableCell>
+                  <TableCell>${type.basePrice}</TableCell>
+                  <TableCell>{type.capacity} Persons</TableCell>
+                  <TableCell>
+                    <Stack direction="row" spacing={0.5} flexWrap="wrap">
+                      {Array.isArray(type.amenities) &&
+                        type.amenities.map((am, index) => (
+                          <Chip
+                            key={index}
+                            label={am}
+                            size="small"
+                            variant="outlined"
+                          />
+                        ))}
+                    </Stack>
+                  </TableCell>
+                  <TableCell>{type.description || "-"}</TableCell>
+                  <TableCell align="right">
+                    <IconButton
+                      color="primary"
+                      onClick={() => handleOpenDialog(type)}
+                    >
+                      <EditIcon />
+                    </IconButton>
+                    <IconButton
+                      color="error"
+                      onClick={() => {
+                        setIdToDelete(type._id);
+                        setDeleteConfirmOpen(true);
+                      }}
+                    >
+                      <DeleteIcon />
+                    </IconButton>
+                  </TableCell>
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={6} align="center">
+                  {loading ? "Loading..." : "No room types found."}
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </TableContainer>
+
       <Dialog
-        open={open}
-        onClose={() => setOpen(false)}
+        open={openDialog}
+        onClose={handleCloseDialog}
         fullWidth
         maxWidth="sm"
       >
-        <DialogTitle sx={{ fontWeight: 900 }}>
-          {editMode ? "Edit Room" : "New Room Entry"}
+        <DialogTitle>
+          {editingItem ? "Edit Room Type" : "Add Room Type"}
         </DialogTitle>
         <DialogContent>
-          <Grid container spacing={2} sx={{ mt: 1 }}>
-            <Grid item xs={6}>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 1 }}>
+            <TextField
+              label="Room Type Name"
+              value={formData.name}
+              onChange={(e) =>
+                setFormData({ ...formData, name: e.target.value })
+              }
+              fullWidth
+              required
+            />
+            <Box sx={{ display: "flex", gap: 2 }}>
               <TextField
-                label="Room Number"
-                fullWidth
-                variant="filled"
-                value={formData.roomNumber}
+                label="Base Price"
+                type="number"
+                value={formData.basePrice}
                 onChange={(e) =>
-                  setFormData({ ...formData, roomNumber: e.target.value })
+                  setFormData({
+                    ...formData,
+                    basePrice: Number(e.target.value),
+                  })
                 }
+                fullWidth
+                required
+                InputProps={{ inputProps: { min: 0 } }}
               />
-            </Grid>
-            <Grid item xs={6}>
               <TextField
-                label="Floor"
-                fullWidth
-                variant="filled"
-                value={formData.floor}
+                label="Capacity"
+                type="number"
+                value={formData.capacity}
                 onChange={(e) =>
-                  setFormData({ ...formData, floor: e.target.value })
+                  setFormData({ ...formData, capacity: Number(e.target.value) })
                 }
+                fullWidth
+                required
+                InputProps={{ inputProps: { min: 1, max: 10 } }}
               />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                select
-                label="Room Type ID"
-                fullWidth
-                variant="filled"
-                value={formData.roomType}
-                onChange={(e) =>
-                  setFormData({ ...formData, roomType: e.target.value })
-                }
-              >
-                {/* Use the IDs from your friend's database here */}
-                <MenuItem value="6946f6ca4939304a397c1d...">
-                  Deluxe Suite
-                </MenuItem>
-                <MenuItem value="other_id">Standard Double</MenuItem>
-              </TextField>
-            </Grid>
-
-            <Grid item xs={12}>
-              <Box
-                sx={{
-                  mt: 2,
-                  p: 3,
-                  border: "2px dashed",
-                  borderColor: "divider",
-                  borderRadius: 4,
-                  textAlign: "center",
-                }}
-              >
-                {previewImage ? (
-                  <Stack alignItems="center" spacing={2}>
-                    <Avatar
-                      src={previewImage}
-                      sx={{ width: 100, height: 100, borderRadius: 2 }}
-                    />
-                    <Button
-                      size="small"
-                      onClick={() => {
-                        setPreviewImage(null);
-                        setSelectedFile(null);
-                      }}
-                    >
-                      Remove Image
-                    </Button>
-                  </Stack>
-                ) : (
-                  <Button component="label" startIcon={<UploadIcon />}>
-                    Upload Room Image
-                    <input
-                      type="file"
-                      hidden
-                      onChange={handleImageChange}
-                      accept="image/*"
-                    />
-                  </Button>
-                )}
-              </Box>
-            </Grid>
-          </Grid>
+            </Box>
+            <TextField
+              label="Amenities (Separated by comma)"
+              placeholder="Wifi, AC, TV, Balcony"
+              value={formData.amenitiesInput}
+              onChange={(e) =>
+                setFormData({ ...formData, amenitiesInput: e.target.value })
+              }
+              fullWidth
+              helperText="Example: WiFi, TV, Mini Bar"
+            />
+            <TextField
+              label="Description"
+              value={formData.description}
+              onChange={(e) =>
+                setFormData({ ...formData, description: e.target.value })
+              }
+              fullWidth
+              multiline
+              rows={3}
+            />
+          </Box>
         </DialogContent>
-        <DialogActions sx={{ p: 4 }}>
-          <Button onClick={() => setOpen(false)} color="inherit">
-            Discard
-          </Button>
-          <Button
-            variant="contained"
-            onClick={handleSave}
-            sx={{ px: 6, borderRadius: 3 }}
-          >
-            {editMode ? "Update Room" : "Save Entry"}
+        <DialogActions>
+          <Button onClick={handleCloseDialog}>Cancel</Button>
+          <Button onClick={handleSubmit} variant="contained">
+            {editingItem ? "Update" : "Save"}
           </Button>
         </DialogActions>
       </Dialog>
-    </Box>
+
+      <Dialog
+        open={deleteConfirmOpen}
+        onClose={() => setDeleteConfirmOpen(false)}
+      >
+        <DialogTitle>Confirm Delete</DialogTitle>
+        <DialogContent>
+          Are you sure you want to delete this room type?
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteConfirmOpen(false)}>Cancel</Button>
+          <Button onClick={handleDelete} color="error" variant="contained">
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={4000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+      >
+        <Alert severity={snackbar.severity}>{snackbar.message}</Alert>
+      </Snackbar>
+    </Container>
   );
 };
 
-export default RoomsManagement;
+export default RoomTypesPage;
