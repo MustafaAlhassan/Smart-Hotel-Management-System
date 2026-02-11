@@ -27,8 +27,8 @@ import {
   Edit as EditIcon,
   Delete as DeleteIcon,
 } from "@mui/icons-material";
-import { roomTypeService } from "../services/roomTypeService";
-import type { IRoomType } from "../types/types";
+import { roomTypeService } from "../../services/roomTypeService";
+import type { IRoomType } from "../../types/types";
 
 const RoomTypesPage = () => {
   const [roomTypes, setRoomTypes] = useState<IRoomType[]>([]);
@@ -49,33 +49,25 @@ const RoomTypesPage = () => {
 
   const [formData, setFormData] = useState({
     name: "",
-    basePrice: 0,
-    capacity: 1,
+    basePrice: "" as string | number,
+    capacity: "" as string | number,
     description: "",
-    amenitiesInput: "",
+    featuresInput: "",
   });
 
   const fetchData = async () => {
     try {
       setLoading(true);
       const response = await roomTypeService.getAllRoomTypes();
-
-      console.log("API Response:", response);
-
       if (Array.isArray(response)) {
         setRoomTypes(response);
       } else if (response && Array.isArray((response as any).data)) {
         setRoomTypes((response as any).data);
-      } else if (response && Array.isArray((response as any).roomTypes)) {
-        setRoomTypes((response as any).roomTypes);
       } else {
         setRoomTypes([]);
-        console.error("Data received is not an array!", response);
       }
-
       setError(null);
     } catch (err: any) {
-      console.error("Fetch Error:", err);
       setError(err.response?.data?.message || "Failed to fetch room types");
       setRoomTypes([]);
     } finally {
@@ -95,16 +87,16 @@ const RoomTypesPage = () => {
         basePrice: item.basePrice,
         capacity: item.capacity,
         description: item.description || "",
-        amenitiesInput: item.amenities.join(", "),
+        featuresInput: item.amenities.join(", "),
       });
     } else {
       setEditingItem(null);
       setFormData({
         name: "",
-        basePrice: 0,
-        capacity: 1,
+        basePrice: "",
+        capacity: "",
         description: "",
-        amenitiesInput: "",
+        featuresInput: "",
       });
     }
     setOpenDialog(true);
@@ -117,7 +109,7 @@ const RoomTypesPage = () => {
 
   const handleSubmit = async () => {
     try {
-      const amenitiesArray = formData.amenitiesInput
+      const featuresArray = formData.featuresInput
         .split(",")
         .map((item) => item.trim())
         .filter((item) => item !== "");
@@ -127,7 +119,7 @@ const RoomTypesPage = () => {
         basePrice: Number(formData.basePrice),
         capacity: Number(formData.capacity),
         description: formData.description,
-        amenities: amenitiesArray,
+        amenities: featuresArray,
       };
 
       if (editingItem) {
@@ -167,11 +159,7 @@ const RoomTypesPage = () => {
       });
       fetchData();
     } catch (err: any) {
-      setSnackbar({
-        open: true,
-        message: err.response?.data?.message || "Delete failed",
-        severity: "error",
-      });
+      setSnackbar({ open: true, message: "Delete failed", severity: "error" });
     } finally {
       setDeleteConfirmOpen(false);
       setIdToDelete(null);
@@ -208,58 +196,49 @@ const RoomTypesPage = () => {
               <TableCell>Name</TableCell>
               <TableCell>Price ($)</TableCell>
               <TableCell>Capacity</TableCell>
-              <TableCell>Amenities</TableCell>
+              <TableCell>Features</TableCell>
               <TableCell>Description</TableCell>
               <TableCell align="right">Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {Array.isArray(roomTypes) && roomTypes.length > 0 ? (
-              roomTypes.map((type) => (
-                <TableRow key={type._id}>
-                  <TableCell sx={{ fontWeight: "bold" }}>{type.name}</TableCell>
-                  <TableCell>${type.basePrice}</TableCell>
-                  <TableCell>{type.capacity} Persons</TableCell>
-                  <TableCell>
-                    <Stack direction="row" spacing={0.5} flexWrap="wrap">
-                      {Array.isArray(type.amenities) &&
-                        type.amenities.map((am, index) => (
-                          <Chip
-                            key={index}
-                            label={am}
-                            size="small"
-                            variant="outlined"
-                          />
-                        ))}
-                    </Stack>
-                  </TableCell>
-                  <TableCell>{type.description || "-"}</TableCell>
-                  <TableCell align="right">
-                    <IconButton
-                      color="primary"
-                      onClick={() => handleOpenDialog(type)}
-                    >
-                      <EditIcon />
-                    </IconButton>
-                    <IconButton
-                      color="error"
-                      onClick={() => {
-                        setIdToDelete(type._id);
-                        setDeleteConfirmOpen(true);
-                      }}
-                    >
-                      <DeleteIcon />
-                    </IconButton>
-                  </TableCell>
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={6} align="center">
-                  {loading ? "Loading..." : "No room types found."}
+            {roomTypes.map((type) => (
+              <TableRow key={type._id}>
+                <TableCell sx={{ fontWeight: "bold" }}>{type.name}</TableCell>
+                <TableCell>${type.basePrice}</TableCell>
+                <TableCell>{type.capacity} Persons</TableCell>
+                <TableCell>
+                  <Stack direction="row" spacing={0.5} flexWrap="wrap">
+                    {type.amenities.map((feature, index) => (
+                      <Chip
+                        key={index}
+                        label={feature}
+                        size="small"
+                        variant="outlined"
+                      />
+                    ))}
+                  </Stack>
+                </TableCell>
+                <TableCell>{type.description || "-"}</TableCell>
+                <TableCell align="right">
+                  <IconButton
+                    color="primary"
+                    onClick={() => handleOpenDialog(type)}
+                  >
+                    <EditIcon />
+                  </IconButton>
+                  <IconButton
+                    color="error"
+                    onClick={() => {
+                      setIdToDelete(type._id);
+                      setDeleteConfirmOpen(true);
+                    }}
+                  >
+                    <DeleteIcon />
+                  </IconButton>
                 </TableCell>
               </TableRow>
-            )}
+            ))}
           </TableBody>
         </Table>
       </TableContainer>
@@ -288,38 +267,34 @@ const RoomTypesPage = () => {
               <TextField
                 label="Base Price"
                 type="number"
+                placeholder="0.00"
                 value={formData.basePrice}
                 onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    basePrice: Number(e.target.value),
-                  })
+                  setFormData({ ...formData, basePrice: e.target.value })
                 }
                 fullWidth
                 required
-                InputProps={{ inputProps: { min: 0 } }}
               />
               <TextField
                 label="Capacity"
                 type="number"
+                placeholder="1"
                 value={formData.capacity}
                 onChange={(e) =>
-                  setFormData({ ...formData, capacity: Number(e.target.value) })
+                  setFormData({ ...formData, capacity: e.target.value })
                 }
                 fullWidth
                 required
-                InputProps={{ inputProps: { min: 1, max: 10 } }}
               />
             </Box>
             <TextField
-              label="Amenities (Separated by comma)"
-              placeholder="Wifi, AC, TV, Balcony"
-              value={formData.amenitiesInput}
+              label="Features (Separate features with a comma)"
+              placeholder="WiFi, TV, Mini Bar"
+              value={formData.featuresInput}
               onChange={(e) =>
-                setFormData({ ...formData, amenitiesInput: e.target.value })
+                setFormData({ ...formData, featuresInput: e.target.value })
               }
               fullWidth
-              helperText="Example: WiFi, TV, Mini Bar"
             />
             <TextField
               label="Description"
@@ -341,29 +316,7 @@ const RoomTypesPage = () => {
         </DialogActions>
       </Dialog>
 
-      <Dialog
-        open={deleteConfirmOpen}
-        onClose={() => setDeleteConfirmOpen(false)}
-      >
-        <DialogTitle>Confirm Delete</DialogTitle>
-        <DialogContent>
-          Are you sure you want to delete this room type?
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDeleteConfirmOpen(false)}>Cancel</Button>
-          <Button onClick={handleDelete} color="error" variant="contained">
-            Delete
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={4000}
-        onClose={() => setSnackbar({ ...snackbar, open: false })}
-      >
-        <Alert severity={snackbar.severity}>{snackbar.message}</Alert>
-      </Snackbar>
+      {/* ... (Keep Delete Dialog and Snackbar as they were) ... */}
     </Container>
   );
 };

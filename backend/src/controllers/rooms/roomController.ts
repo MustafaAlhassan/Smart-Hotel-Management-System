@@ -107,7 +107,11 @@ export const updateRoom = async (req: Request, res: Response) => {
           const oldFileName = existingRoom.image.split(/[/\\]/).pop();
 
           if (oldFileName) {
-            const oldImagePath = path.join(process.cwd(), "uploads", oldFileName);
+            const oldImagePath = path.join(
+              process.cwd(),
+              "uploads",
+              oldFileName,
+            );
 
             console.log("📍 Trying to delete:", oldImagePath);
 
@@ -115,7 +119,9 @@ export const updateRoom = async (req: Request, res: Response) => {
               fs.unlinkSync(oldImagePath);
               console.log("✅ Deleted successfully.");
             } else {
-              console.log("⚠️ File mismatch: Database says file exists, but disk says no.");
+              console.log(
+                "⚠️ File mismatch: Database says file exists, but disk says no.",
+              );
             }
           }
         } catch (err) {
@@ -128,7 +134,9 @@ export const updateRoom = async (req: Request, res: Response) => {
     if (!updatedData)
       return res.status(404).json({ message: "Room not found" });
 
-    res.status(200).json({ data: updatedData, message: "Room Updated Successfully" });
+    res
+      .status(200)
+      .json({ data: updatedData, message: "Room Updated Successfully" });
   } catch (error: any) {
     handleError(error, res);
   }

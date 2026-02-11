@@ -1,4 +1,4 @@
-import type { IRoomType } from "../types/types";
+import type { IRoomType } from "../types/types.ts";
 import api from "./api";
 
 export const roomTypeService = {
@@ -12,7 +12,9 @@ export const roomTypeService = {
     return response.data;
   },
 
-  createRoomType: async (data: Omit<IRoomType, "_id" | "createdAt" | "updatedAt">) => {
+  createRoomType: async (
+    data: Omit<IRoomType, "_id" | "createdAt" | "updatedAt">,
+  ) => {
     const response = await api.post<IRoomType>("/room-types", data);
     return response.data;
   },
