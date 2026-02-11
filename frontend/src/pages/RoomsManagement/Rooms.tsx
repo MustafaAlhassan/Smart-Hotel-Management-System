@@ -3,11 +3,9 @@ import {
   Container,
   Typography,
   Button,
-  Grid,
   Card,
   CardContent,
   CardMedia,
-  IconButton,
   Box,
   Dialog,
   DialogTitle,
@@ -20,6 +18,7 @@ import {
   Snackbar,
   Alert,
   CircularProgress,
+  Divider,
 } from "@mui/material";
 import {
   Add as AddIcon,
@@ -27,11 +26,14 @@ import {
   Delete as DeleteIcon,
   CloudUpload as UploadIcon,
   ImageNotSupported as NoImageIcon,
+  CheckCircle as FeatureIcon,
+  Stairs as FloorIcon,
 } from "@mui/icons-material";
 import { roomService } from "../../services/roomService";
 import { roomTypeService } from "../../services/roomTypeService";
 
-// --- Types & Enums ---
+const API_BASE_URL = "http://localhost:5000";
+
 export enum RoomStatus {
   AVAILABLE = "Available",
   OCCUPIED = "Occupied",
@@ -42,6 +44,9 @@ export enum RoomStatus {
 export interface IRoomType {
   _id: string;
   name: string;
+  price: number;
+  description?: string;
+  features?: string[];
 }
 
 export interface IRoom {
@@ -54,17 +59,12 @@ export interface IRoom {
 }
 
 const RoomsPage = () => {
-  // --- State ---
   const [rooms, setRooms] = useState<IRoom[]>([]);
   const [roomTypes, setRoomTypes] = useState<IRoomType[]>([]);
   const [open, setOpen] = useState(false);
-  const [loading, setLoading] = useState(false); // For image processing
-  const [saveLoading, setSaveLoading] = useState(false); // For API saving
+  const [saveLoading, setSaveLoading] = useState(false);
   const [editingRoom, setEditingRoom] = useState<IRoom | null>(null);
-
-  // State for the raw file to be sent via FormData
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: "",
@@ -76,10 +76,17 @@ const RoomsPage = () => {
     roomType: "",
     floor: "" as string | number,
     status: RoomStatus.AVAILABLE,
-    image: "", // Used for preview URL only
+    image: "",
   });
 
-  // --- Fetch Data ---
+  const getFullImageUrl = (imagePath: string | undefined) => {
+    if (!imagePath) return "";
+    if (imagePath.startsWith("http") || imagePath.startsWith("blob:")) {
+      return imagePath;
+    }
+    return `${API_BASE_URL}/${imagePath}`;
+  };
+
   const fetchData = async () => {
     try {
       const [roomsData, typesResponse] = await Promise.all([
@@ -100,7 +107,7 @@ const RoomsPage = () => {
       console.error("Fetch Error:", error);
       setSnackbar({
         open: true,
-        message: "Failed to load rooms",
+        message: "Failed to load data",
         severity: "error",
       });
     }
@@ -110,24 +117,22 @@ const RoomsPage = () => {
     fetchData();
   }, []);
 
-  // --- IMAGE HANDLER (Modified for FormData) ---
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // 1. Store the raw file to send it later
+      if (formData.image.startsWith("blob:")) {
+        URL.revokeObjectURL(formData.image);
+      }
       setSelectedFile(file);
-
-      // 2. Create a local preview URL for the UI
       const previewUrl = URL.createObjectURL(file);
       setFormData({ ...formData, image: previewUrl });
     }
   };
 
-  // --- Handlers ---
   const handleOpen = (room?: IRoom) => {
     if (room) {
       setEditingRoom(room);
-      setSelectedFile(null); // Reset file on edit open
+      setSelectedFile(null);
       setFormData({
         roomNumber: room.roomNumber,
         roomType:
@@ -152,12 +157,11 @@ const RoomsPage = () => {
     setOpen(true);
   };
 
-  // --- SAVE HANDLER (Modified to use FormData) ---
   const handleSave = async () => {
     if (!formData.roomNumber || !formData.roomType || formData.floor === "") {
       setSnackbar({
         open: true,
-        message: "Please fill in all required fields",
+        message: "Please fill required fields",
         severity: "error",
       });
       return;
@@ -165,43 +169,34 @@ const RoomsPage = () => {
 
     try {
       setSaveLoading(true);
-
-      // Create FormData object
       const data = new FormData();
       data.append("roomNumber", formData.roomNumber);
       data.append("roomType", formData.roomType);
       data.append("floor", formData.floor.toString());
       data.append("status", formData.status);
 
-      // Only append image if a new file was selected
       if (selectedFile) {
         data.append("image", selectedFile);
       }
 
-      // NOTE: Ensure your roomService accepts FormData as the payload
       if (editingRoom) {
         await roomService.updateRoom(editingRoom._id, data);
-        setSnackbar({
-          open: true,
-          message: "Room updated successfully!",
-          severity: "success",
-        });
       } else {
         await roomService.createRoom(data);
-        setSnackbar({
-          open: true,
-          message: "Room created successfully!",
-          severity: "success",
-        });
       }
+
+      setSnackbar({
+        open: true,
+        message: editingRoom ? "Room updated!" : "Room created!",
+        severity: "success",
+      });
       setOpen(false);
       fetchData();
     } catch (error: any) {
-      console.error("Save failed", error);
       const msg =
         error.response?.status === 413
-          ? "Image too large."
-          : error.response?.data?.message || "Failed to save room";
+          ? "Image too large"
+          : "Failed to save room";
       setSnackbar({ open: true, message: msg, severity: "error" });
     } finally {
       setSaveLoading(false);
@@ -221,7 +216,7 @@ const RoomsPage = () => {
       } catch (error) {
         setSnackbar({
           open: true,
-          message: "Failed to delete room",
+          message: "Delete failed",
           severity: "error",
         });
       }
@@ -243,138 +238,257 @@ const RoomsPage = () => {
     }
   };
 
+  const getRoomTypeData = (room: IRoom): IRoomType | undefined => {
+    if (typeof room.roomType === "object" && room.roomType !== null) {
+      return room.roomType as IRoomType;
+    }
+    return roomTypes.find((t) => t._id === room.roomType);
+  };
+
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, pb: 4 }}>
-      {/* Header */}
-      <Box sx={{ display: "flex", justifyContent: "space-between", mb: 3 }}>
-        <Typography variant="h4" fontWeight="bold" color="white">
-          Rooms Management
-        </Typography>
+    <Container maxWidth="xl" sx={{ mt: 4, pb: 6 }}>
+      <Box
+        sx={{
+          display: "flex",
+          flexDirection: { xs: "column", sm: "row" },
+          justifyContent: "space-between",
+          alignItems: { xs: "flex-start", sm: "center" },
+          mb: 4,
+          gap: 2,
+        }}
+      >
+        <Box>
+          <Typography variant="h4" fontWeight="800" sx={{ mb: 1 }}>
+            Room Management
+          </Typography>
+          <Typography variant="body1" color="text.secondary">
+            Manage your hotel inventory, prices, and status.
+          </Typography>
+        </Box>
         <Button
           variant="contained"
           startIcon={<AddIcon />}
           onClick={() => handleOpen()}
-          sx={{ borderRadius: 2 }}
+          size="large"
+          sx={{
+            borderRadius: 3,
+            px: 3,
+            py: 1.5,
+            textTransform: "none",
+            fontSize: "1rem",
+            boxShadow: 4,
+            width: { xs: "100%", sm: "auto" },
+            whiteSpace: "nowrap",
+          }}
         >
           Add New Room
         </Button>
       </Box>
 
-      {/* Grid of Rooms */}
-      <Grid container spacing={3}>
-        {rooms.map((room) => (
-          <Grid
-            item
-            xs={12}
-            sm={6}
-            md={4}
-            key={room._id}
-            sx={{ display: "flex", justifyContent: "center" }}
-          >
+      <Box
+        sx={{
+          display: "flex",
+          flexWrap: "wrap",
+          gap: 3,
+          justifyContent: { xs: "center", sm: "flex-start" },
+        }}
+      >
+        {rooms.map((room) => {
+          const typeData = getRoomTypeData(room);
+          const imageUrl = getFullImageUrl(room.image);
+
+          return (
             <Card
+              key={room._id}
+              elevation={3}
               sx={{
-                width: "230px",
-                height: 380,
+                width: "250px",
                 display: "flex",
                 flexDirection: "column",
                 borderRadius: 4,
-                position: "relative",
+                transition: "transform 0.2s, box-shadow 0.2s",
+                "&:hover": {
+                  transform: "translateY(-4px)",
+                  boxShadow: 8,
+                },
               }}
             >
-              {room.image ? (
-                <CardMedia
-                  component="img"
-                  sx={{ height: 200, objectFit: "cover" }}
-                  image={room.image}
-                  alt={`Room ${room.roomNumber}`}
-                />
-              ) : (
+              <Box sx={{ position: "relative" }}>
+                {imageUrl ? (
+                  <CardMedia
+                    component="img"
+                    sx={{ height: 180, objectFit: "cover" }}
+                    image={imageUrl}
+                    alt={`Room ${room.roomNumber}`}
+                    onError={(e: any) => {
+                      e.target.src =
+                        "https://via.placeholder.com/250x180?text=Error";
+                    }}
+                  />
+                ) : (
+                  <Box
+                    sx={{
+                      height: 180,
+                      bgcolor: "grey.100",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexDirection: "column",
+                    }}
+                  >
+                    <NoImageIcon
+                      sx={{ fontSize: 60, color: "text.disabled", mb: 1 }}
+                    />
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      fontWeight="bold"
+                    >
+                      No Image
+                    </Typography>
+                  </Box>
+                )}
+
                 <Box
                   sx={{
-                    height: 200,
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    justifyContent: "center",
+                    position: "absolute",
+                    top: 12,
+                    right: 12,
+                    zIndex: 1,
                   }}
                 >
-                  <NoImageIcon sx={{ fontSize: 50, opacity: 0.3 }} />
-                  <Typography variant="caption" sx={{ opacity: 0.5, mt: 1 }}>
-                    No Image
+                  <Chip
+                    label={room.status}
+                    color={getStatusColor(room.status) as any}
+                    sx={{ fontWeight: "bold", backdropFilter: "blur(4px)" }}
+                  />
+                </Box>
+                <Box
+                  sx={{
+                    position: "absolute",
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    background:
+                      "linear-gradient(to top, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0) 100%)",
+                    p: 2,
+                    pt: 4,
+                  }}
+                >
+                  <Typography variant="h5" fontWeight="bold" color="white">
+                    {room.roomNumber}
                   </Typography>
                 </Box>
-              )}
+              </Box>
 
-              <CardContent
-                sx={{
-                  flexGrow: 1,
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "space-between",
-                }}
-              >
-                <Box>
-                  <Stack
-                    direction="row"
-                    justifyContent="space-between"
-                    alignItems="center"
-                    mb={1}
-                  >
-                    <Typography variant="h6" fontWeight="bold">
-                      Room {room.roomNumber}
+              <CardContent sx={{ flexGrow: 1, p: 2 }}>
+                <Stack
+                  direction="row"
+                  justifyContent="space-between"
+                  alignItems="start"
+                  mb={1}
+                >
+                  <Box>
+                    <Typography
+                      variant="subtitle1"
+                      fontWeight="bold"
+                      color="primary"
+                    >
+                      {typeData?.name || "Unknown Type"}
                     </Typography>
-                    <Chip
-                      label={room.status}
-                      color={getStatusColor(room.status) as any}
-                      size="small"
-                      sx={{ fontWeight: "bold" }}
-                    />
-                  </Stack>
-
-                  <Stack spacing={0.5} sx={{ opacity: 0.8 }}>
-                    <Typography variant="body2">Floor: {room.floor}</Typography>
-                    <Typography variant="body2" color="primary.light" noWrap>
-                      Type:{" "}
-                      {typeof room.roomType === "object"
-                        ? room.roomType?.name
-                        : "Standard"}
+                    <Stack
+                      direction="row"
+                      alignItems="center"
+                      spacing={0.5}
+                      sx={{ mt: 0.5 }}
+                    >
+                      <FloorIcon fontSize="small" color="action" />
+                      <Typography variant="body2" color="text.secondary">
+                        Floor {room.floor}
+                      </Typography>
+                    </Stack>
+                  </Box>
+                  <Box textAlign="right">
+                    <Typography
+                      variant="h6"
+                      fontWeight="bold"
+                      color="text.primary"
+                    >
+                      ${typeData?.basePrice || 0}
                     </Typography>
-                  </Stack>
-                </Box>
+                  </Box>
+                </Stack>
 
-                <Box
+                <Divider sx={{ my: 1 }} />
+
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
                   sx={{
-                    display: "flex",
-                    justifyContent: "flex-end",
-                    gap: 1,
-                    mt: 2,
+                    mb: 2,
+                    display: "-webkit-box",
+                    overflow: "hidden",
+                    WebkitBoxOrient: "vertical",
+                    WebkitLineClamp: 2,
+                    height: 40,
                   }}
                 >
-                  <IconButton
-                    size="small"
-                    sx={{
-                      bgcolor: "rgba(33, 150, 243, 0.1)",
-                      color: "#2196f3",
-                    }}
-                    onClick={() => handleOpen(room)}
-                  >
-                    <EditIcon fontSize="small" />
-                  </IconButton>
-                  <IconButton
-                    size="small"
-                    sx={{ bgcolor: "rgba(244, 67, 54, 0.1)", color: "#f44336" }}
-                    onClick={() => handleDelete(room._id)}
-                  >
-                    <DeleteIcon fontSize="small" />
-                  </IconButton>
-                </Box>
-              </CardContent>
-            </Card>
-          </Grid>
-        ))}
-      </Grid>
+                  {typeData?.description ||
+                    "No description available for this room type."}
+                </Typography>
 
-      {/* Add/Edit Dialog */}
+                <Stack
+                  direction="row"
+                  spacing={1}
+                  flexWrap="wrap"
+                  sx={{ gap: 1 }}
+                >
+                  {typeData?.features?.slice(0, 2).map((feature, idx) => (
+                    <Chip
+                      key={idx}
+                      icon={
+                        <FeatureIcon sx={{ fontSize: "14px !important" }} />
+                      }
+                      label={feature}
+                      size="small"
+                      variant="outlined"
+                      sx={{ borderRadius: 1, fontSize: "0.7rem" }}
+                    />
+                  ))}
+                  {(typeData?.features?.length || 0) > 2 && (
+                    <Chip
+                      label={`+${(typeData?.features?.length || 0) - 2}`}
+                      size="small"
+                      variant="outlined"
+                    />
+                  )}
+                </Stack>
+              </CardContent>
+
+              <Box sx={{ p: 2, pt: 0, display: "flex", gap: 1 }}>
+                <Button
+                  variant="contained"
+                  fullWidth
+                  startIcon={<EditIcon />}
+                  onClick={() => handleOpen(room)}
+                  sx={{ borderRadius: 2, textTransform: "none" }}
+                >
+                  Edit
+                </Button>
+                <Button
+                  variant="outlined"
+                  color="error"
+                  onClick={() => handleDelete(room._id)}
+                  sx={{ borderRadius: 2, minWidth: 50, px: 0 }}
+                >
+                  <DeleteIcon />
+                </Button>
+              </Box>
+            </Card>
+          );
+        })}
+      </Box>
+
       <Dialog
         open={open}
         onClose={() => setOpen(false)}
@@ -386,7 +500,6 @@ const RoomsPage = () => {
           <Stack spacing={2} sx={{ mt: 1 }}>
             <TextField
               label="Room Number"
-              placeholder="e.g. G-101"
               value={formData.roomNumber}
               fullWidth
               required
@@ -394,6 +507,7 @@ const RoomsPage = () => {
                 setFormData({ ...formData, roomNumber: e.target.value })
               }
             />
+
             <TextField
               select
               label="Room Type"
@@ -404,28 +518,24 @@ const RoomsPage = () => {
                 setFormData({ ...formData, roomType: e.target.value })
               }
             >
-              {roomTypes.length > 0 ? (
-                roomTypes.map((t) => (
-                  <MenuItem key={t._id} value={t._id}>
-                    {t.name}
-                  </MenuItem>
-                ))
-              ) : (
-                <MenuItem disabled>No Room Types Available</MenuItem>
-              )}
+              {roomTypes.map((t) => (
+                <MenuItem key={t._id} value={t._id}>
+                  {t.name}
+                </MenuItem>
+              ))}
             </TextField>
+
             <TextField
               label="Floor"
               type="number"
-              placeholder="0"
               value={formData.floor}
               fullWidth
               required
-              inputProps={{ min: -5, max: 500 }}
               onChange={(e) =>
                 setFormData({ ...formData, floor: e.target.value })
               }
             />
+
             <TextField
               select
               label="Status"
@@ -445,7 +555,6 @@ const RoomsPage = () => {
               ))}
             </TextField>
 
-            {/* Image Upload Area */}
             <Box
               sx={{
                 border: "1px dashed grey",
@@ -459,9 +568,8 @@ const RoomsPage = () => {
                 variant="outlined"
                 startIcon={<UploadIcon />}
                 size="small"
-                disabled={loading}
               >
-                {loading ? "Processing..." : "Upload Image"}
+                Upload Image
                 <input
                   type="file"
                   hidden
@@ -470,24 +578,19 @@ const RoomsPage = () => {
                 />
               </Button>
 
-              {/* No loading needed for basic file select, but kept state just in case */}
-              {loading && (
-                <CircularProgress
-                  size={24}
-                  sx={{ display: "block", mx: "auto", mt: 2 }}
-                />
-              )}
-
-              {!loading && formData.image ? (
-                <Box sx={{ mt: 2, position: "relative" }}>
+              {formData.image && (
+                <Box sx={{ mt: 2 }}>
                   <img
-                    src={formData.image}
+                    src={getFullImageUrl(formData.image)}
                     alt="Preview"
                     style={{
                       width: "100%",
                       maxHeight: 150,
                       objectFit: "contain",
                       borderRadius: 4,
+                    }}
+                    onError={(e: any) => {
+                      e.target.style.display = "none";
                     }}
                   />
                   <Button
@@ -499,19 +602,9 @@ const RoomsPage = () => {
                     }}
                     sx={{ mt: 1 }}
                   >
-                    Remove Image
+                    Remove
                   </Button>
                 </Box>
-              ) : (
-                !loading && (
-                  <Typography
-                    variant="caption"
-                    display="block"
-                    sx={{ mt: 1, opacity: 0.7 }}
-                  >
-                    No image selected
-                  </Typography>
-                )
               )}
             </Box>
           </Stack>
@@ -521,27 +614,25 @@ const RoomsPage = () => {
           <Button
             variant="contained"
             onClick={handleSave}
-            disabled={loading || saveLoading}
+            disabled={saveLoading}
           >
-            {saveLoading
-              ? "Saving..."
-              : editingRoom
-                ? "Update Room"
-                : "Create Room"}
+            {saveLoading ? (
+              <CircularProgress size={24} />
+            ) : editingRoom ? (
+              "Update"
+            ) : (
+              "Create"
+            )}
           </Button>
         </DialogActions>
       </Dialog>
-
-      {/* Snackbar for Notifications */}
       <Snackbar
         open={snackbar.open}
         autoHideDuration={4000}
         onClose={() => setSnackbar({ ...snackbar, open: false })}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
       >
-        <Alert
-          severity={snackbar.severity}
-          onClose={() => setSnackbar({ ...snackbar, open: false })}
-        >
+        <Alert severity={snackbar.severity} variant="filled">
           {snackbar.message}
         </Alert>
       </Snackbar>
