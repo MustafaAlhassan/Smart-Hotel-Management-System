@@ -21,7 +21,6 @@ import MeetingRoomIcon from "@mui/icons-material/MeetingRoom";
 import CategoryIcon from "@mui/icons-material/Category";
 import React, { useState } from "react";
 
-// Start Ibrhaim Work
 interface SidebarProps {
   sidebarWidth: number;
   noneORblock: string;
@@ -29,7 +28,6 @@ interface SidebarProps {
   setDrawerType: React.Dispatch<React.SetStateAction<string>>;
   setnoneORblock: React.Dispatch<React.SetStateAction<string>>;
 }
-// End Ibrhaim Work
 
 const Sidebar = ({
   sidebarWidth,
@@ -38,8 +36,9 @@ const Sidebar = ({
   setDrawerType,
   setnoneORblock,
 }: SidebarProps) => {
-  // Start Mustafa Work
   const navigate = useNavigate();
+  const theme = useTheme();
+  const currentLocation = useLocation();
 
   const handleLogout = () => {
     localStorage.removeItem("role");
@@ -47,14 +46,8 @@ const Sidebar = ({
     localStorage.removeItem("username");
     navigate("/login");
   };
-  // End Mustafa Work
 
-  // Start Ibrahim Work
-  const theme = useTheme();
-  const currentLocation = useLocation();
-
-  // State to manage the collapse of Rooms Management
-  const [roomsOpen, setRoomsOpen] = useState(true);
+  const [roomsOpen, setRoomsOpen] = useState(false);
 
   const myList = [
     { text: "Dahsboard", icon: <DashboardIcon />, path: "/dashboard" },
@@ -67,7 +60,6 @@ const Sidebar = ({
     { text: "Reservations", icon: <BookOnlineIcon />, path: "/reservations" },
     { text: "Settings", icon: <SettingsIcon />, path: "/settings" },
   ];
-  // End Ibrahim Work
 
   return (
     <>
@@ -102,7 +94,6 @@ const Sidebar = ({
         </Box>
         <Divider />
         <List sx={{ mt: "30px" }}>
-          {/* Main Navigation Items */}
           {myList.map((item) => (
             <ListItem
               key={item.text}
@@ -121,7 +112,6 @@ const Sidebar = ({
             </ListItem>
           ))}
 
-          {/* Rooms Management Section */}
           <ListItem disablePadding>
             <ListItemButton onClick={() => setRoomsOpen(!roomsOpen)}>
               <ListItemIcon>
@@ -132,7 +122,6 @@ const Sidebar = ({
             </ListItemButton>
           </ListItem>
 
-          {/* Sub-menu Items */}
           <Collapse in={roomsOpen} timeout="auto" unmountOnExit>
             <List component="div" disablePadding>
               <ListItemButton
@@ -140,7 +129,7 @@ const Sidebar = ({
                   pl: 4,
                   bgcolor:
                     currentLocation.pathname === "/rooms"
-                      ? "rgba(0, 0, 0, 0.08)"
+                      ? "rgba(255, 255, 255, 0.08)"
                       : null,
                 }}
                 onClick={() => navigate("/rooms")}
@@ -156,7 +145,7 @@ const Sidebar = ({
                   pl: 4,
                   bgcolor:
                     currentLocation.pathname === "/room-types"
-                      ? "rgba(0, 0, 0, 0.08)"
+                      ? "rgba(255, 255, 255, 0.08)"
                       : null,
                 }}
                 onClick={() => navigate("/room-types")}
@@ -169,7 +158,6 @@ const Sidebar = ({
             </List>
           </Collapse>
 
-          {/* Bottom Navigation Items */}
           {bottomList.map((item) => (
             <ListItem
               key={item.text}
@@ -188,7 +176,6 @@ const Sidebar = ({
             </ListItem>
           ))}
 
-          {/* Logout Button */}
           <ListItem disablePadding>
             <ListItemButton onClick={handleLogout}>
               <ListItemIcon>
