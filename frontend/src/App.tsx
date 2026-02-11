@@ -20,7 +20,7 @@ import {
 import getDesignTokens from "./theme/MyTheme";
 import RoomsPage from "./pages/RoomsManagement/Rooms";
 import RoomTypesPage from "./pages/RoomsManagement/RoomType";
-const sidebarWidth = 240;
+const sidebarWidth = 270;
 
 function App() {
   // Start Theme

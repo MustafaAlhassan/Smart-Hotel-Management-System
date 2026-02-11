@@ -11,22 +11,28 @@ export const handleChatMessage = async (req: Request, res: Response) => {
     const apiKey = process.env.GEMINI_API_KEY;
 
     if (!apiKey) {
-      return res.status(500).json({ response: "Server Error: API Key missing" });
+      return res
+        .status(500)
+        .json({ response: "Server Error: API Key missing" });
     }
 
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
 
-    const availableRooms = await RoomModel.find({ status: "Available" })
-      .populate("roomType");
+    const availableRooms = await RoomModel.find({
+      status: "Available",
+    }).populate("roomType");
 
-    const roomsContext = availableRooms.length > 0 
-      ? availableRooms.map((r) => {
-          const details = r.roomType as any; 
-          
-          return `- Room ${r.roomNumber} (${details.name}): Price $${details.basePrice}, Capacity: ${details.capacity} people, Amenities: ${details.amenities?.join(", ")}`;
-        }).join("\n")
-      : "No rooms currently available.";
+    const roomsContext =
+      availableRooms.length > 0
+        ? availableRooms
+            .map((r) => {
+              const details = r.roomType as any;
+
+              return `- Room ${r.roomNumber} (${details.name}): Price $${details.basePrice}, Capacity: ${details.capacity} people, Amenities: ${details.amenities?.join(", ")}`;
+            })
+            .join("\n")
+        : "No rooms currently available.";
 
     const hotelInfo = `
       - Hotel Name: Grand Hotel
@@ -57,13 +63,14 @@ export const handleChatMessage = async (req: Request, res: Response) => {
     const result = await model.generateContent(prompt);
     const response = await result.response;
     const text = response.text();
-    
+
     console.log("🤖 AI Reply:", text);
 
     res.status(200).json({ response: text });
-
   } catch (error) {
     console.error("❌ AI Error:", error);
-    res.status(500).json({ response: "I'm having trouble accessing the system right now." });
+    res
+      .status(500)
+      .json({ response: "I'm having trouble accessing the system right now." });
   }
 };

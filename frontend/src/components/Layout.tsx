@@ -3,7 +3,7 @@ import Navbar from "./Navbar";
 import Sidebar from "./Sidebar";
 import { Box, type PaletteMode } from "@mui/material";
 import { useState } from "react";
-
+import { Chatbot } from "./Chatbot";
 interface LayoutProps {
   setMyMode: React.Dispatch<React.SetStateAction<PaletteMode>>;
   sidebarWidth: number;
@@ -46,6 +46,7 @@ export const Layout = ({ setMyMode, sidebarWidth }: LayoutProps) => {
       >
         <Outlet />
       </Box>
+      <Chatbot />
     </>
   );
 };
