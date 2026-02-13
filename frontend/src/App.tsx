@@ -3,7 +3,6 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import HomePage from "./pages/HomePage";
 import LoginPage from "./pages/LoginPage/LoginPage";
 import DashboardPage from "./pages/DashboardPage";
-import StatisPage from "./pages/StatisPage";
 import BillPage from "./pages/BillPage";
 import ReservationsPage from "./pages/ReservationsPage";
 import UsersPage from "./pages/UsersPage";
@@ -53,7 +52,6 @@ function App() {
               }
             >
               <Route path="/dashboard" element={<DashboardPage />} />
-              <Route path="/statistics" element={<StatisPage />} />
               <Route path="/billing" element={<BillPage />} />
               <Route path="/users" element={<UsersPage />} />
               <Route path="/reservations" element={<ReservationsPage />} />

@@ -1,23 +1,25 @@
-export enum RoomStatus {
-  AVAILABLE = "Available",
-  OCCUPIED = "Occupied",
-  MAINTENANCE = "Maintenance",
-}
-
-export interface IRoom {
-  _id: string;
-  roomNumber: string;
-  roomType: string | IRoomType; // Can be ID or populated object
-  floor: number;
-  status: RoomStatus;
-  image?: string;
-}
-
-export interface IRoomType {
-  _id: string;
-  name: string;
-  basePrice: number;
-  capacity: number;
-  amenities: string[];
-  description?: string;
+export interface DashboardData {
+  rooms: {
+    total: number;
+    occupied: number;
+    available: number;
+    maintenance?: number;
+  };
+  guests: {
+    total: number;
+  };
+  todayActivity: {
+    checkIns: number;
+    checkOuts: number;
+    pendingArrivals?: number;
+  };
+  financials: {
+    monthlyRevenue: number;
+  };
+  recentBookings?: {
+    id: string;
+    guest: string;
+    room: string;
+    status: "Confirmed" | "Checked In" | "Pending";
+  }[];
 }

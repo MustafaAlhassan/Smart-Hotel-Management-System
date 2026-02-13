@@ -51,7 +51,6 @@ const Sidebar = ({
 
   const myList = [
     { text: "Dahsboard", icon: <DashboardIcon />, path: "/dashboard" },
-    { text: "Statistics", icon: <AssessmentIcon />, path: "/statistics" },
   ];
 
   const bottomList = [
