@@ -157,7 +157,7 @@ export const Chatbot = () => {
                   align="center"
                   fontWeight="medium"
                 >
-                  Welcome to Grand Hotel!
+                  Welcome to AMI hotel system!
                 </Typography>
                 <Typography variant="body2" color="#B0C4DE" align="center">
                   Ask me about room availability, prices, or amenities.
