@@ -28,6 +28,7 @@ import {
   ImageNotSupported as NoImageIcon,
   CheckCircle as FeatureIcon,
   Stairs as FloorIcon,
+  Warning as WarningIcon, // Added for the delete dialog
 } from "@mui/icons-material";
 import { roomService } from "../../services/roomService";
 import { roomTypeService } from "../../services/roomTypeService";
@@ -65,6 +66,11 @@ const RoomsPage = () => {
   const [saveLoading, setSaveLoading] = useState(false);
   const [editingRoom, setEditingRoom] = useState<IRoom | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+
+  // --- NEW STATE FOR DELETE CONFIRMATION ---
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [roomToDelete, setRoomToDelete] = useState<string | null>(null);
+
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: "",
@@ -203,23 +209,33 @@ const RoomsPage = () => {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (window.confirm("Are you sure you want to delete this room?")) {
-      try {
-        await roomService.deleteRoom(id);
-        setSnackbar({
-          open: true,
-          message: "Room deleted",
-          severity: "success",
-        });
-        fetchData();
-      } catch (error) {
-        setSnackbar({
-          open: true,
-          message: "Delete failed",
-          severity: "error",
-        });
-      }
+  // --- STEP 1: OPEN THE CONFIRMATION DIALOG ---
+  const handleDeleteClick = (id: string) => {
+    setRoomToDelete(id);
+    setDeleteConfirmOpen(true);
+  };
+
+  // --- STEP 2: EXECUTE DELETE (Called by Dialog) ---
+  const handleConfirmDelete = async () => {
+    if (!roomToDelete) return;
+
+    try {
+      await roomService.deleteRoom(roomToDelete);
+      setSnackbar({
+        open: true,
+        message: "Room deleted successfully",
+        severity: "success",
+      });
+      fetchData();
+    } catch (error) {
+      setSnackbar({
+        open: true,
+        message: "Delete failed",
+        severity: "error",
+      });
+    } finally {
+      setDeleteConfirmOpen(false);
+      setRoomToDelete(null);
     }
   };
 
@@ -478,7 +494,8 @@ const RoomsPage = () => {
                 <Button
                   variant="outlined"
                   color="error"
-                  onClick={() => handleDelete(room._id)}
+                  // Updated: Now calls handleDeleteClick instead of direct delete
+                  onClick={() => handleDeleteClick(room._id)}
                   sx={{ borderRadius: 2, minWidth: 50, px: 0 }}
                 >
                   <DeleteIcon />
@@ -489,6 +506,7 @@ const RoomsPage = () => {
         })}
       </Box>
 
+      {/* EDIT / CREATE DIALOG */}
       <Dialog
         open={open}
         onClose={() => setOpen(false)}
@@ -626,6 +644,36 @@ const RoomsPage = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* NEW DELETE CONFIRMATION DIALOG */}
+      <Dialog
+        open={deleteConfirmOpen}
+        onClose={() => setDeleteConfirmOpen(false)}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <WarningIcon color="error" /> Confirm Delete
+        </DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to delete this room? This action cannot be
+            undone.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteConfirmOpen(false)}>Cancel</Button>
+          <Button
+            onClick={handleConfirmDelete}
+            color="error"
+            variant="contained"
+            autoFocus
+          >
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       <Snackbar
         open={snackbar.open}
         autoHideDuration={4000}
