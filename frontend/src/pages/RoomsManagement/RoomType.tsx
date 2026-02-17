@@ -18,14 +18,23 @@ import {
   TextField,
   Box,
   Alert,
-  Snackbar,
   Chip,
   Stack,
+  Snackbar,
+  Card,
+  CardContent,
+  CardActions,
+  useTheme,
+  useMediaQuery,
+  Grid,
+  Divider,
 } from "@mui/material";
 import {
   Add as AddIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
+  People as PeopleIcon,
+  AttachMoney as MoneyIcon,
 } from "@mui/icons-material";
 import { roomTypeService } from "../../services/roomTypeService";
 import type { IRoomType } from "../../types/types";
@@ -54,6 +63,11 @@ const RoomTypesPage = () => {
     description: "",
     featuresInput: "",
   });
+
+  // RESPONSIVE HOOKS
+  const theme = useTheme();
+  // Returns true if screen width is less than 900px (tablet/mobile)
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
   const fetchData = async () => {
     try {
@@ -105,6 +119,14 @@ const RoomTypesPage = () => {
   const handleCloseDialog = () => {
     setOpenDialog(false);
     setEditingItem(null);
+  };
+
+  const handleCloseSnackbar = (
+    event?: React.SyntheticEvent | Event,
+    reason?: string,
+  ) => {
+    if (reason === "clickaway") return;
+    setSnackbar({ ...snackbar, open: false });
   };
 
   const handleSubmit = async () => {
@@ -170,7 +192,17 @@ const RoomTypesPage = () => {
 
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      <Box sx={{ display: "flex", justifyContent: "space-between", mb: 3 }}>
+      {/* 1. RESPONSIVE HEADER: Stacks vertically on mobile */}
+      <Box
+        sx={{
+          display: "flex",
+          flexDirection: isMobile ? "column" : "row",
+          justifyContent: "space-between",
+          alignItems: isMobile ? "flex-start" : "center",
+          gap: 2,
+          mb: 3,
+        }}
+      >
         <Typography variant="h4" component="h1">
           Room Types
         </Typography>
@@ -178,6 +210,7 @@ const RoomTypesPage = () => {
           variant="contained"
           startIcon={<AddIcon />}
           onClick={() => handleOpenDialog()}
+          fullWidth={isMobile} // Button takes full width on mobile
         >
           Add New Type
         </Button>
@@ -189,65 +222,160 @@ const RoomTypesPage = () => {
         </Alert>
       )}
 
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Name</TableCell>
-              <TableCell>Price ($)</TableCell>
-              <TableCell>Capacity</TableCell>
-              <TableCell>Features</TableCell>
-              <TableCell>Description</TableCell>
-              <TableCell align="right">Actions</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {roomTypes.map((type) => (
-              <TableRow key={type._id}>
-                <TableCell sx={{ fontWeight: "bold" }}>{type.name}</TableCell>
-                <TableCell>${type.basePrice}</TableCell>
-                <TableCell>{type.capacity} Persons</TableCell>
-                <TableCell>
-                  <Stack direction="row" spacing={0.5} flexWrap="wrap">
-                    {type.amenities.map((feature, index) => (
-                      <Chip
-                        key={index}
-                        label={feature}
-                        size="small"
-                        variant="outlined"
-                      />
-                    ))}
-                  </Stack>
-                </TableCell>
-                <TableCell>{type.description || "-"}</TableCell>
-                <TableCell align="right">
-                  <IconButton
-                    color="primary"
-                    onClick={() => handleOpenDialog(type)}
-                  >
-                    <EditIcon />
-                  </IconButton>
-                  <IconButton
-                    color="error"
-                    onClick={() => {
-                      setIdToDelete(type._id);
-                      setDeleteConfirmOpen(true);
-                    }}
-                  >
-                    <DeleteIcon />
-                  </IconButton>
-                </TableCell>
+      {/* 2. RESPONSIVE DATA DISPLAY: Switch between Table (Desktop) and Cards (Mobile) */}
+      {!isMobile ? (
+        // --- DESKTOP TABLE VIEW ---
+        <TableContainer component={Paper}>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>Name</TableCell>
+                <TableCell>Price ($)</TableCell>
+                <TableCell>Capacity</TableCell>
+                <TableCell>Features</TableCell>
+                <TableCell>Description</TableCell>
+                <TableCell align="right">Actions</TableCell>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
+            </TableHead>
+            <TableBody>
+              {roomTypes.map((type) => (
+                <TableRow key={type._id}>
+                  <TableCell sx={{ fontWeight: "bold" }}>{type.name}</TableCell>
+                  <TableCell>${type.basePrice}</TableCell>
+                  <TableCell>{type.capacity} Persons</TableCell>
+                  <TableCell>
+                    <Stack direction="row" spacing={0.5} flexWrap="wrap">
+                      {type.amenities.map((feature, index) => (
+                        <Chip
+                          key={index}
+                          label={feature}
+                          size="small"
+                          variant="outlined"
+                          sx={{ mb: 0.5 }}
+                        />
+                      ))}
+                    </Stack>
+                  </TableCell>
+                  <TableCell sx={{ maxWidth: 200 }}>
+                    <Typography noWrap variant="body2">
+                      {type.description || "-"}
+                    </Typography>
+                  </TableCell>
+                  <TableCell align="right">
+                    <Stack direction="row" justifyContent="flex-end">
+                      <IconButton
+                        color="primary"
+                        onClick={() => handleOpenDialog(type)}
+                      >
+                        <EditIcon />
+                      </IconButton>
+                      <IconButton
+                        color="error"
+                        onClick={() => {
+                          setIdToDelete(type._id);
+                          setDeleteConfirmOpen(true);
+                        }}
+                      >
+                        <DeleteIcon />
+                      </IconButton>
+                    </Stack>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      ) : (
+        // --- MOBILE CARD VIEW ---
+        <Stack spacing={2}>
+          {roomTypes.map((type) => (
+            <Card key={type._id} elevation={2}>
+              <CardContent>
+                <Box
+                  display="flex"
+                  justifyContent="space-between"
+                  alignItems="center"
+                  mb={1}
+                >
+                  <Typography variant="h6" component="div">
+                    {type.name}
+                  </Typography>
+                  <Chip
+                    icon={<MoneyIcon />}
+                    label={`$${type.basePrice}`}
+                    color="primary"
+                    size="small"
+                  />
+                </Box>
 
+                <Stack direction="row" alignItems="center" gap={1} mb={2}>
+                  <PeopleIcon fontSize="small" color="action" />
+                  <Typography variant="body2" color="text.secondary">
+                    Capacity: {type.capacity} Persons
+                  </Typography>
+                </Stack>
+
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  paragraph
+                  sx={{
+                    display: "-webkit-box",
+                    overflow: "hidden",
+                    WebkitBoxOrient: "vertical",
+                    WebkitLineClamp: 2, // Limit description to 2 lines
+                  }}
+                >
+                  {type.description || "No description provided."}
+                </Typography>
+
+                <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
+                  {type.amenities.map((feature, index) => (
+                    <Chip
+                      key={index}
+                      label={feature}
+                      size="small"
+                      variant="outlined"
+                    />
+                  ))}
+                </Box>
+              </CardContent>
+              <Divider />
+              <CardActions sx={{ justifyContent: "flex-end" }}>
+                <Button
+                  size="small"
+                  startIcon={<EditIcon />}
+                  onClick={() => handleOpenDialog(type)}
+                >
+                  Edit
+                </Button>
+                <Button
+                  size="small"
+                  color="error"
+                  startIcon={<DeleteIcon />}
+                  onClick={() => {
+                    setIdToDelete(type._id);
+                    setDeleteConfirmOpen(true);
+                  }}
+                >
+                  Delete
+                </Button>
+              </CardActions>
+            </Card>
+          ))}
+        </Stack>
+      )}
+
+      {/* Dialog */}
       <Dialog
         open={openDialog}
         onClose={handleCloseDialog}
         fullWidth
         maxWidth="sm"
+        // Ensure dialog fits on small mobile screens
+        PaperProps={{
+          sx: { m: 2, width: "100%" },
+        }}
       >
         <DialogTitle>
           {editingItem ? "Edit Room Type" : "Add Room Type"}
@@ -263,7 +391,14 @@ const RoomTypesPage = () => {
               fullWidth
               required
             />
-            <Box sx={{ display: "flex", gap: 2 }}>
+            {/* 3. RESPONSIVE FORM: Stacks inputs vertically on mobile */}
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: isMobile ? "column" : "row", // Stack on mobile
+                gap: 2,
+              }}
+            >
               <TextField
                 label="Base Price"
                 type="number"
@@ -316,7 +451,42 @@ const RoomTypesPage = () => {
         </DialogActions>
       </Dialog>
 
-      {/* ... (Keep Delete Dialog and Snackbar as they were) ... */}
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={deleteConfirmOpen}
+        onClose={() => setDeleteConfirmOpen(false)}
+      >
+        <DialogTitle>Confirm Delete</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to delete this room type? This action cannot
+            be undone.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteConfirmOpen(false)}>Cancel</Button>
+          <Button onClick={handleDelete} color="error" variant="contained">
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Snackbar */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={4000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
+      >
+        <Alert
+          onClose={handleCloseSnackbar}
+          severity={snackbar.severity}
+          variant="filled"
+          sx={{ width: "100%", boxShadow: 3 }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Container>
   );
 };

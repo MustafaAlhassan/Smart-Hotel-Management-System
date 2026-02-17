@@ -26,7 +26,6 @@ import {
   Hotel,
   TrendingUp,
   BookOnline,
-  FlashOn,
 } from "@mui/icons-material";
 
 import {
@@ -227,8 +226,8 @@ const DashboardPage = () => {
         container
         spacing={3}
         mb={4}
-        justifyContent="center" // لتوسيط الشبكة بالكامل في الشاشة
-        alignItems="stretch" // لضمان تساوي الارتفاع تلقائياً
+        justifyContent="center"
+        alignItems="stretch"
       >
         {/* 1. Quick Actions */}
         <Grid item xs={12} md={4}>
