@@ -97,13 +97,7 @@ const ReservationPage = () => {
   const getRoomPrice = (room: any) => {
     if (!room) return 0;
     // Check ALL possible field names for price
-    const price =
-      room.price ||
-      room.basePrice ||
-      room.cost ||
-      room.rate ||
-      room.amount ||
-      0;
+    const price = room.basePrice || 0;
     return Number(price);
   };
 
