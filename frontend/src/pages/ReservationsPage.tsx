@@ -10,36 +10,23 @@ import {
   TextField,
   Grid,
   MenuItem,
-  Divider,
-  Card,
-  CardContent,
-  Container,
   CircularProgress,
   Alert,
   Stack,
-  useTheme,
 } from "@mui/material";
-import {
-  Person,
-  EventAvailable,
-  CheckCircleOutline,
-  AttachMoney,
-  Bed,
-  CalendarMonth,
-} from "@mui/icons-material";
+import { CheckCircleOutline } from "@mui/icons-material";
 import api from "../services/api";
 
-const steps = ["Guest Information", "Booking Details"];
+const steps = ["Email Verification", "Guest Information", "Booking Details"];
 
 const ReservationPage = () => {
-  const theme = useTheme();
-
-  // --- 1. State ---
   const [activeStep, setActiveStep] = useState(0);
   const [loading, setLoading] = useState(false);
   const [roomsLoading, setRoomsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [availableRooms, setAvailableRooms] = useState<any[]>([]);
+  const [guestExists, setGuestExists] = useState(false);
+  const [guestId, setGuestId] = useState<string | null>(null);
 
   const [guestData, setGuestData] = useState({
     firstName: "",
@@ -58,72 +45,67 @@ const ReservationPage = () => {
     notes: "",
   });
 
-  // --- 2. Fetch Data ---
   useEffect(() => {
     const fetchRooms = async () => {
       try {
         const response = await api.get("/rooms");
-        // Handle various API structures safely
         const rooms = Array.isArray(response.data)
           ? response.data
           : response.data.data || [];
-        const available = rooms.filter(
-          (r: any) =>
-            // Check strictly for available status (case insensitive)
-            String(r.status).toLowerCase() === "available",
+
+        const filtered = rooms.filter(
+          (r: any) => String(r.status).toLowerCase() === "available",
         );
-        console.log("Loaded Rooms:", available); // For debugging
-        setAvailableRooms(available);
-      } catch (err) {
-        console.error("Fetch error:", err);
-        setError("Network error: Could not load rooms.");
+
+        setAvailableRooms(filtered);
+      } catch {
+        setError("Failed to load rooms.");
       } finally {
         setRoomsLoading(false);
       }
     };
+
     fetchRooms();
   }, []);
 
-  // --- 3. Smart Logic ---
-
-  // A. Find the Room
   const selectedRoomObj = useMemo(() => {
     return availableRooms.find(
       (r) => String(r._id) === String(bookingData.room),
     );
   }, [bookingData.room, availableRooms]);
 
-  // B. HELPER: Extract Price (The Fix for 0 Price)
-  const getRoomPrice = (room: any) => {
-    if (!room) return 0;
-    // Check ALL possible field names for price
-    const price = room.basePrice || 0;
-    return Number(price);
-  };
+  const pricePerNight =
+    selectedRoomObj?.basePrice ||
+    selectedRoomObj?.type?.basePrice ||
+    selectedRoomObj?.roomType?.basePrice ||
+    0;
 
-  const roomPricePerNight = useMemo(
-    () => getRoomPrice(selectedRoomObj),
-    [selectedRoomObj],
-  );
-
-  // C. Calculate Nights
   const nights = useMemo(() => {
     if (!bookingData.checkInDate || !bookingData.checkOutDate) return 0;
     const start = new Date(bookingData.checkInDate);
     const end = new Date(bookingData.checkOutDate);
-    const diffTime = end.getTime() - start.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays > 0 ? diffDays : 0;
+    const diff = Math.ceil(
+      (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24),
+    );
+    return diff > 0 ? diff : 0;
   }, [bookingData.checkInDate, bookingData.checkOutDate]);
 
-  // D. Total Price
-  const totalPrice = nights * roomPricePerNight;
+  const basePrice = nights * pricePerNight;
 
-  // --- 4. Handlers ---
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    if (activeStep === 0) {
-      setGuestData((prev) => ({ ...prev, [name]: value }));
+
+    if (error) setError(null);
+
+    const cleanedValue =
+      name === "email"
+        ? value.trim().toLowerCase()
+        : name === "idNumber"
+          ? value.trim().toUpperCase()
+          : value;
+
+    if (activeStep === 0 || activeStep === 1) {
+      setGuestData((prev) => ({ ...prev, [name]: cleanedValue }));
     } else {
       setBookingData((prev) => ({
         ...prev,
@@ -133,366 +115,333 @@ const ReservationPage = () => {
     }
   };
 
-  const handleNext = () => {
-    if (activeStep === 0) {
-      if (
-        !guestData.firstName ||
-        !guestData.lastName ||
-        !guestData.phoneNumber
-      ) {
-        setError("Please fill in First Name, Last Name, and Phone.");
+  const checkGuest = async () => {
+    if (!guestData.email && !guestData.idNumber) {
+      setError("Please enter Email or Passport ID.");
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      let foundGuest = null;
+
+      // 🔎 Search by Email
+      if (guestData.email) {
+        try {
+          const res = await api.get(`/guests/email/${guestData.email}`);
+          foundGuest = res.data?.data || res.data;
+        } catch (err: any) {
+          if (err.response?.status !== 404) throw err;
+        }
+      }
+
+      // 🔎 If not found, search by Passport ID
+      if (!foundGuest && guestData.idNumber) {
+        try {
+          const res = await api.get(`/guests/id/${guestData.idNumber}`);
+          foundGuest = res.data?.data || res.data;
+        } catch (err: any) {
+          if (err.response?.status !== 404) throw err;
+        }
+      }
+
+      if (foundGuest) {
+        handleGuestFound(foundGuest);
         return;
       }
-    }
-    setError(null);
-    setActiveStep((prev) => prev + 1);
-  };
 
-  const handleBack = () => {
-    setError(null);
-    setActiveStep((prev) => prev - 1);
-  };
-
-  const handleFinalSubmit = async () => {
-    setLoading(true);
-    try {
-      const guestRes = await api.post("/guests", guestData);
-      const guestId = guestRes.data.data?._id || guestRes.data._id;
-
-      await api.post("/bookings", {
-        ...bookingData,
-        guest: guestId,
-        totalPrice: totalPrice,
-      });
-
-      setActiveStep(2);
-    } catch (err: any) {
-      setError(err.response?.data?.message || "Booking failed.");
+      // ❌ Not Found → go to Guest Info step
+      setGuestExists(false);
+      setGuestId(null);
+      setActiveStep(1);
+    } catch (err) {
+      console.error("Verification error:", err);
+      setError("Error verifying guest. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
-  // --- 5. Layout & Render ---
+  const handleGuestFound = (data: any) => {
+    const guest = data.data || data;
+
+    setGuestExists(true);
+    setGuestId(guest._id);
+
+    setGuestData({
+      firstName: guest.firstName || "",
+      lastName: guest.lastName || "",
+      email: guest.email || "",
+      phoneNumber: guest.phoneNumber || "",
+      idNumber: guest.idNumber || "",
+    });
+
+    // ✅ Skip Guest Info → go directly to Reservation step
+    setActiveStep(2);
+  };
+
+  const handleFinalSubmit = async () => {
+    if (!bookingData.room) {
+      setError("Please select a room.");
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      let finalGuestId = guestId;
+
+      if (!guestExists) {
+        const guestRes = await api.post("/guests", guestData);
+        finalGuestId = guestRes.data.data?._id || guestRes.data._id;
+      }
+
+      if (!finalGuestId) {
+        throw new Error(
+          "Failed to generate Guest ID. Please check guest information.",
+        );
+      }
+
+      await api.post("/bookings", {
+        ...bookingData,
+        guest: finalGuestId,
+        basePrice,
+      });
+
+      setActiveStep(3);
+    } catch (err: any) {
+      console.error("Booking Error:", err);
+      // 4. Show the REAL error message from the backend
+      const errorMessage =
+        err.response?.data?.message || err.message || "Booking failed.";
+      setError(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
-    <Container maxWidth="xl" sx={{ py: 4 }}>
-      <Typography variant="h4" fontWeight="800" textAlign="center" mb={5}>
+    <Box sx={{ width: "100%", px: { xs: 3, md: 8 }, py: 6 }}>
+      <Typography variant="h4" fontWeight="bold" textAlign="center" mb={6}>
         New Reservation
       </Typography>
 
-      {/* SUCCESS SCREEN */}
-      {activeStep === 2 ? (
+      {activeStep === 3 ? (
         <Paper
-          sx={{
-            p: 6,
-            textAlign: "center",
-            borderRadius: 4,
-            maxWidth: 600,
-            mx: "auto",
-          }}
+          sx={{ p: 8, borderRadius: 3, textAlign: "center", minHeight: 400 }}
         >
-          <CheckCircleOutline color="success" sx={{ fontSize: 80, mb: 2 }} />
-          <Typography variant="h4" fontWeight="bold">
-            Success!
+          <CheckCircleOutline color="success" sx={{ fontSize: 90, mb: 3 }} />
+          <Typography variant="h5" fontWeight="bold">
+            Booking Successful
           </Typography>
-          <Typography color="text.secondary" paragraph>
-            Booking created for {guestData.firstName}.
-          </Typography>
-          <Button variant="contained" onClick={() => window.location.reload()}>
-            New Booking
-          </Button>
         </Paper>
       ) : (
-        <Grid container spacing={4}>
-          {/* ======================= */}
-          {/* LEFT: FORM AREA */}
-          {/* ======================= */}
-          <Grid item xs={12}>
-            <Paper elevation={3} sx={{ p: 4, borderRadius: 3 }}>
-              <Stepper activeStep={activeStep} sx={{ mb: 4 }}>
-                {steps.map((label) => (
-                  <Step key={label}>
-                    <StepLabel>{label}</StepLabel>
-                  </Step>
+        <>
+          <Paper sx={{ p: 6, borderRadius: 3, mb: 5, minHeight: 450 }}>
+            <Stepper activeStep={activeStep} sx={{ mb: 6 }}>
+              {steps.map((label) => (
+                <Step key={label}>
+                  <StepLabel>{label}</StepLabel>
+                </Step>
+              ))}
+            </Stepper>
+
+            {error && (
+              <Alert severity="error" sx={{ mb: 4 }}>
+                {error}
+              </Alert>
+            )}
+
+            {activeStep === 0 && (
+              <TextField
+                fullWidth
+                size="medium"
+                sx={{ "& .MuiInputBase-root": { height: 56 } }}
+                label="Email Address"
+                name="email"
+                value={guestData.email}
+                onChange={handleInputChange}
+              />
+            )}
+
+            {activeStep === 1 && (
+              <Grid container spacing={4}>
+                {[
+                  { label: "First Name", name: "firstName" },
+                  { label: "Last Name", name: "lastName" },
+                  { label: "Passport ID", name: "idNumber" },
+                  { label: "Phone Number", name: "phoneNumber" },
+                ].map((field) => (
+                  <Grid item xs={12} md={6} key={field.name}>
+                    <TextField
+                      size="medium"
+                      sx={{
+                        "& .MuiInputBase-root": { height: 56 },
+                        width: "250px",
+                      }}
+                      label={field.label}
+                      name={field.name}
+                      value={(guestData as any)[field.name]}
+                      onChange={handleInputChange}
+                    />
+                  </Grid>
                 ))}
-              </Stepper>
+              </Grid>
+            )}
 
-              {error && (
-                <Alert severity="error" sx={{ mb: 3 }}>
-                  {error}
-                </Alert>
-              )}
-
-              {/* STEP 1: GUEST */}
-              {activeStep === 0 && (
-                <Grid container spacing={3}>
-                  <Grid item xs={12}>
-                    <Typography
-                      variant="h6"
-                      fontWeight="bold"
-                      display="flex"
-                      gap={1}
+            {activeStep === 2 && (
+              <Grid container spacing={4}>
+                <Grid item xs={12}>
+                  {roomsLoading ? (
+                    <CircularProgress />
+                  ) : (
+                    <TextField
+                      select
+                      size="medium"
+                      sx={{
+                        "& .MuiInputBase-root": { height: 56 },
+                        width: "250px",
+                      }}
+                      label="Select Room"
+                      name="room"
+                      value={bookingData.room}
+                      onChange={handleInputChange}
                     >
-                      <Person color="primary" /> Guest Details
-                    </Typography>
-                  </Grid>
-                  {/* Perfect 50/50 Split */}
-                  <Grid item xs={12} md={6}>
-                    <TextField
-                      fullWidth
-                      label="First Name"
-                      name="firstName"
-                      value={guestData.firstName}
-                      onChange={handleInputChange}
-                    />
-                  </Grid>
-                  <Grid item xs={12} md={6}>
-                    <TextField
-                      fullWidth
-                      label="Last Name"
-                      name="lastName"
-                      value={guestData.lastName}
-                      onChange={handleInputChange}
-                    />
-                  </Grid>
-                  <Grid item xs={12} md={6}>
-                    <TextField
-                      fullWidth
-                      label="Phone"
-                      name="phoneNumber"
-                      value={guestData.phoneNumber}
-                      onChange={handleInputChange}
-                    />
-                  </Grid>
-                  <Grid item xs={12} md={6}>
-                    <TextField
-                      fullWidth
-                      label="Passport / ID"
-                      name="idNumber"
-                      value={guestData.idNumber}
-                      onChange={handleInputChange}
-                    />
-                  </Grid>
-                  <Grid item xs={12}>
-                    <TextField
-                      fullWidth
-                      label="Email"
-                      name="email"
-                      value={guestData.email}
-                      onChange={handleInputChange}
-                    />
-                  </Grid>
+                      <MenuItem value="">Select Room</MenuItem>
+                      {availableRooms.map((room) => (
+                        <MenuItem key={room._id} value={room._id}>
+                          Room {room.roomNumber}
+                        </MenuItem>
+                      ))}
+                    </TextField>
+                  )}
                 </Grid>
-              )}
 
-              {/* STEP 2: BOOKING (Fixed Alignment) */}
-              {activeStep === 1 && (
-                <Grid container spacing={3}>
-                  <Grid item xs={12}>
-                    <Typography
-                      variant="h6"
-                      fontWeight="bold"
-                      display="flex"
-                      gap={1}
-                    >
-                      <EventAvailable color="primary" /> Stay Details
-                    </Typography>
-                  </Grid>
-
-                  {/* Room Selection (Full Row) */}
-                  <Grid item xs={12}>
-                    {roomsLoading ? (
-                      <CircularProgress />
-                    ) : (
-                      <TextField
-                        select
-                        fullWidth
-                        label="Select Room"
-                        name="room"
-                        value={bookingData.room}
-                        onChange={handleInputChange}
-                        helperText="Price is calculated automatically based on room selection"
-                      >
-                        {availableRooms.map((room) => (
-                          <MenuItem key={room._id} value={room._id}>
-                            Room {room.roomNumber} ({room.type}) — $
-                            {getRoomPrice(room)}/night
-                          </MenuItem>
-                        ))}
-                      </TextField>
-                    )}
-                  </Grid>
-
-                  {/* Dates (50/50 Row) */}
-                  <Grid item xs={12} md={6}>
-                    <TextField
-                      fullWidth
-                      type="date"
-                      label="Check-In"
-                      name="checkInDate"
-                      InputLabelProps={{ shrink: true }}
-                      value={bookingData.checkInDate}
-                      onChange={handleInputChange}
-                    />
-                  </Grid>
-                  <Grid item xs={12} md={6}>
-                    <TextField
-                      fullWidth
-                      type="date"
-                      label="Check-Out"
-                      name="checkOutDate"
-                      InputLabelProps={{ shrink: true }}
-                      value={bookingData.checkOutDate}
-                      onChange={handleInputChange}
-                    />
-                  </Grid>
-
-                  {/* Guests (50/50 Row) */}
-                  <Grid item xs={12} md={6}>
-                    <TextField
-                      fullWidth
-                      type="number"
-                      label="Adults"
-                      name="adults"
-                      value={bookingData.adults}
-                      onChange={handleInputChange}
-                    />
-                  </Grid>
-                  <Grid item xs={12} md={6}>
-                    <TextField
-                      fullWidth
-                      type="number"
-                      label="Children"
-                      name="children"
-                      value={bookingData.children}
-                      onChange={handleInputChange}
-                    />
-                  </Grid>
-
-                  {/* Notes (Full Row) */}
-                  <Grid item xs={12}>
-                    <TextField
-                      fullWidth
-                      multiline
-                      rows={2}
-                      label="Notes"
-                      name="notes"
-                      value={bookingData.notes}
-                      onChange={handleInputChange}
-                    />
-                  </Grid>
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    type="date"
+                    size="medium"
+                    sx={{
+                      "& .MuiInputBase-root": { height: 56 },
+                      width: "250px",
+                    }}
+                    label="Check In"
+                    name="checkInDate"
+                    InputLabelProps={{ shrink: true }}
+                    value={bookingData.checkInDate}
+                    onChange={handleInputChange}
+                  />
                 </Grid>
-              )}
 
-              {/* BUTTONS */}
-              <Box
-                sx={{ display: "flex", justifyContent: "space-between", mt: 4 }}
-              >
-                <Button
-                  disabled={activeStep === 0}
-                  onClick={handleBack}
-                  variant="outlined"
-                >
-                  Back
-                </Button>
-                {activeStep === 0 ? (
-                  <Button variant="contained" onClick={handleNext}>
-                    Next
-                  </Button>
-                ) : (
-                  <Button
-                    variant="contained"
-                    onClick={handleFinalSubmit}
-                    disabled={loading || !bookingData.room} // Removed strict price check to allow submission even if 0
-                  >
-                    {loading ? "Processing..." : `Confirm ($${totalPrice})`}
-                  </Button>
-                )}
-              </Box>
-            </Paper>
-          </Grid>
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    type="date"
+                    size="medium"
+                    sx={{
+                      "& .MuiInputBase-root": { height: 56 },
+                      width: "250px",
+                    }}
+                    label="Check Out"
+                    name="checkOutDate"
+                    InputLabelProps={{ shrink: true }}
+                    value={bookingData.checkOutDate}
+                    onChange={handleInputChange}
+                  />
+                </Grid>
+              </Grid>
+            )}
 
-          {/* ======================= */}
-          {/* BOTTOM: SUMMARY DASHBOARD */}
-          {/* ======================= */}
-          <Grid item xs={12}>
-            <Card
-              variant="outlined"
-              sx={{ borderRadius: 3, bgcolor: "background.paper" }}
+            <Box
+              sx={{ display: "flex", justifyContent: "space-between", mt: 6 }}
             >
-              <CardContent>
-                <Grid container spacing={2} alignItems="center">
-                  {/* Guest Info */}
-                  <Grid item xs={12} md={4}>
-                    <Stack spacing={0.5}>
-                      <Typography variant="caption" color="text.secondary">
-                        GUEST
-                      </Typography>
-                      <Typography variant="subtitle2" fontWeight="bold">
-                        {guestData.firstName} {guestData.lastName}
-                      </Typography>
-                      <Typography variant="body2">
-                        {guestData.phoneNumber}
-                      </Typography>
-                    </Stack>
-                  </Grid>
+              <Button
+                disabled={activeStep === 0}
+                onClick={() => setActiveStep((prev) => prev - 1)}
+              >
+                Back
+              </Button>
 
-                  {/* Room Info */}
-                  <Grid item xs={12} md={4}>
-                    <Stack spacing={0.5}>
-                      <Typography variant="caption" color="text.secondary">
-                        ROOM
-                      </Typography>
-                      <Typography variant="subtitle2" fontWeight="bold">
-                        {selectedRoomObj
-                          ? `No. ${selectedRoomObj.roomNumber} - ${selectedRoomObj.type}`
-                          : "Not Selected"}
-                      </Typography>
-                      <Box display="flex" alignItems="center" gap={1}>
-                        <CalendarMonth fontSize="inherit" />
-                        <Typography variant="body2">{nights} Nights</Typography>
-                      </Box>
-                    </Stack>
-                  </Grid>
+              {activeStep === 0 && (
+                <Button variant="contained" onClick={checkGuest}>
+                  {loading ? <CircularProgress size={20} /> : "Next"}
+                </Button>
+              )}
 
-                  {/* Price Info */}
-                  <Grid item xs={12} md={4}>
-                    <Paper
-                      variant="outlined"
-                      sx={{ p: 2, bgcolor: theme.palette.action.hover }}
-                    >
-                      <Box display="flex" justifyContent="space-between">
-                        <Typography variant="body2">Price/Night:</Typography>
-                        <Typography variant="body2">
-                          ${roomPricePerNight}
-                        </Typography>
-                      </Box>
-                      <Divider sx={{ my: 1 }} />
-                      <Box
-                        display="flex"
-                        justifyContent="space-between"
-                        alignItems="center"
-                      >
-                        <Typography variant="subtitle1" fontWeight="bold">
-                          TOTAL:
-                        </Typography>
-                        <Typography
-                          variant="h6"
-                          color="primary.main"
-                          fontWeight="900"
-                        >
-                          ${totalPrice}
-                        </Typography>
-                      </Box>
-                    </Paper>
-                  </Grid>
-                </Grid>
-              </CardContent>
-            </Card>
-          </Grid>
-        </Grid>
+              {activeStep === 1 && (
+                <Button variant="contained" onClick={() => setActiveStep(2)}>
+                  Next
+                </Button>
+              )}
+
+              {activeStep === 2 && (
+                <Button variant="contained" onClick={handleFinalSubmit}>
+                  {loading ? (
+                    <CircularProgress size={20} />
+                  ) : (
+                    `Confirm ($${basePrice})`
+                  )}
+                </Button>
+              )}
+            </Box>
+          </Paper>
+
+          <Paper sx={{ p: 6, borderRadius: 3, minHeight: 200 }}>
+            <Grid
+              container
+              justifyContent="space-between"
+              alignItems="center"
+              columnSpacing={6}
+            >
+              <Grid item xs={12} md={4}>
+                <Stack spacing={1} sx={{ minHeight: 70 }}>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    Guest
+                  </Typography>
+                  <Typography variant="h6" fontWeight="bold">
+                    {guestData.firstName
+                      ? `${guestData.firstName} ${guestData.lastName}`
+                      : "---"}
+                  </Typography>
+                </Stack>
+              </Grid>
+
+              <Grid item xs={12} md={4} textAlign="center">
+                <Stack spacing={1} sx={{ minHeight: 70 }}>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    Room
+                  </Typography>
+                  <Typography variant="h6" fontWeight="bold">
+                    {selectedRoomObj
+                      ? `Room ${selectedRoomObj.roomNumber}`
+                      : "---"}
+                  </Typography>
+                  {nights > 0 && (
+                    <Typography variant="body2" color="text.secondary">
+                      {nights} Nights
+                    </Typography>
+                  )}
+                </Stack>
+              </Grid>
+
+              <Grid item xs={12} md={4} textAlign="right">
+                <Stack spacing={1} sx={{ minHeight: 70 }}>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    Total
+                  </Typography>
+                  <Typography variant="h4" fontWeight="bold" color="primary">
+                    ${basePrice}
+                  </Typography>
+                </Stack>
+              </Grid>
+            </Grid>
+          </Paper>
+        </>
       )}
-    </Container>
+    </Box>
   );
 };
 
