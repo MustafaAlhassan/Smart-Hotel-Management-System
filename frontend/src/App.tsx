@@ -4,7 +4,8 @@ import HomePage from "./pages/HomePage";
 import LoginPage from "./pages/LoginPage/LoginPage";
 import DashboardPage from "./pages/DashboardPage";
 import BillPage from "./pages/BillPage";
-import ReservationsPage from "./pages/ReservationsPage";
+import BookingPage from "./pages/Reservations/BookingPage";
+import AllReservationsPage from "./pages/Reservations/AllReservationsPage";
 import UsersPage from "./pages/UsersPage";
 import SettingsPage from "./pages/SettingsPage";
 import NotFoundPage from "./pages/NotFoundPage";
@@ -17,8 +18,8 @@ import {
   type PaletteMode,
 } from "@mui/material";
 import getDesignTokens from "./theme/MyTheme";
-import RoomsPage from "./pages/RoomsManagement/Rooms";
-import RoomTypesPage from "./pages/RoomsManagement/RoomType";
+import RoomsPage from "./pages/RoomsManagement/RoomsPage";
+import RoomTypesPage from "./pages/RoomsManagement/RoomTypePage";
 const sidebarWidth = 270;
 
 function App() {
@@ -54,7 +55,11 @@ function App() {
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/billing" element={<BillPage />} />
               <Route path="/users" element={<UsersPage />} />
-              <Route path="/reservations" element={<ReservationsPage />} />
+              <Route
+                path="/all-reservations"
+                element={<AllReservationsPage />}
+              />
+              <Route path="/booking" element={<BookingPage />} />
               <Route path="/settings" element={<SettingsPage />} />
               <Route path="/rooms" element={<RoomsPage />} />
               <Route path="/room-types" element={<RoomTypesPage />} />
