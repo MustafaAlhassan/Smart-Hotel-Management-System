@@ -313,7 +313,7 @@ const ReservationPage = () => {
               <Grid container spacing={3}>
                 <Grid item xs={12} md={6}>
                   <TextField
-                    fullWidth
+                    sx={{ width: "250px" }}
                     label="First Name"
                     name="firstName"
                     value={guestData.firstName}
@@ -322,7 +322,7 @@ const ReservationPage = () => {
                 </Grid>
                 <Grid item xs={12} md={6}>
                   <TextField
-                    fullWidth
+                    sx={{ width: "250px" }}
                     label="Last Name"
                     name="lastName"
                     value={guestData.lastName}
@@ -331,7 +331,7 @@ const ReservationPage = () => {
                 </Grid>
                 <Grid item xs={12} md={6}>
                   <TextField
-                    fullWidth
+                    sx={{ width: "250px" }}
                     label="Email"
                     name="email"
                     value={guestData.email}
@@ -340,7 +340,7 @@ const ReservationPage = () => {
                 </Grid>
                 <Grid item xs={12} md={6}>
                   <TextField
-                    fullWidth
+                    sx={{ width: "250px" }}
                     label="Phone"
                     name="phoneNumber"
                     value={guestData.phoneNumber}
@@ -349,7 +349,7 @@ const ReservationPage = () => {
                 </Grid>
                 <Grid item xs={12}>
                   <TextField
-                    fullWidth
+                    sx={{ width: "250px" }}
                     label="Passport ID"
                     name="idNumber"
                     value={guestData.idNumber}
@@ -364,7 +364,7 @@ const ReservationPage = () => {
                 <Grid item xs={12}>
                   <TextField
                     select
-                    fullWidth
+                    sx={{ width: "250px" }}
                     label="Select Room"
                     name="room"
                     value={bookingData.room}
@@ -380,7 +380,7 @@ const ReservationPage = () => {
                 </Grid>
                 <Grid item xs={12} md={6}>
                   <TextField
-                    fullWidth
+                    sx={{ width: "250px" }}
                     type="date"
                     label="Check In"
                     name="checkInDate"
@@ -391,7 +391,7 @@ const ReservationPage = () => {
                 </Grid>
                 <Grid item xs={12} md={6}>
                   <TextField
-                    fullWidth
+                    sx={{ width: "250px" }}
                     type="date"
                     label="Check Out"
                     name="checkOutDate"
@@ -402,7 +402,7 @@ const ReservationPage = () => {
                 </Grid>
                 <Grid item xs={12} md={6}>
                   <TextField
-                    fullWidth
+                    sx={{ width: "250px" }}
                     type="number"
                     label="Adults"
                     name="adults"
@@ -412,7 +412,7 @@ const ReservationPage = () => {
                 </Grid>
                 <Grid item xs={12} md={6}>
                   <TextField
-                    fullWidth
+                    sx={{ width: "250px" }}
                     type="number"
                     label="Children"
                     name="children"

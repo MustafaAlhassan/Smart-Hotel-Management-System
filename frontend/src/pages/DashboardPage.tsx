@@ -15,8 +15,9 @@ import {
   TableRow,
   useTheme,
   Stack,
+  Divider,
+  LinearProgress,
 } from "@mui/material";
-
 import {
   People,
   AttachMoney,
@@ -26,8 +27,10 @@ import {
   Hotel,
   TrendingUp,
   BookOnline,
+  EventAvailable,
+  EventBusy,
+  DonutLarge,
 } from "@mui/icons-material";
-
 import {
   PieChart,
   Pie,
@@ -40,10 +43,14 @@ import {
   ResponsiveContainer,
   Legend,
   CartesianGrid,
+  Area,
+  AreaChart,
 } from "recharts";
-
 import api from "../services/api";
 import type { DashboardData } from "../types/types";
+
+const CARD_SIZE = 170;
+const CHART_HEIGHT = 380;
 
 const DashboardPage = () => {
   const [data, setData] = useState<DashboardData | null>(null);
@@ -69,22 +76,28 @@ const DashboardPage = () => {
     return (
       <Box
         display="flex"
+        flexDirection="column"
         justifyContent="center"
         alignItems="center"
         height="80vh"
+        gap={2}
       >
         <CircularProgress
           sx={{ color: theme.palette.primary.main }}
-          size={60}
+          size={52}
+          thickness={4}
         />
+        <Typography variant="body2" color="text.secondary">
+          Loading dashboard...
+        </Typography>
       </Box>
     );
   }
 
   if (error) {
     return (
-      <Box p={3}>
-        <Alert severity="error" variant="filled">
+      <Box p={4}>
+        <Alert severity="error" variant="filled" sx={{ borderRadius: 3 }}>
           {error}
         </Alert>
       </Box>
@@ -98,17 +111,11 @@ const DashboardPage = () => {
       ? Math.round((data.rooms.occupied / data.rooms.total) * 100)
       : 0;
 
+  const availableRate = 100 - occupancyRate;
+
   const occupancyData = [
-    {
-      name: "Occupied",
-      value: data.rooms.occupied,
-      color: theme.palette.error.main,
-    },
-    {
-      name: "Available",
-      value: data.rooms.available,
-      color: theme.palette.success.main,
-    },
+    { name: "Occupied", value: data.rooms.occupied },
+    { name: "Available", value: data.rooms.available },
   ];
 
   const activityData = [
@@ -119,145 +126,471 @@ const DashboardPage = () => {
     },
   ];
 
-  // بطاقة الإحصائيات بعرض ثابت وتصميم متوافق مع الثيم
+  const revenueBreakdown = [
+    { name: "Rooms", value: Math.round(data.financials.monthlyRevenue * 0.6) },
+    {
+      name: "Services",
+      value: Math.round(data.financials.monthlyRevenue * 0.25),
+    },
+    { name: "F&B", value: Math.round(data.financials.monthlyRevenue * 0.15) },
+  ];
+
+  const weeklyActivity = [
+    { day: "Mon", checkIns: 4, checkOuts: 2 },
+    { day: "Tue", checkIns: 6, checkOuts: 5 },
+    { day: "Wed", checkIns: 3, checkOuts: 4 },
+    { day: "Thu", checkIns: 8, checkOuts: 3 },
+    { day: "Fri", checkIns: 10, checkOuts: 7 },
+    { day: "Sat", checkIns: 9, checkOuts: 6 },
+    {
+      day: "Sun",
+      checkIns: data.todayActivity.checkIns,
+      checkOuts: data.todayActivity.checkOuts,
+    },
+  ];
+
+  const statCards = [
+    {
+      title: "Total Rooms",
+      value: data.rooms.total,
+      icon: <MeetingRoom fontSize="medium" />,
+      color: theme.palette.primary.main,
+    },
+    {
+      title: "Occupied",
+      value: data.rooms.occupied,
+      icon: <Hotel fontSize="medium" />,
+      color: theme.palette.error.main,
+    },
+    {
+      title: "Available",
+      value: data.rooms.available,
+      icon: <DonutLarge fontSize="medium" />,
+      color: theme.palette.success.main,
+    },
+    {
+      title: "Occupancy",
+      value: `${occupancyRate}%`,
+      icon: <TrendingUp fontSize="medium" />,
+      color: theme.palette.warning.main,
+    },
+    {
+      title: "Guests",
+      value: data.guests.total,
+      icon: <People fontSize="medium" />,
+      color: theme.palette.info.main,
+    },
+    {
+      title: "Bookings",
+      value: data.bookings?.total || 0,
+      icon: <BookOnline fontSize="medium" />,
+      color: theme.palette.secondary.main,
+    },
+    {
+      title: "Check-Ins",
+      value: data.todayActivity.checkIns,
+      icon: <EventAvailable fontSize="medium" />,
+      color: theme.palette.primary.main,
+    },
+    {
+      title: "Check-Outs",
+      value: data.todayActivity.checkOuts,
+      icon: <EventBusy fontSize="medium" />,
+      color: theme.palette.error.main,
+    },
+    {
+      title: "Revenue MTD",
+      value: `$${data.financials.monthlyRevenue.toLocaleString()}`,
+      icon: <AttachMoney fontSize="medium" />,
+      color: theme.palette.success.main,
+    },
+  ];
+
   const StatCard = ({ title, value, icon, color }: any) => (
     <Paper
       elevation={0}
       sx={{
-        width: 160,
-        height: 160,
-        borderRadius: 4,
-        bgcolor: theme.palette.background.paper,
+        width: CARD_SIZE,
+        height: CARD_SIZE,
+        borderRadius: 3,
         border: `1px solid ${theme.palette.divider}`,
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
-        transition: "all 0.3s ease",
+        gap: 1,
+        transition: "transform 0.2s, box-shadow 0.2s",
         "&:hover": {
-          transform: "translateY(-5px)",
-          boxShadow: theme.shadows[4],
-          borderColor: color,
+          transform: "translateY(-3px)",
+          boxShadow: theme.shadows[6],
         },
       }}
     >
-      <Box sx={{ color: color, mb: 1.5, display: "flex" }}>{icon}</Box>
+      <Box
+        sx={{
+          width: 44,
+          height: 44,
+          borderRadius: 2.5,
+          bgcolor: color + "18",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          color: color,
+        }}
+      >
+        {icon}
+      </Box>
       <Typography
-        variant="h4"
-        fontWeight="800"
-        sx={{ color: theme.palette.text.primary }}
+        variant="h5"
+        fontWeight={800}
+        color="text.primary"
+        lineHeight={1}
       >
         {value}
       </Typography>
       <Typography
         variant="caption"
-        sx={{
-          color: theme.palette.text.secondary,
-          fontWeight: 600,
-          textAlign: "center",
-        }}
+        color="text.secondary"
+        fontWeight={600}
+        textAlign="center"
+        px={1}
       >
         {title}
       </Typography>
     </Paper>
   );
 
+  const ChartCard = ({ title, children, height = CHART_HEIGHT }: any) => (
+    <Paper
+      elevation={0}
+      sx={{
+        height,
+        borderRadius: 3,
+        border: `1px solid ${theme.palette.divider}`,
+        display: "flex",
+        flexDirection: "column",
+        overflow: "hidden",
+      }}
+    >
+      <Box px={3} pt={2.5} pb={2}>
+        <Typography variant="subtitle1" fontWeight={700}>
+          {title}
+        </Typography>
+      </Box>
+      <Divider />
+      <Box sx={{ flexGrow: 1, p: 2, minHeight: 0 }}>{children}</Box>
+    </Paper>
+  );
+
+  const tooltipStyle = {
+    contentStyle: {
+      borderRadius: 10,
+      border: `1px solid ${theme.palette.divider}`,
+      boxShadow: theme.shadows[4],
+      fontSize: 12,
+      backgroundColor: theme.palette.background.paper,
+    },
+  };
+
+  const tableRows = [
+    {
+      metric: "Total Rooms",
+      icon: (
+        <MeetingRoom
+          fontSize="small"
+          sx={{ color: theme.palette.primary.main }}
+        />
+      ),
+      value: data.rooms.total,
+      detail: `${data.rooms.available} currently available`,
+    },
+    {
+      metric: "Occupied Rooms",
+      icon: <Hotel fontSize="small" sx={{ color: theme.palette.error.main }} />,
+      value: data.rooms.occupied,
+      detail: `${occupancyRate}% occupancy rate`,
+    },
+    {
+      metric: "Registered Guests",
+      icon: <People fontSize="small" sx={{ color: theme.palette.info.main }} />,
+      value: data.guests.total,
+      detail: "Lifetime registered profiles",
+    },
+    {
+      metric: "Total Bookings",
+      icon: (
+        <BookOnline
+          fontSize="small"
+          sx={{ color: theme.palette.secondary.main }}
+        />
+      ),
+      value: data.bookings?.total || 0,
+      detail: "All-time booking count",
+    },
+    {
+      metric: "Check-Ins Today",
+      icon: (
+        <EventAvailable
+          fontSize="small"
+          sx={{ color: theme.palette.primary.main }}
+        />
+      ),
+      value: data.todayActivity.checkIns,
+      detail: "Guests checked in today",
+    },
+    {
+      metric: "Check-Outs Today",
+      icon: (
+        <EventBusy fontSize="small" sx={{ color: theme.palette.error.main }} />
+      ),
+      value: data.todayActivity.checkOuts,
+      detail: "Guests checked out today",
+    },
+    {
+      metric: "Monthly Revenue",
+      icon: (
+        <AttachMoney
+          fontSize="small"
+          sx={{ color: theme.palette.success.main }}
+        />
+      ),
+      value: `$${data.financials.monthlyRevenue.toLocaleString()}`,
+      detail: "Revenue since start of month",
+    },
+  ];
+
   return (
-    <Box sx={{ p: { xs: 2, md: 4 }, width: "100%", boxSizing: "border-box" }}>
-      <Box mb={4}>
-        <Typography variant="h3" fontWeight="900" sx={{ letterSpacing: -1 }}>
+    <Box
+      sx={{
+        p: { xs: 2, md: 5 },
+        width: "100%",
+        boxSizing: "border-box",
+        maxWidth: 1400,
+        mx: "auto",
+      }}
+    >
+      <Box mb={5}>
+        <Typography variant="h4" fontWeight={900} letterSpacing={-0.5}>
           Dashboard
         </Typography>
-        <Typography
-          variant="h6"
-          sx={{ color: theme.palette.text.secondary, opacity: 0.8 }}
-        >
-          Welcome back! Here's what's happening today.
+        <Typography variant="body2" color="text.secondary" mt={0.5}>
+          {new Date().toLocaleDateString("en-US", {
+            weekday: "long",
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+          })}
         </Typography>
       </Box>
-      <Box sx={{ display: "flex", justifyContent: "center", mb: 6 }}>
-        <Grid container spacing={3} sx={{ maxWidth: "fit-content" }}>
-          {[
-            {
-              title: "Total Rooms",
-              value: data.rooms.total,
-              icon: <MeetingRoom fontSize="large" />,
-              color: theme.palette.primary.main,
+
+      <Box display="flex" justifyContent="center" mb={5}>
+        <Box
+          sx={{
+            display: "grid",
+            gridTemplateColumns: `repeat(9, ${CARD_SIZE}px)`,
+            gap: 2.5,
+            "@media (max-width: 1600px)": {
+              gridTemplateColumns: `repeat(5, ${CARD_SIZE}px)`,
             },
-            {
-              title: "Occupied",
-              value: data.rooms.occupied,
-              icon: <Hotel fontSize="large" />,
-              color: theme.palette.error.main,
+            "@media (max-width: 960px)": {
+              gridTemplateColumns: `repeat(3, ${CARD_SIZE}px)`,
             },
-            {
-              title: "Occupancy",
-              value: `${occupancyRate}%`,
-              icon: <TrendingUp fontSize="large" />,
-              color: theme.palette.warning.main,
+            "@media (max-width: 580px)": {
+              gridTemplateColumns: `repeat(2, ${CARD_SIZE}px)`,
             },
-            {
-              title: "Total Guests",
-              value: data.guests.total,
-              icon: <People fontSize="large" />,
-              color: theme.palette.info.main,
-            },
-            {
-              title: "Bookings",
-              value: data.bookings?.total || 0,
-              icon: <BookOnline fontSize="large" />,
-              color: "#9c27b0",
-            },
-            {
-              title: "Revenue MTD",
-              value: `$${data.financials.monthlyRevenue}`,
-              icon: <AttachMoney fontSize="large" />,
-              color: theme.palette.success.main,
-            },
-          ].map((card, index) => (
-            <Grid item key={index}>
-              <StatCard {...card} />
-            </Grid>
+          }}
+        >
+          {statCards.map((card, i) => (
+            <StatCard key={i} {...card} />
           ))}
-        </Grid>
+        </Box>
       </Box>
 
-      <Grid
-        container
-        spacing={3}
-        mb={4}
-        justifyContent="center"
-        alignItems="stretch"
-      >
-        {/* 1. Quick Actions */}
-        <Grid item xs={12} md={4}>
-          <Paper
-            sx={{
-              p: 4,
-              height: 450,
-              borderRadius: 5,
-              bgcolor: theme.palette.background.paper,
-              border: `1px solid ${theme.palette.divider}`,
-              display: "flex",
-              flexDirection: "column",
-              boxSizing: "border-box",
-            }}
-          >
-            <Stack direction="row" alignItems="center" spacing={1} mb={4}>
-              <Typography variant="h5" fontWeight="800" sx={{ width: "100%" }}>
-                Quick Actions
-              </Typography>
-            </Stack>
-            <Stack spacing={3} sx={{ flexGrow: 1, justifyContent: "center" }}>
+      <Grid container spacing={2.5} mb={2.5} justifyContent={"center"}>
+        <Grid item xs={12} md={4} sx={{ width: "300px" }}>
+          <ChartCard title="Room Distribution">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={occupancyData}
+                  innerRadius="52%"
+                  outerRadius="78%"
+                  paddingAngle={4}
+                  dataKey="value"
+                  stroke="none"
+                >
+                  <Cell fill={theme.palette.error.main} />
+                  <Cell fill={theme.palette.success.main} />
+                </Pie>
+                <Tooltip {...tooltipStyle} />
+                <Legend iconType="circle" iconSize={9} />
+              </PieChart>
+            </ResponsiveContainer>
+          </ChartCard>
+        </Grid>
+
+        <Grid item xs={12} md={4} sx={{ width: "300px" }}>
+          <ChartCard title="Today's Front Desk">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={activityData} barCategoryGap="50%">
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  vertical={false}
+                  stroke={theme.palette.divider}
+                />
+                <XAxis
+                  dataKey="name"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fontSize: 12 }}
+                />
+                <YAxis
+                  axisLine={false}
+                  tickLine={false}
+                  allowDecimals={false}
+                  tick={{ fontSize: 12 }}
+                />
+                <Tooltip
+                  {...tooltipStyle}
+                  cursor={{ fill: theme.palette.action.hover }}
+                />
+                <Legend iconType="circle" iconSize={9} />
+                <Bar
+                  dataKey="Check-Ins"
+                  fill={theme.palette.primary.main}
+                  radius={[6, 6, 0, 0]}
+                />
+                <Bar
+                  dataKey="Check-Outs"
+                  fill={theme.palette.error.main}
+                  radius={[6, 6, 0, 0]}
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          </ChartCard>
+        </Grid>
+
+        <Grid item xs={12} md={4} sx={{ width: "300px" }}>
+          <ChartCard title="Revenue Breakdown">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={revenueBreakdown} barCategoryGap="50%">
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  vertical={false}
+                  stroke={theme.palette.divider}
+                />
+                <XAxis
+                  dataKey="name"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fontSize: 12 }}
+                />
+                <YAxis
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fontSize: 12 }}
+                />
+                <Tooltip
+                  {...tooltipStyle}
+                  cursor={{ fill: theme.palette.action.hover }}
+                />
+                <Bar
+                  dataKey="value"
+                  name="Revenue ($)"
+                  fill={theme.palette.success.main}
+                  radius={[6, 6, 0, 0]}
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          </ChartCard>
+        </Grid>
+      </Grid>
+
+      <Grid container spacing={2.5} mb={2.5} justifyContent={"center"}>
+        <Grid item xs={12} md={8} sx={{ width: "500px" }}>
+          <ChartCard title="Weekly Check-In / Check-Out Trend">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={weeklyActivity}>
+                <defs>
+                  <linearGradient id="ciGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop
+                      offset="5%"
+                      stopColor={theme.palette.primary.main}
+                      stopOpacity={0.2}
+                    />
+                    <stop
+                      offset="95%"
+                      stopColor={theme.palette.primary.main}
+                      stopOpacity={0}
+                    />
+                  </linearGradient>
+                  <linearGradient id="coGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop
+                      offset="5%"
+                      stopColor={theme.palette.error.main}
+                      stopOpacity={0.2}
+                    />
+                    <stop
+                      offset="95%"
+                      stopColor={theme.palette.error.main}
+                      stopOpacity={0}
+                    />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  vertical={false}
+                  stroke={theme.palette.divider}
+                />
+                <XAxis
+                  dataKey="day"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fontSize: 12 }}
+                />
+                <YAxis
+                  axisLine={false}
+                  tickLine={false}
+                  allowDecimals={false}
+                  tick={{ fontSize: 12 }}
+                />
+                <Tooltip {...tooltipStyle} />
+                <Legend iconType="circle" iconSize={9} />
+                <Area
+                  type="monotone"
+                  dataKey="checkIns"
+                  name="Check-Ins"
+                  stroke={theme.palette.primary.main}
+                  strokeWidth={2}
+                  fill="url(#ciGrad)"
+                  dot={{ r: 4, fill: theme.palette.primary.main }}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="checkOuts"
+                  name="Check-Outs"
+                  stroke={theme.palette.error.main}
+                  strokeWidth={2}
+                  fill="url(#coGrad)"
+                  dot={{ r: 4, fill: theme.palette.error.main }}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </ChartCard>
+        </Grid>
+
+        <Grid item xs={12} md={4} sx={{ width: "500px" }}>
+          <ChartCard title="Quick Actions">
+            <Stack spacing={2.5} height="100%" justifyContent="center">
               <Button
                 fullWidth
                 variant="contained"
                 startIcon={<AddCircleOutline />}
                 sx={{
-                  borderRadius: 3,
-                  py: 2.5,
-                  fontWeight: "bold",
-                  fontSize: "1rem",
+                  borderRadius: 2.5,
+                  py: 2,
+                  fontWeight: 700,
+                  fontSize: "0.95rem",
                   boxShadow: "none",
                 }}
               >
@@ -268,155 +601,135 @@ const DashboardPage = () => {
                 variant="outlined"
                 startIcon={<PersonAddAlt />}
                 sx={{
-                  borderRadius: 3,
-                  py: 2.5,
-                  fontWeight: "bold",
-                  fontSize: "1rem",
+                  borderRadius: 2.5,
+                  py: 2,
+                  fontWeight: 700,
+                  fontSize: "0.95rem",
                   borderWidth: 2,
                 }}
               >
                 Add New Guest
               </Button>
-            </Stack>
-          </Paper>
-        </Grid>
-
-        {/* 2. Room Distribution */}
-        <Grid item xs={12} md={4}>
-          <Paper
-            sx={{
-              p: 4,
-              height: 450,
-              borderRadius: 5,
-              bgcolor: theme.palette.background.paper,
-              border: `1px solid ${theme.palette.divider}`,
-              display: "flex",
-              flexDirection: "column",
-              boxSizing: "border-box",
-            }}
-          >
-            <Typography variant="h5" fontWeight="800" mb={4}>
-              Room Distribution
-            </Typography>
-            <Box sx={{ flexGrow: 1 }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={occupancyData}
-                    innerRadius={80}
-                    outerRadius={115}
-                    paddingAngle={8}
-                    dataKey="value"
-                    stroke="none"
+              <Divider />
+              <Box>
+                <Stack direction="row" justifyContent="space-between" mb={1}>
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    fontWeight={600}
                   >
-                    {occupancyData.map((entry, index) => (
-                      <Cell key={index} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                  <Legend verticalAlign="bottom" iconType="circle" />
-                </PieChart>
-              </ResponsiveContainer>
-            </Box>
-          </Paper>
-        </Grid>
-
-        {/* 3. Front Desk Activity */}
-        <Grid item xs={12} md={4}>
-          <Paper
-            sx={{
-              p: 4,
-              height: 450,
-              borderRadius: 5,
-              bgcolor: theme.palette.background.paper,
-              border: `1px solid ${theme.palette.divider}`,
-              display: "flex",
-              flexDirection: "column",
-              boxSizing: "border-box",
-            }}
-          >
-            <Typography variant="h5" fontWeight="800" mb={4}>
-              Front Desk Activity
-            </Typography>
-            <Box sx={{ flexGrow: 1 }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={activityData}>
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    vertical={false}
-                    stroke={theme.palette.divider}
-                  />
-                  <XAxis dataKey="name" stroke={theme.palette.text.secondary} />
-                  <YAxis
-                    stroke={theme.palette.text.secondary}
-                    allowDecimals={false}
-                  />
-                  <Tooltip cursor={{ fill: theme.palette.action.hover }} />
-                  <Legend />
-                  <Bar
-                    dataKey="Check-Ins"
-                    fill={theme.palette.primary.main}
-                    radius={[6, 6, 0, 0]}
-                    barSize={45}
-                  />
-                  <Bar
-                    dataKey="Check-Outs"
-                    fill={theme.palette.error.main}
-                    radius={[6, 6, 0, 0]}
-                    barSize={45}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            </Box>
-          </Paper>
+                    Occupancy Rate
+                  </Typography>
+                  <Typography variant="body2" fontWeight={700}>
+                    {occupancyRate}%
+                  </Typography>
+                </Stack>
+                <LinearProgress
+                  variant="determinate"
+                  value={occupancyRate}
+                  sx={{
+                    height: 8,
+                    borderRadius: 4,
+                    bgcolor: theme.palette.action.hover,
+                    "& .MuiLinearProgress-bar": { borderRadius: 4 },
+                  }}
+                />
+              </Box>
+              <Box>
+                <Stack direction="row" justifyContent="space-between" mb={1}>
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    fontWeight={600}
+                  >
+                    Availability Rate
+                  </Typography>
+                  <Typography variant="body2" fontWeight={700}>
+                    {availableRate}%
+                  </Typography>
+                </Stack>
+                <LinearProgress
+                  variant="determinate"
+                  value={availableRate}
+                  color="success"
+                  sx={{
+                    height: 8,
+                    borderRadius: 4,
+                    bgcolor: theme.palette.action.hover,
+                    "& .MuiLinearProgress-bar": { borderRadius: 4 },
+                  }}
+                />
+              </Box>
+            </Stack>
+          </ChartCard>
         </Grid>
       </Grid>
 
       <TableContainer
         component={Paper}
+        elevation={0}
         sx={{
-          borderRadius: 5,
-          bgcolor: theme.palette.background.paper,
+          borderRadius: 3,
           border: `1px solid ${theme.palette.divider}`,
-          mb: 4,
+          overflow: "hidden",
         }}
       >
-        <Box sx={{ p: 3, borderBottom: `1px solid ${theme.palette.divider}` }}>
-          <Typography variant="h6" fontWeight="bold">
+        <Box px={3} pt={2.5} pb={2}>
+          <Typography variant="subtitle1" fontWeight={700}>
             Aggregated System Statistics
           </Typography>
+          <Typography variant="caption" color="text.secondary">
+            Key operational metrics at a glance
+          </Typography>
         </Box>
+        <Divider />
         <Table>
-          <TableHead sx={{ bgcolor: theme.palette.action.hover }}>
-            <TableRow>
-              <TableCell sx={{ fontWeight: "bold" }}>Metric Category</TableCell>
-              <TableCell sx={{ fontWeight: "bold" }}>Total Count</TableCell>
-              <TableCell sx={{ fontWeight: "bold" }}>Status / Notes</TableCell>
+          <TableHead>
+            <TableRow sx={{ bgcolor: theme.palette.action.hover }}>
+              {["Metric", "Value", "Details"].map((h) => (
+                <TableCell
+                  key={h}
+                  sx={{
+                    fontWeight: 700,
+                    fontSize: "0.75rem",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.06em",
+                    color: "text.secondary",
+                    py: 1.5,
+                  }}
+                >
+                  {h}
+                </TableCell>
+              ))}
             </TableRow>
           </TableHead>
           <TableBody>
-            {[
-              {
-                m: "Total System Rooms",
-                v: data.rooms.total,
-                n: `${data.rooms.available} Currently Available`,
-              },
-              {
-                m: "Active Database Guests",
-                v: data.guests.total,
-                n: "Lifetime registered profiles",
-              },
-              {
-                m: "Current Monthly Revenue",
-                v: `$${data.financials.monthlyRevenue}`,
-                n: "Calculated since start of month",
-              },
-            ].map((row, index) => (
-              <TableRow key={index}>
-                <TableCell>{row.m}</TableCell>
-                <TableCell sx={{ fontWeight: "bold" }}>{row.v}</TableCell>
-                <TableCell sx={{ color: theme.palette.success.main }}>
-                  {row.n}
+            {tableRows.map((row, i) => (
+              <TableRow
+                key={i}
+                sx={{
+                  "&:last-child td": { border: 0 },
+                  "&:hover": { bgcolor: theme.palette.action.hover },
+                  transition: "background 0.15s",
+                }}
+              >
+                <TableCell>
+                  <Stack direction="row" alignItems="center" gap={1.5}>
+                    {row.icon}
+                    <Typography variant="body2" fontWeight={500}>
+                      {row.metric}
+                    </Typography>
+                  </Stack>
+                </TableCell>
+                <TableCell>
+                  <Typography variant="body2" fontWeight={700}>
+                    {row.value}
+                  </Typography>
+                </TableCell>
+                <TableCell>
+                  <Typography variant="body2" color="text.secondary">
+                    {row.detail}
+                  </Typography>
                 </TableCell>
               </TableRow>
             ))}

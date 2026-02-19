@@ -92,20 +92,13 @@ const AllReservationsPage = () => {
     fetchBookings();
   }, []);
 
-  // ------------------------------------------------------------------
-  //  LOGIC PORTED FROM BOOKING PAGE
-  // ------------------------------------------------------------------
   const calculateTotal = (booking: any) => {
-    // 1. If the backend already saved the final total, return it.
     if (booking.totalPrice && booking.totalPrice > 0) return booking.totalPrice;
 
-    // 2. Otherwise, calculate it dynamically using BookingPage logic
     const room = booking.room;
 
-    // Get Price Per Night (supports basePrice or nested roomType)
     const pricePerNight = room?.basePrice || room?.roomType?.basePrice || 0;
 
-    // Calculate Nights
     if (!booking.checkInDate || !booking.checkOutDate) return 0;
 
     const start = new Date(booking.checkInDate);
@@ -115,10 +108,8 @@ const AllReservationsPage = () => {
     );
     const nights = diff > 0 ? diff : 0;
 
-    // Return Total
     return nights * pricePerNight;
   };
-  // ------------------------------------------------------------------
 
   const handleCancelBooking = async (id: string) => {
     if (!window.confirm("Are you sure you want to cancel this booking?"))
@@ -140,16 +131,14 @@ const AllReservationsPage = () => {
   const handleEditClick = (booking: any) => {
     setCurrentBooking(booking);
 
-    // We also use the calculator here so the edit modal shows the correct price initially
-    const calculatedPrice = calculateTotal(booking);
-
     setEditFormData({
       checkInDate: booking.checkInDate ? booking.checkInDate.split("T")[0] : "",
       checkOutDate: booking.checkOutDate
         ? booking.checkOutDate.split("T")[0]
         : "",
       status: booking.status || "Confirmed",
-      totalPrice: calculatedPrice,
+      room: booking.room?._id || "",
+      totalPrice: calculateTotal(booking),
       notes: booking.notes || "",
     });
     setEditDialogOpen(true);
@@ -185,6 +174,22 @@ const AllReservationsPage = () => {
     }
   };
 
+  const [availableRooms, setAvailableRooms] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchRooms = async () => {
+      try {
+        const response = await api.get("/rooms");
+        const rooms = Array.isArray(response.data)
+          ? response.data
+          : response.data.data || [];
+        setAvailableRooms(rooms);
+      } catch (err) {
+        console.error("Error fetching rooms", err);
+      }
+    };
+    fetchRooms();
+  }, []);
   const filteredBookings = bookings.filter((booking) => {
     const guestName =
       `${booking.guest?.firstName || ""} ${booking.guest?.lastName || ""}`.toLowerCase();
@@ -242,7 +247,7 @@ const AllReservationsPage = () => {
         <Button
           variant="contained"
           startIcon={<AddIcon />}
-          onClick={() => navigate("/reservations/new")}
+          onClick={() => navigate("/booking")}
           sx={{
             borderRadius: "10px",
             px: 4,
@@ -298,7 +303,7 @@ const AllReservationsPage = () => {
         <Box>
           {filteredBookings.length > 0 ? (
             filteredBookings.map((booking) => {
-              const totalPrice = calculateTotal(booking); // Calculate here
+              const totalPrice = calculateTotal(booking);
 
               return (
                 <Card
@@ -440,7 +445,7 @@ const AllReservationsPage = () => {
             <TableBody>
               {filteredBookings.length > 0 ? (
                 filteredBookings.map((booking) => {
-                  const totalPrice = calculateTotal(booking); // Calculate here
+                  const totalPrice = calculateTotal(booking);
 
                   return (
                     <TableRow
@@ -514,26 +519,47 @@ const AllReservationsPage = () => {
           </Table>
         </TableContainer>
       )}
-
       <Dialog
         open={editDialogOpen}
         onClose={handleEditClose}
         maxWidth="sm"
         fullWidth
+        PaperProps={{
+          sx: { borderRadius: "12px", m: { xs: 1, sm: 2 } },
+        }}
       >
-        <DialogTitle sx={{ fontWeight: "bold" }}>Edit Reservation</DialogTitle>
-        <DialogContent>
+        <DialogTitle sx={{ fontWeight: "bold", pb: 1 }}>
+          Edit Reservation
+        </DialogTitle>
+        <DialogContent dividers>
           <Box component="form" sx={{ mt: 1 }}>
-            <Grid container spacing={2}>
+            <Grid container spacing={3}>
+              <Grid item xs={12}>
+                <TextField
+                  select
+                  label="Room Number"
+                  sx={{ width: "260px" }}
+                  name="room"
+                  value={editFormData.room}
+                  onChange={handleEditChange}
+                  variant="outlined"
+                >
+                  {availableRooms.map((room) => (
+                    <MenuItem key={room._id} value={room._id}>
+                      Room {room.roomNumber} - {room.roomType?.name}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              </Grid>
+
               <Grid item xs={12} sm={6}>
                 <TextField
                   label="Check-in Date"
                   type="date"
-                  fullWidth
+                  sx={{ width: "260px" }}
                   name="checkInDate"
                   value={editFormData.checkInDate}
                   onChange={handleEditChange}
-                  sx={{ width: "250px" }}
                   InputLabelProps={{ shrink: true }}
                 />
               </Grid>
@@ -541,21 +567,20 @@ const AllReservationsPage = () => {
                 <TextField
                   label="Check-out Date"
                   type="date"
-                  fullWidth
+                  sx={{ width: "260px" }}
                   name="checkOutDate"
-                  sx={{ width: "250px" }}
                   value={editFormData.checkOutDate}
                   onChange={handleEditChange}
                   InputLabelProps={{ shrink: true }}
                 />
               </Grid>
+
               <Grid item xs={12}>
                 <TextField
                   select
                   label="Status"
-                  fullWidth
+                  sx={{ width: "260px" }}
                   name="status"
-                  sx={{ width: "250px" }}
                   value={editFormData.status}
                   onChange={handleEditChange}
                 >
@@ -571,32 +596,36 @@ const AllReservationsPage = () => {
                 <TextField
                   label="Notes"
                   multiline
-                  rows={3}
-                  fullWidth
-                  sx={{ width: "250px" }}
+                  rows={4}
+                  sx={{ width: "550px" }}
                   name="notes"
                   value={editFormData.notes}
                   onChange={handleEditChange}
+                  placeholder="Add any special requests..."
                 />
               </Grid>
             </Grid>
           </Box>
         </DialogContent>
-        <DialogActions sx={{ p: 2 }}>
-          <Button onClick={handleEditClose} color="inherit">
+        <DialogActions sx={{ p: 2.5, gap: 1 }}>
+          <Button
+            onClick={handleEditClose}
+            variant="outlined"
+            color="inherit"
+            sx={{ borderRadius: "8px", textTransform: "none" }}
+          >
             Cancel
           </Button>
           <Button
             onClick={handleEditSave}
             variant="contained"
             color="primary"
-            sx={{ px: 4 }}
+            sx={{ borderRadius: "8px", px: 4, textTransform: "none" }}
           >
             Save Changes
           </Button>
         </DialogActions>
       </Dialog>
-
       <Snackbar
         open={snackbar.open}
         autoHideDuration={4000}
