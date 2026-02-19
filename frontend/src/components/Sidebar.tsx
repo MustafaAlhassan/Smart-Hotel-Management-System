@@ -11,7 +11,6 @@ import GroupIcon from "@mui/icons-material/Group";
 import SettingsIcon from "@mui/icons-material/Settings";
 import { Box } from "@mui/system";
 import Logo from "../assets/Logo.png";
-import AssessmentIcon from "@mui/icons-material/Assessment";
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import BookOnlineIcon from "@mui/icons-material/BookOnline";
 import NightShelterIcon from "@mui/icons-material/NightShelter";
@@ -19,6 +18,8 @@ import ExpandLess from "@mui/icons-material/ExpandLess";
 import ExpandMore from "@mui/icons-material/ExpandMore";
 import MeetingRoomIcon from "@mui/icons-material/MeetingRoom";
 import CategoryIcon from "@mui/icons-material/Category";
+import ListAltIcon from "@mui/icons-material/ListAlt"; // أيقونة لقائمة الحجوزات
+import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline"; // أيقونة لحجز جديد
 import React, { useState } from "react";
 
 interface SidebarProps {
@@ -40,6 +41,9 @@ const Sidebar = ({
   const theme = useTheme();
   const currentLocation = useLocation();
 
+  const [roomsOpen, setRoomsOpen] = useState(false);
+  const [reservationsOpen, setReservationsOpen] = useState(false); // الحالة الجديدة لقسم الحجوزات
+
   const handleLogout = () => {
     localStorage.removeItem("role");
     localStorage.removeItem("token");
@@ -47,16 +51,13 @@ const Sidebar = ({
     navigate("/login");
   };
 
-  const [roomsOpen, setRoomsOpen] = useState(false);
-
   const myList = [
-    { text: "Dahsboard", icon: <DashboardIcon />, path: "/dashboard" },
+    { text: "Dashboard", icon: <DashboardIcon />, path: "/dashboard" },
   ];
 
   const bottomList = [
     { text: "Billing", icon: <DescriptionIcon />, path: "/billing" },
     { text: "Users", icon: <GroupIcon />, path: "/users" },
-    { text: "Reservations", icon: <BookOnlineIcon />, path: "/reservations" },
     { text: "Settings", icon: <SettingsIcon />, path: "/settings" },
   ];
 
@@ -92,7 +93,9 @@ const Sidebar = ({
           <Avatar src={Logo} variant="square"></Avatar>
         </Box>
         <Divider />
+
         <List sx={{ mt: "30px" }}>
+          {/* Dashboard */}
           {myList.map((item) => (
             <ListItem
               key={item.text}
@@ -111,6 +114,7 @@ const Sidebar = ({
             </ListItem>
           ))}
 
+          {/* Rooms Management (Expandable) */}
           <ListItem disablePadding>
             <ListItemButton onClick={() => setRoomsOpen(!roomsOpen)}>
               <ListItemIcon>
@@ -128,7 +132,7 @@ const Sidebar = ({
                   pl: 4,
                   bgcolor:
                     currentLocation.pathname === "/rooms"
-                      ? "rgba(255, 255, 255, 0.08)"
+                      ? "rgba(0, 0, 0, 0.04)"
                       : null,
                 }}
                 onClick={() => navigate("/rooms")}
@@ -144,7 +148,7 @@ const Sidebar = ({
                   pl: 4,
                   bgcolor:
                     currentLocation.pathname === "/room-types"
-                      ? "rgba(255, 255, 255, 0.08)"
+                      ? "rgba(0, 0, 0, 0.04)"
                       : null,
                 }}
                 onClick={() => navigate("/room-types")}
@@ -157,6 +161,57 @@ const Sidebar = ({
             </List>
           </Collapse>
 
+          {/* Reservations Management (Expandable) - القسم الجديد */}
+          <ListItem disablePadding>
+            <ListItemButton
+              onClick={() => setReservationsOpen(!reservationsOpen)}
+            >
+              <ListItemIcon>
+                <BookOnlineIcon />
+              </ListItemIcon>
+              <ListItemText primary="Reservations" />
+              {reservationsOpen ? <ExpandLess /> : <ExpandMore />}
+            </ListItemButton>
+          </ListItem>
+
+          <Collapse in={reservationsOpen} timeout="auto" unmountOnExit>
+            <List component="div" disablePadding>
+              {/* خيار عرض كل الحجوزات */}
+              <ListItemButton
+                sx={{
+                  pl: 4,
+                  bgcolor:
+                    currentLocation.pathname === "/reservations"
+                      ? "rgba(0, 0, 0, 0.04)"
+                      : null,
+                }}
+                onClick={() => navigate("/all-reservations")}
+              >
+                <ListItemIcon>
+                  <ListAltIcon fontSize="small" />
+                </ListItemIcon>
+                <ListItemText primary="All Reservations" />
+              </ListItemButton>
+
+              <ListItemButton
+                sx={{
+                  pl: 4,
+                  bgcolor:
+                    currentLocation.pathname === "/reservations"
+                      ? "rgba(0, 0, 0, 0.04)"
+                      : null,
+                }}
+                onClick={() => navigate("/booking")}
+              >
+                <ListItemIcon>
+                  <AddCircleOutlineIcon fontSize="small" />
+                </ListItemIcon>
+                <ListItemText primary="New Booking" />
+              </ListItemButton>
+            </List>
+          </Collapse>
+
+          {/* Other List Items */}
           {bottomList.map((item) => (
             <ListItem
               key={item.text}
@@ -175,6 +230,7 @@ const Sidebar = ({
             </ListItem>
           ))}
 
+          {/* Logout */}
           <ListItem disablePadding>
             <ListItemButton onClick={handleLogout}>
               <ListItemIcon>
