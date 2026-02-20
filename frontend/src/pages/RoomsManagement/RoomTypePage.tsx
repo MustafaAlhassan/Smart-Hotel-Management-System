@@ -26,7 +26,6 @@ import {
   CardActions,
   useTheme,
   useMediaQuery,
-  Grid,
   Divider,
 } from "@mui/material";
 import {
@@ -64,9 +63,7 @@ const RoomTypesPage = () => {
     featuresInput: "",
   });
 
-  // RESPONSIVE HOOKS
   const theme = useTheme();
-  // Returns true if screen width is less than 900px (tablet/mobile)
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
   const fetchData = async () => {
@@ -192,7 +189,6 @@ const RoomTypesPage = () => {
 
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      {/* 1. RESPONSIVE HEADER: Stacks vertically on mobile */}
       <Box
         sx={{
           display: "flex",
@@ -210,7 +206,7 @@ const RoomTypesPage = () => {
           variant="contained"
           startIcon={<AddIcon />}
           onClick={() => handleOpenDialog()}
-          fullWidth={isMobile} // Button takes full width on mobile
+          fullWidth={isMobile}
         >
           Add New Type
         </Button>
@@ -222,9 +218,7 @@ const RoomTypesPage = () => {
         </Alert>
       )}
 
-      {/* 2. RESPONSIVE DATA DISPLAY: Switch between Table (Desktop) and Cards (Mobile) */}
       {!isMobile ? (
-        // --- DESKTOP TABLE VIEW ---
         <TableContainer component={Paper}>
           <Table>
             <TableHead>
@@ -286,7 +280,6 @@ const RoomTypesPage = () => {
           </Table>
         </TableContainer>
       ) : (
-        // --- MOBILE CARD VIEW ---
         <Stack spacing={2}>
           {roomTypes.map((type) => (
             <Card key={type._id} elevation={2}>
@@ -323,7 +316,7 @@ const RoomTypesPage = () => {
                     display: "-webkit-box",
                     overflow: "hidden",
                     WebkitBoxOrient: "vertical",
-                    WebkitLineClamp: 2, // Limit description to 2 lines
+                    WebkitLineClamp: 2,
                   }}
                 >
                   {type.description || "No description provided."}
@@ -366,13 +359,11 @@ const RoomTypesPage = () => {
         </Stack>
       )}
 
-      {/* Dialog */}
       <Dialog
         open={openDialog}
         onClose={handleCloseDialog}
         fullWidth
         maxWidth="sm"
-        // Ensure dialog fits on small mobile screens
         PaperProps={{
           sx: { m: 2, width: "100%" },
         }}
@@ -391,11 +382,10 @@ const RoomTypesPage = () => {
               fullWidth
               required
             />
-            {/* 3. RESPONSIVE FORM: Stacks inputs vertically on mobile */}
             <Box
               sx={{
                 display: "flex",
-                flexDirection: isMobile ? "column" : "row", // Stack on mobile
+                flexDirection: isMobile ? "column" : "row",
                 gap: 2,
               }}
             >
@@ -451,7 +441,6 @@ const RoomTypesPage = () => {
         </DialogActions>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
       <Dialog
         open={deleteConfirmOpen}
         onClose={() => setDeleteConfirmOpen(false)}
@@ -471,7 +460,6 @@ const RoomTypesPage = () => {
         </DialogActions>
       </Dialog>
 
-      {/* Snackbar */}
       <Snackbar
         open={snackbar.open}
         autoHideDuration={4000}

@@ -21,6 +21,7 @@ import getDesignTokens from "./theme/MyTheme";
 import RoomsPage from "./pages/RoomsManagement/RoomsPage";
 import RoomTypesPage from "./pages/RoomsManagement/RoomTypePage";
 import GuestsPage from "./pages/GuestsPage";
+import ServicesPage from "./pages/ServicesPage";
 const sidebarWidth = 270;
 
 function App() {
@@ -62,6 +63,7 @@ function App() {
               />
               <Route path="/booking" element={<BookingPage />} />
               <Route path="/guests" element={<GuestsPage />} />
+              <Route path="/services" element={<ServicesPage />} />
               <Route path="/billing" element={<BillPage />} />
               <Route path="/users" element={<UsersPage />} />
               <Route path="/settings" element={<SettingsPage />} />

@@ -22,6 +22,7 @@ import ListAltIcon from "@mui/icons-material/ListAlt";
 import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 import React, { useState } from "react";
 import PersonAddIcon from "@mui/icons-material/PersonAdd";
+import RoomServiceIcon from "@mui/icons-material/RoomService";
 
 interface SidebarProps {
   sidebarWidth: number;
@@ -58,6 +59,7 @@ const Sidebar = ({
 
   const bottomList = [
     { text: "Guests", icon: <PersonAddIcon />, path: "/guests" },
+    { text: "Services", icon: <RoomServiceIcon />, path: "/services" },
     { text: "Billing", icon: <DescriptionIcon />, path: "/billing" },
     { text: "Users", icon: <GroupIcon />, path: "/users" },
     { text: "Settings", icon: <SettingsIcon />, path: "/settings" },
