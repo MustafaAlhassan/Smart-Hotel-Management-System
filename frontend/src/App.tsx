@@ -20,6 +20,7 @@ import {
 import getDesignTokens from "./theme/MyTheme";
 import RoomsPage from "./pages/RoomsManagement/RoomsPage";
 import RoomTypesPage from "./pages/RoomsManagement/RoomTypePage";
+import GuestsPage from "./pages/GuestsPage";
 const sidebarWidth = 270;
 
 function App() {
@@ -53,16 +54,17 @@ function App() {
               }
             >
               <Route path="/dashboard" element={<DashboardPage />} />
-              <Route path="/billing" element={<BillPage />} />
-              <Route path="/users" element={<UsersPage />} />
+              <Route path="/rooms" element={<RoomsPage />} />
+              <Route path="/room-types" element={<RoomTypesPage />} />
               <Route
                 path="/all-reservations"
                 element={<AllReservationsPage />}
               />
               <Route path="/booking" element={<BookingPage />} />
+              <Route path="/guests" element={<GuestsPage />} />
+              <Route path="/billing" element={<BillPage />} />
+              <Route path="/users" element={<UsersPage />} />
               <Route path="/settings" element={<SettingsPage />} />
-              <Route path="/rooms" element={<RoomsPage />} />
-              <Route path="/room-types" element={<RoomTypesPage />} />
             </Route>
           </Route>
           <Route path="*" element={<NotFoundPage />} />

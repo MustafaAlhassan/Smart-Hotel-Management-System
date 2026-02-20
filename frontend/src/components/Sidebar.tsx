@@ -18,9 +18,10 @@ import ExpandLess from "@mui/icons-material/ExpandLess";
 import ExpandMore from "@mui/icons-material/ExpandMore";
 import MeetingRoomIcon from "@mui/icons-material/MeetingRoom";
 import CategoryIcon from "@mui/icons-material/Category";
-import ListAltIcon from "@mui/icons-material/ListAlt"; // أيقونة لقائمة الحجوزات
-import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline"; // أيقونة لحجز جديد
+import ListAltIcon from "@mui/icons-material/ListAlt";
+import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 import React, { useState } from "react";
+import PersonAddIcon from "@mui/icons-material/PersonAdd";
 
 interface SidebarProps {
   sidebarWidth: number;
@@ -56,6 +57,7 @@ const Sidebar = ({
   ];
 
   const bottomList = [
+    { text: "Guests", icon: <PersonAddIcon />, path: "/guests" },
     { text: "Billing", icon: <DescriptionIcon />, path: "/billing" },
     { text: "Users", icon: <GroupIcon />, path: "/users" },
     { text: "Settings", icon: <SettingsIcon />, path: "/settings" },
@@ -95,7 +97,6 @@ const Sidebar = ({
         <Divider />
 
         <List sx={{ mt: "30px" }}>
-          {/* Dashboard */}
           {myList.map((item) => (
             <ListItem
               key={item.text}
@@ -114,7 +115,6 @@ const Sidebar = ({
             </ListItem>
           ))}
 
-          {/* Rooms Management (Expandable) */}
           <ListItem disablePadding>
             <ListItemButton onClick={() => setRoomsOpen(!roomsOpen)}>
               <ListItemIcon>
@@ -161,7 +161,6 @@ const Sidebar = ({
             </List>
           </Collapse>
 
-          {/* Reservations Management (Expandable) - القسم الجديد */}
           <ListItem disablePadding>
             <ListItemButton
               onClick={() => setReservationsOpen(!reservationsOpen)}
@@ -176,7 +175,6 @@ const Sidebar = ({
 
           <Collapse in={reservationsOpen} timeout="auto" unmountOnExit>
             <List component="div" disablePadding>
-              {/* خيار عرض كل الحجوزات */}
               <ListItemButton
                 sx={{
                   pl: 4,
@@ -211,7 +209,6 @@ const Sidebar = ({
             </List>
           </Collapse>
 
-          {/* Other List Items */}
           {bottomList.map((item) => (
             <ListItem
               key={item.text}
@@ -230,7 +227,6 @@ const Sidebar = ({
             </ListItem>
           ))}
 
-          {/* Logout */}
           <ListItem disablePadding>
             <ListItemButton onClick={handleLogout}>
               <ListItemIcon>

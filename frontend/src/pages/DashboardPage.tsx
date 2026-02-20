@@ -30,6 +30,8 @@ import {
   EventAvailable,
   EventBusy,
   DonutLarge,
+  CleaningServices, // Added for Dirty
+  Handyman, // Added for Maintenance
 } from "@mui/icons-material";
 import {
   PieChart,
@@ -110,12 +112,14 @@ const DashboardPage = () => {
     data.rooms.total > 0
       ? Math.round((data.rooms.occupied / data.rooms.total) * 100)
       : 0;
-
   const availableRate = 100 - occupancyRate;
 
+  // Updated Pie Chart Data
   const occupancyData = [
     { name: "Occupied", value: data.rooms.occupied },
     { name: "Available", value: data.rooms.available },
+    { name: "Dirty", value: data.rooms.dirty || 0 },
+    { name: "Maintenance", value: data.rooms.maintenance || 0 },
   ];
 
   const activityData = [
@@ -153,56 +157,56 @@ const DashboardPage = () => {
     {
       title: "Total Rooms",
       value: data.rooms.total,
-      icon: <MeetingRoom fontSize="medium" />,
+      icon: <MeetingRoom />,
       color: theme.palette.primary.main,
     },
     {
       title: "Occupied",
       value: data.rooms.occupied,
-      icon: <Hotel fontSize="medium" />,
+      icon: <Hotel />,
       color: theme.palette.error.main,
     },
     {
       title: "Available",
       value: data.rooms.available,
-      icon: <DonutLarge fontSize="medium" />,
+      icon: <DonutLarge />,
       color: theme.palette.success.main,
+    },
+    {
+      title: "Dirty",
+      value: data.rooms.dirty || 0,
+      icon: <CleaningServices />,
+      color: "#795548",
+    },
+    {
+      title: "Maintenance",
+      value: data.rooms.maintenance || 0,
+      icon: <Handyman />,
+      color: "#607d8b",
     },
     {
       title: "Occupancy",
       value: `${occupancyRate}%`,
-      icon: <TrendingUp fontSize="medium" />,
+      icon: <TrendingUp />,
       color: theme.palette.warning.main,
     },
     {
       title: "Guests",
       value: data.guests.total,
-      icon: <People fontSize="medium" />,
+      icon: <People />,
       color: theme.palette.info.main,
     },
     {
-      title: "Bookings",
-      value: data.bookings?.total || 0,
-      icon: <BookOnline fontSize="medium" />,
-      color: theme.palette.secondary.main,
-    },
-    {
-      title: "Check-Ins",
+      title: "Today's Check-Ins",
       value: data.todayActivity.checkIns,
-      icon: <EventAvailable fontSize="medium" />,
+      icon: <EventAvailable />,
       color: theme.palette.primary.main,
     },
     {
-      title: "Check-Outs",
+      title: "Today's Check-Outs",
       value: data.todayActivity.checkOuts,
-      icon: <EventBusy fontSize="medium" />,
+      icon: <EventBusy />,
       color: theme.palette.error.main,
-    },
-    {
-      title: "Revenue MTD",
-      value: `$${data.financials.monthlyRevenue.toLocaleString()}`,
-      icon: <AttachMoney fontSize="medium" />,
-      color: theme.palette.success.main,
     },
   ];
 
@@ -292,6 +296,7 @@ const DashboardPage = () => {
     },
   };
 
+  // Updated Table Rows
   const tableRows = [
     {
       metric: "Total Rooms",
@@ -302,30 +307,25 @@ const DashboardPage = () => {
         />
       ),
       value: data.rooms.total,
-      detail: `${data.rooms.available} currently available`,
+      detail: `${data.rooms.available} ready for check-in`,
+    },
+    {
+      metric: "Dirty Rooms",
+      icon: <CleaningServices fontSize="small" sx={{ color: "#795548" }} />,
+      value: data.rooms.dirty || 0,
+      detail: "Requires housekeeping",
+    },
+    {
+      metric: "Maintenance",
+      icon: <Handyman fontSize="small" sx={{ color: "#607d8b" }} />,
+      value: data.rooms.maintenance || 0,
+      detail: "Out of service",
     },
     {
       metric: "Occupied Rooms",
       icon: <Hotel fontSize="small" sx={{ color: theme.palette.error.main }} />,
       value: data.rooms.occupied,
       detail: `${occupancyRate}% occupancy rate`,
-    },
-    {
-      metric: "Registered Guests",
-      icon: <People fontSize="small" sx={{ color: theme.palette.info.main }} />,
-      value: data.guests.total,
-      detail: "Lifetime registered profiles",
-    },
-    {
-      metric: "Total Bookings",
-      icon: (
-        <BookOnline
-          fontSize="small"
-          sx={{ color: theme.palette.secondary.main }}
-        />
-      ),
-      value: data.bookings?.total || 0,
-      detail: "All-time booking count",
     },
     {
       metric: "Check-Ins Today",
@@ -336,15 +336,7 @@ const DashboardPage = () => {
         />
       ),
       value: data.todayActivity.checkIns,
-      detail: "Guests checked in today",
-    },
-    {
-      metric: "Check-Outs Today",
-      icon: (
-        <EventBusy fontSize="small" sx={{ color: theme.palette.error.main }} />
-      ),
-      value: data.todayActivity.checkOuts,
-      detail: "Guests checked out today",
+      detail: "Guests arrived",
     },
     {
       metric: "Monthly Revenue",
@@ -355,7 +347,7 @@ const DashboardPage = () => {
         />
       ),
       value: `$${data.financials.monthlyRevenue.toLocaleString()}`,
-      detail: "Revenue since start of month",
+      detail: "MTD Performance",
     },
   ];
 
@@ -387,17 +379,10 @@ const DashboardPage = () => {
         <Box
           sx={{
             display: "grid",
-            gridTemplateColumns: `repeat(9, ${CARD_SIZE}px)`,
+            gridTemplateColumns: `repeat(auto-fill, ${CARD_SIZE}px)`,
+            justifyContent: "center",
+            width: "100%",
             gap: 2.5,
-            "@media (max-width: 1600px)": {
-              gridTemplateColumns: `repeat(5, ${CARD_SIZE}px)`,
-            },
-            "@media (max-width: 960px)": {
-              gridTemplateColumns: `repeat(3, ${CARD_SIZE}px)`,
-            },
-            "@media (max-width: 580px)": {
-              gridTemplateColumns: `repeat(2, ${CARD_SIZE}px)`,
-            },
           }}
         >
           {statCards.map((card, i) => (
@@ -421,6 +406,8 @@ const DashboardPage = () => {
                 >
                   <Cell fill={theme.palette.error.main} />
                   <Cell fill={theme.palette.success.main} />
+                  <Cell fill="#795548" />
+                  <Cell fill="#607d8b" />
                 </Pie>
                 <Tooltip {...tooltipStyle} />
                 <Legend iconType="circle" iconSize={9} />
@@ -590,7 +577,6 @@ const DashboardPage = () => {
                   borderRadius: 2.5,
                   py: 2,
                   fontWeight: 700,
-                  fontSize: "0.95rem",
                   boxShadow: "none",
                 }}
               >
@@ -604,7 +590,6 @@ const DashboardPage = () => {
                   borderRadius: 2.5,
                   py: 2,
                   fontWeight: 700,
-                  fontSize: "0.95rem",
                   borderWidth: 2,
                 }}
               >
@@ -620,21 +605,27 @@ const DashboardPage = () => {
                   >
                     Occupancy Rate
                   </Typography>
+
                   <Typography variant="body2" fontWeight={700}>
                     {occupancyRate}%
                   </Typography>
                 </Stack>
+
                 <LinearProgress
                   variant="determinate"
                   value={occupancyRate}
                   sx={{
                     height: 8,
+
                     borderRadius: 4,
+
                     bgcolor: theme.palette.action.hover,
+
                     "& .MuiLinearProgress-bar": { borderRadius: 4 },
                   }}
                 />
               </Box>
+
               <Box>
                 <Stack direction="row" justifyContent="space-between" mb={1}>
                   <Typography
@@ -644,18 +635,23 @@ const DashboardPage = () => {
                   >
                     Availability Rate
                   </Typography>
+
                   <Typography variant="body2" fontWeight={700}>
                     {availableRate}%
                   </Typography>
                 </Stack>
+
                 <LinearProgress
                   variant="determinate"
                   value={availableRate}
                   color="success"
                   sx={{
                     height: 8,
+
                     borderRadius: 4,
+
                     bgcolor: theme.palette.action.hover,
+
                     "& .MuiLinearProgress-bar": { borderRadius: 4 },
                   }}
                 />
@@ -693,7 +689,6 @@ const DashboardPage = () => {
                     fontWeight: 700,
                     fontSize: "0.75rem",
                     textTransform: "uppercase",
-                    letterSpacing: "0.06em",
                     color: "text.secondary",
                     py: 1.5,
                   }}
