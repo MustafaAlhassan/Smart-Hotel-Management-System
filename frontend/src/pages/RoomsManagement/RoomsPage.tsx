@@ -28,7 +28,7 @@ import {
   ImageNotSupported as NoImageIcon,
   CheckCircle as FeatureIcon,
   Stairs as FloorIcon,
-  Warning as WarningIcon, // Added for the delete dialog
+  Warning as WarningIcon,
 } from "@mui/icons-material";
 import { roomService } from "../../services/roomService";
 import { roomTypeService } from "../../services/roomTypeService";
@@ -67,7 +67,6 @@ const RoomsPage = () => {
   const [editingRoom, setEditingRoom] = useState<IRoom | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
-  // --- NEW STATE FOR DELETE CONFIRMATION ---
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [roomToDelete, setRoomToDelete] = useState<string | null>(null);
 
@@ -209,13 +208,11 @@ const RoomsPage = () => {
     }
   };
 
-  // --- STEP 1: OPEN THE CONFIRMATION DIALOG ---
   const handleDeleteClick = (id: string) => {
     setRoomToDelete(id);
     setDeleteConfirmOpen(true);
   };
 
-  // --- STEP 2: EXECUTE DELETE (Called by Dialog) ---
   const handleConfirmDelete = async () => {
     if (!roomToDelete) return;
 
@@ -494,7 +491,6 @@ const RoomsPage = () => {
                 <Button
                   variant="outlined"
                   color="error"
-                  // Updated: Now calls handleDeleteClick instead of direct delete
                   onClick={() => handleDeleteClick(room._id)}
                   sx={{ borderRadius: 2, minWidth: 50, px: 0 }}
                 >
@@ -506,7 +502,6 @@ const RoomsPage = () => {
         })}
       </Box>
 
-      {/* EDIT / CREATE DIALOG */}
       <Dialog
         open={open}
         onClose={() => setOpen(false)}
@@ -645,7 +640,6 @@ const RoomsPage = () => {
         </DialogActions>
       </Dialog>
 
-      {/* NEW DELETE CONFIRMATION DIALOG */}
       <Dialog
         open={deleteConfirmOpen}
         onClose={() => setDeleteConfirmOpen(false)}
@@ -678,7 +672,7 @@ const RoomsPage = () => {
         open={snackbar.open}
         autoHideDuration={4000}
         onClose={() => setSnackbar({ ...snackbar, open: false })}
-        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+        anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
       >
         <Alert severity={snackbar.severity} variant="filled">
           {snackbar.message}
