@@ -60,7 +60,7 @@ const Sidebar = ({
   const bottomList = [
     { text: "Guests", icon: <PersonAddIcon />, path: "/guests" },
     { text: "Services", icon: <RoomServiceIcon />, path: "/services" },
-    { text: "Billing", icon: <DescriptionIcon />, path: "/billing" },
+    { text: "Invoices", icon: <DescriptionIcon />, path: "/invoices" },
     { text: "Users", icon: <GroupIcon />, path: "/users" },
     { text: "Settings", icon: <SettingsIcon />, path: "/settings" },
   ];
