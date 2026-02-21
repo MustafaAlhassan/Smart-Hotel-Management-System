@@ -3,7 +3,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import HomePage from "./pages/HomePage";
 import LoginPage from "./pages/LoginPage/LoginPage";
 import DashboardPage from "./pages/DashboardPage";
-import BillPage from "./pages/BillPage";
+import InvoicesPage from "./pages/InvoicesPage";
 import BookingPage from "./pages/Reservations/BookingPage";
 import AllReservationsPage from "./pages/Reservations/AllReservationsPage";
 import UsersPage from "./pages/UsersPage";
@@ -64,7 +64,7 @@ function App() {
               <Route path="/booking" element={<BookingPage />} />
               <Route path="/guests" element={<GuestsPage />} />
               <Route path="/services" element={<ServicesPage />} />
-              <Route path="/billing" element={<BillPage />} />
+              <Route path="/invoices" element={<InvoicesPage />} />
               <Route path="/users" element={<UsersPage />} />
               <Route path="/settings" element={<SettingsPage />} />
             </Route>

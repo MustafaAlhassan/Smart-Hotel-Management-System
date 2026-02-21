@@ -5,6 +5,7 @@ import {
   getBookingInvoice,
   getInvoice,
   updatePayment,
+  addServiceToInvoice,
 } from "../controllers/invoiceController";
 import { requireRole } from "../middlewares/requireRole";
 import { UserRole } from "../models/userModel";
@@ -21,5 +22,11 @@ invoiceRouter.get(
   getBookingInvoice,
 );
 invoiceRouter.patch("/:id/payment", requireRole(writeAccess), updatePayment);
+
+invoiceRouter.patch(
+  "/:id/services",
+  requireRole(writeAccess),
+  addServiceToInvoice,
+);
 
 export default invoiceRouter;

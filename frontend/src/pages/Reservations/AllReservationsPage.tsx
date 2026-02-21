@@ -39,6 +39,7 @@ import EventIcon from "@mui/icons-material/Event";
 import HotelIcon from "@mui/icons-material/Hotel";
 import AttachMoneyIcon from "@mui/icons-material/AttachMoney";
 import PersonIcon from "@mui/icons-material/Person";
+import ReceiptIcon from "@mui/icons-material/Receipt";
 import { useNavigate } from "react-router-dom";
 import api from "../../services/api";
 
@@ -124,6 +125,16 @@ const AllReservationsPage = () => {
     } catch (err: any) {
       const errorMsg =
         err.response?.data?.message || "Error cancelling booking.";
+      showMessage(errorMsg, "error");
+    }
+  };
+
+  const handleCreateInvoice = async (id: string) => {
+    try {
+      await api.post("/invoices", { bookingId: id });
+      showMessage("Invoice created successfully.");
+    } catch (err: any) {
+      const errorMsg = err.response?.data?.message || "Error creating invoice.";
       showMessage(errorMsg, "error");
     }
   };
@@ -378,7 +389,18 @@ const AllReservationsPage = () => {
                       justifyContent="flex-end"
                       mt={2}
                       gap={1}
+                      flexWrap="wrap"
                     >
+                      <Button
+                        variant="outlined"
+                        color="success"
+                        size="small"
+                        startIcon={<ReceiptIcon />}
+                        onClick={() => handleCreateInvoice(booking._id)}
+                        sx={{ borderRadius: "8px" }}
+                      >
+                        Invoice
+                      </Button>
                       <Button
                         variant="outlined"
                         color="info"
@@ -483,6 +505,16 @@ const AllReservationsPage = () => {
                       </TableCell>
                       <TableCell>{getStatusChip(booking.status)}</TableCell>
                       <TableCell align="center">
+                        <Tooltip title="Create Invoice">
+                          <IconButton
+                            color="success"
+                            size="small"
+                            sx={{ mr: 1 }}
+                            onClick={() => handleCreateInvoice(booking._id)}
+                          >
+                            <ReceiptIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
                         <Tooltip title="Edit">
                           <IconButton
                             color="info"
@@ -630,7 +662,7 @@ const AllReservationsPage = () => {
         open={snackbar.open}
         autoHideDuration={4000}
         onClose={handleCloseSnackbar}
-        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+        anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
       >
         <Alert
           onClose={handleCloseSnackbar}

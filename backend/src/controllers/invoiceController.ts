@@ -4,8 +4,11 @@ import {
   getInvoiceByBookingId,
   getInvoiceById,
   updateInvoiceStatus,
-  findAllInvoices
+  findAllInvoices,
 } from "../services/invoiceServices";
+import { ServiceModel } from "../models/serviceModel";
+
+import { InvoiceModel } from "../models/invoiceModel";
 
 const handleError = (error: any, res: Response) => {
   console.error(error);
@@ -45,6 +48,49 @@ export const getInvoice = async (req: Request, res: Response) => {
     const invoice = await getInvoiceById(id);
 
     if (!invoice) return res.status(404).json({ message: "Invoice not found" });
+
+    res.status(200).json(invoice);
+  } catch (error) {
+    handleError(error, res);
+  }
+};
+
+export const addServiceToInvoice = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { serviceId, quantity } = req.body;
+
+    if (!serviceId || !quantity) {
+      return res
+        .status(400)
+        .json({ message: "Service ID and quantity are required" });
+    }
+
+    const invoice = await InvoiceModel.findById(id);
+    if (!invoice) {
+      return res.status(404).json({ message: "Invoice not found" });
+    }
+
+    const serviceDetails = await ServiceModel.findById(serviceId);
+
+    if (!serviceDetails) {
+      return res.status(404).json({ message: "Service not found in database" });
+    }
+
+    const price = serviceDetails.price; // Grabs the real price (e.g., 30)
+    const itemTotal = price * quantity;
+
+    invoice.usedServices.push({
+      service: serviceId,
+      quantity: quantity,
+      price: price,
+      total: itemTotal,
+    });
+
+    invoice.totalServiceCharge += itemTotal;
+    invoice.totalAmountDue += itemTotal;
+
+    await invoice.save();
 
     res.status(200).json(invoice);
   } catch (error) {
