@@ -1,9 +1,20 @@
-import { Outlet, Navigate } from "react-router-dom";
+import { Outlet, Navigate, useLocation } from "react-router-dom";
+import { canAccess } from "./Sidebar";
 
-const ProtectedLayout = () => {
+const ProtectedRoute = () => {
   const token = localStorage.getItem("token");
+  const role = localStorage.getItem("role");
+  const location = useLocation();
 
-  return token ? <Outlet /> : <Navigate to="/login" replace />;
+  if (!token) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (!canAccess(location.pathname, role)) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return <Outlet />;
 };
 
-export default ProtectedLayout;
+export default ProtectedRoute;

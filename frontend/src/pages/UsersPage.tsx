@@ -34,9 +34,7 @@ import {
 import {
   MoreVert,
   Add as AddIcon,
-  Person as PersonIcon,
   Email as EmailIcon,
-  Badge as BadgeIcon,
   AdminPanelSettings as AdminIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
@@ -54,14 +52,17 @@ interface IUser {
   role: string;
 }
 
-const roles = ["MANAGER", "RECEPTIONIST", "HOUSEKEEPING"];
+// Must match backend UserRole enum exactly (Pascal case based on stored "Admin")
+const ASSIGNABLE_ROLES = ["Manager", "Receptionist", "Housekeeping"];
 
 const getRoleColor = (
   role: string,
-): "primary" | "secondary" | "warning" | "default" => {
-  if (role === "MANAGER") return "primary";
-  if (role === "RECEPTIONIST") return "secondary";
-  if (role === "HOUSEKEEPING") return "warning";
+): "success" | "primary" | "secondary" | "warning" | "default" => {
+  const r = role?.toLowerCase();
+  if (r === "admin") return "success";
+  if (r === "manager") return "primary";
+  if (r === "receptionist") return "secondary";
+  if (r === "housekeeping") return "warning";
   return "default";
 };
 
@@ -85,6 +86,10 @@ const UsersPage = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
+  // Current logged-in user's role from localStorage
+  const currentRole = localStorage.getItem("role") || "";
+  const isAdmin = currentRole?.toUpperCase() === "ADMIN";
+
   const [users, setUsers] = useState<IUser[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -102,7 +107,7 @@ const UsersPage = () => {
     username: "",
     email: "",
     password: "",
-    role: "MANAGER",
+    role: "Manager",
   });
   const [newRole, setNewRole] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -236,7 +241,7 @@ const UsersPage = () => {
       username: "",
       email: "",
       password: "",
-      role: "MANAGER",
+      role: "Manager",
     });
     setOpenUserDialog(true);
   };
@@ -268,7 +273,7 @@ const UsersPage = () => {
 
   return (
     <Box sx={{ width: "100%", p: { xs: 2, md: 4 }, boxSizing: "border-box" }}>
-      {/* Header */}
+      {/* ── Header ──────────────────────────────────────────────────────── */}
       <Box
         sx={{
           display: "flex",
@@ -292,6 +297,7 @@ const UsersPage = () => {
             Manage staff accounts and access roles
           </Typography>
         </Box>
+        {/* Both ADMIN and MANAGER can create users */}
         <Button
           variant="contained"
           startIcon={<AddIcon />}
@@ -310,7 +316,7 @@ const UsersPage = () => {
         </Button>
       </Box>
 
-      {/* Mobile Card View */}
+      {/* ── Mobile Card View ────────────────────────────────────────────── */}
       {isMobile ? (
         <Box>
           {users.length === 0 ? (
@@ -406,7 +412,7 @@ const UsersPage = () => {
           )}
         </Box>
       ) : (
-        /* Desktop Table View */
+        /* ── Desktop Table View ───────────────────────────────────────── */
         <TableContainer
           component={Paper}
           elevation={0}
@@ -518,7 +524,7 @@ const UsersPage = () => {
         </TableContainer>
       )}
 
-      {/* Context Menu */}
+      {/* ── Context Menu ────────────────────────────────────────────────── */}
       <Menu
         anchorEl={anchorEl}
         open={Boolean(anchorEl)}
@@ -531,54 +537,68 @@ const UsersPage = () => {
           },
         }}
       >
+        {/* ADMIN + MANAGER: edit basic details */}
         <MenuItem onClick={openEditDialog} sx={{ gap: 1.5, py: 1.2 }}>
           <EditIcon fontSize="small" color="primary" />
           <Typography variant="body2" fontWeight={600}>
             Edit Details
           </Typography>
         </MenuItem>
-        <MenuItem
-          onClick={() => {
-            setNewRole(selectedUser?.role || "");
-            setOpenRoleDialog(true);
-            handleMenuClose();
-          }}
-          sx={{ gap: 1.5, py: 1.2 }}
-        >
-          <ManageAccountsIcon fontSize="small" color="secondary" />
-          <Typography variant="body2" fontWeight={600}>
-            Change Role
-          </Typography>
-        </MenuItem>
-        <MenuItem
-          onClick={() => {
-            setNewPassword("");
-            setOpenPasswordDialog(true);
-            handleMenuClose();
-          }}
-          sx={{ gap: 1.5, py: 1.2 }}
-        >
-          <LockResetIcon fontSize="small" color="warning" />
-          <Typography variant="body2" fontWeight={600}>
-            Reset Password
-          </Typography>
-        </MenuItem>
-        <Divider />
-        <MenuItem
-          onClick={() => {
-            setOpenDeleteDialog(true);
-            handleMenuClose();
-          }}
-          sx={{ gap: 1.5, py: 1.2, color: "error.main" }}
-        >
-          <DeleteIcon fontSize="small" />
-          <Typography variant="body2" fontWeight={600}>
-            Delete User
-          </Typography>
-        </MenuItem>
+
+        {/* ADMIN only: change role */}
+        {isAdmin && (
+          <MenuItem
+            onClick={() => {
+              setNewRole(selectedUser?.role || "");
+              setOpenRoleDialog(true);
+              handleMenuClose();
+            }}
+            sx={{ gap: 1.5, py: 1.2 }}
+          >
+            <ManageAccountsIcon fontSize="small" color="secondary" />
+            <Typography variant="body2" fontWeight={600}>
+              Change Role
+            </Typography>
+          </MenuItem>
+        )}
+
+        {/* ADMIN only: reset password */}
+        {isAdmin && (
+          <MenuItem
+            onClick={() => {
+              setNewPassword("");
+              setOpenPasswordDialog(true);
+              handleMenuClose();
+            }}
+            sx={{ gap: 1.5, py: 1.2 }}
+          >
+            <LockResetIcon fontSize="small" color="warning" />
+            <Typography variant="body2" fontWeight={600}>
+              Reset Password
+            </Typography>
+          </MenuItem>
+        )}
+
+        {/* ADMIN only: delete */}
+        {isAdmin && [
+          <Divider key="div" />,
+          <MenuItem
+            key="delete"
+            onClick={() => {
+              setOpenDeleteDialog(true);
+              handleMenuClose();
+            }}
+            sx={{ gap: 1.5, py: 1.2, color: "error.main" }}
+          >
+            <DeleteIcon fontSize="small" />
+            <Typography variant="body2" fontWeight={600}>
+              Delete User
+            </Typography>
+          </MenuItem>,
+        ]}
       </Menu>
 
-      {/* Create / Edit User Dialog */}
+      {/* ── Create / Edit Dialog ────────────────────────────────────────── */}
       <Dialog
         open={openUserDialog}
         onClose={() => setOpenUserDialog(false)}
@@ -646,7 +666,7 @@ const UsersPage = () => {
                     setFormData({ ...formData, role: e.target.value })
                   }
                 >
-                  {roles.map((r) => (
+                  {ASSIGNABLE_ROLES.map((r) => (
                     <MenuItem key={r} value={r}>
                       {r}
                     </MenuItem>
@@ -679,7 +699,7 @@ const UsersPage = () => {
         </DialogActions>
       </Dialog>
 
-      {/* Change Role Dialog */}
+      {/* ── Change Role Dialog (ADMIN only) ─────────────────────────────── */}
       <Dialog
         open={openRoleDialog}
         onClose={() => setOpenRoleDialog(false)}
@@ -700,7 +720,7 @@ const UsersPage = () => {
               value={newRole}
               onChange={(e) => setNewRole(e.target.value)}
             >
-              {roles.map((r) => (
+              {ASSIGNABLE_ROLES.map((r) => (
                 <MenuItem key={r} value={r}>
                   {r}
                 </MenuItem>
@@ -731,7 +751,7 @@ const UsersPage = () => {
         </DialogActions>
       </Dialog>
 
-      {/* Reset Password Dialog */}
+      {/* ── Reset Password Dialog (ADMIN only) ──────────────────────────── */}
       <Dialog
         open={openPasswordDialog}
         onClose={() => setOpenPasswordDialog(false)}
@@ -779,7 +799,7 @@ const UsersPage = () => {
         </DialogActions>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
+      {/* ── Delete Confirmation Dialog (ADMIN only) ──────────────────────── */}
       <Dialog
         open={openDeleteDialog}
         onClose={() => setOpenDeleteDialog(false)}

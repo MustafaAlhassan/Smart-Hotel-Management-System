@@ -22,10 +22,9 @@ import RoomsPage from "./pages/RoomsManagement/RoomsPage";
 import RoomTypesPage from "./pages/RoomsManagement/RoomTypePage";
 import GuestsPage from "./pages/GuestsPage";
 import ServicesPage from "./pages/ServicesPage";
-const sidebarWidth = 270;
+const sidebarWidth = 290;
 
 function App() {
-  // Start Theme
   const [mode, setMyMode] = useState<PaletteMode>(
     localStorage.getItem("currentMode") === null
       ? "light"
@@ -35,11 +34,6 @@ function App() {
   );
 
   const theme = React.useMemo(() => createTheme(getDesignTokens(mode)), [mode]);
-  // End Theme
-
-  // Start Drawer
-
-  // End Drawer
 
   return (
     <ThemeProvider theme={theme}>

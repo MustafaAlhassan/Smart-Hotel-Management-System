@@ -1,24 +1,45 @@
-import { ListItem, useTheme, type PaletteMode } from "@mui/material";
-import { Brightness4, Brightness7 } from "@mui/icons-material";
 import * as React from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { styled, alpha } from "@mui/material/styles";
-import AppBar from "@mui/material/AppBar";
-import Box from "@mui/material/Box";
-import Toolbar from "@mui/material/Toolbar";
-import IconButton from "@mui/material/IconButton";
-import InputBase from "@mui/material/InputBase";
-import Badge from "@mui/material/Badge";
-import MenuItem from "@mui/material/MenuItem";
+import {
+  AppBar,
+  Box,
+  Toolbar,
+  IconButton,
+  InputBase,
+  MenuItem,
+  Menu,
+  Avatar,
+  Typography,
+  Divider,
+  Chip,
+  Tooltip,
+  useTheme,
+  Paper,
+  List,
+  ListItemButton,
+  ListItemIcon,
+  ListItemText,
+  ClickAwayListener,
+  type PaletteMode,
+} from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
 import SearchIcon from "@mui/icons-material/Search";
-import AccountCircle from "@mui/icons-material/AccountCircle";
-import MailIcon from "@mui/icons-material/Mail";
-import NotificationsIcon from "@mui/icons-material/Notifications";
-import MoreIcon from "@mui/icons-material/MoreVert";
-import Menu from "@mui/material/Menu";
-import { width } from "@mui/system";
+import CloseIcon from "@mui/icons-material/Close";
+import Brightness4Icon from "@mui/icons-material/Brightness4";
+import Brightness7Icon from "@mui/icons-material/Brightness7";
+import SettingsIcon from "@mui/icons-material/Settings";
+import LogoutIcon from "@mui/icons-material/Logout";
+import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
+import DashboardIcon from "@mui/icons-material/Dashboard";
+import MeetingRoomIcon from "@mui/icons-material/MeetingRoom";
+import CategoryIcon from "@mui/icons-material/Category";
+import BookOnlineIcon from "@mui/icons-material/BookOnline";
+import PersonAddIcon from "@mui/icons-material/PersonAdd";
+import RoomServiceIcon from "@mui/icons-material/RoomService";
+import DescriptionIcon from "@mui/icons-material/Description";
+import GroupIcon from "@mui/icons-material/Group";
 
-// Defining prop type
 interface NavbarProps {
   setMyMode: React.Dispatch<React.SetStateAction<PaletteMode>>;
   sidebarWidth: number;
@@ -26,47 +47,102 @@ interface NavbarProps {
   setnoneORblock: React.Dispatch<React.SetStateAction<string>>;
 }
 
-// Start MUI code
-const Search = styled("div")(({ theme }) => ({
-  position: "relative",
-  borderRadius: theme.shape.borderRadius,
-  backgroundColor: alpha(theme.palette.common.white, 0.15),
-  "&:hover": {
-    backgroundColor: alpha(theme.palette.common.white, 0.25),
+const ALL_PAGES = [
+  {
+    label: "Dashboard",
+    path: "/dashboard",
+    icon: <DashboardIcon fontSize="small" />,
   },
-  marginRight: theme.spacing(2),
-  marginLeft: 0,
+  {
+    label: "All Rooms",
+    path: "/rooms",
+    icon: <MeetingRoomIcon fontSize="small" />,
+  },
+  {
+    label: "Room Types",
+    path: "/room-types",
+    icon: <CategoryIcon fontSize="small" />,
+  },
+  {
+    label: "All Reservations",
+    path: "/all-reservations",
+    icon: <BookOnlineIcon fontSize="small" />,
+  },
+  {
+    label: "New Booking",
+    path: "/booking",
+    icon: <BookOnlineIcon fontSize="small" />,
+  },
+  {
+    label: "Guests",
+    path: "/guests",
+    icon: <PersonAddIcon fontSize="small" />,
+  },
+  {
+    label: "Services",
+    path: "/services",
+    icon: <RoomServiceIcon fontSize="small" />,
+  },
+  {
+    label: "Invoices",
+    path: "/invoices",
+    icon: <DescriptionIcon fontSize="small" />,
+  },
+  { label: "Users", path: "/users", icon: <GroupIcon fontSize="small" /> },
+  {
+    label: "Settings",
+    path: "/settings",
+    icon: <SettingsIcon fontSize="small" />,
+  },
+];
+
+const ROLE_COLOR: Record<
+  string,
+  "success" | "primary" | "secondary" | "warning" | "default"
+> = {
+  ADMIN: "success",
+  MANAGER: "primary",
+  RECEPTIONIST: "secondary",
+  HOUSEKEEPING: "warning",
+};
+
+const SearchWrapper = styled("div")(({ theme }) => ({
+  position: "relative",
+  borderRadius: "10px",
+  border: `1px solid ${theme.palette.divider}`,
+  backgroundColor: theme.palette.background.default,
+  transition: "border-color 0.2s, box-shadow 0.2s",
+  "&:focus-within": {
+    borderColor: theme.palette.primary.main,
+    boxShadow: `0 0 0 3px ${alpha(theme.palette.primary.main, 0.12)}`,
+  },
   width: "100%",
-  [theme.breakpoints.up("sm")]: {
-    marginLeft: theme.spacing(3),
-    width: "auto",
+  maxWidth: 520,
+  [theme.breakpoints.down("sm")]: {
+    maxWidth: "100%",
   },
 }));
 
-const SearchIconWrapper = styled("div")(({ theme }) => ({
-  padding: theme.spacing(0, 2),
+const SearchIconWrap = styled("div")(({ theme }) => ({
+  padding: theme.spacing(0, 1.5),
   height: "100%",
   position: "absolute",
   pointerEvents: "none",
   display: "flex",
   alignItems: "center",
-  justifyContent: "center",
+  color: theme.palette.text.disabled,
 }));
 
-const StyledInputBase = styled(InputBase)(({ theme }) => ({
-  color: "inherit",
+const StyledInput = styled(InputBase)(({ theme }) => ({
+  width: "100%",
+  color: theme.palette.text.primary,
   "& .MuiInputBase-input": {
-    padding: theme.spacing(1, 1, 1, 0),
-    // vertical padding + font size from searchIcon
-    paddingLeft: `calc(1em + ${theme.spacing(4)})`,
-    transition: theme.transitions.create("width"),
+    padding: theme.spacing(1, 4.5, 1, 0),
+    paddingLeft: `calc(1em + ${theme.spacing(2.5)})`,
+    fontSize: "0.875rem",
     width: "100%",
-    [theme.breakpoints.up("md")]: {
-      width: "20ch",
-    },
   },
 }));
-// End MUI code
 
 const Navbar = ({
   setMyMode,
@@ -74,208 +150,432 @@ const Navbar = ({
   setDrawerType,
   setnoneORblock,
 }: NavbarProps) => {
-  // Start Ibrahim Work
   const theme = useTheme();
+  const navigate = useNavigate();
+  const location = useLocation();
 
-  // Start MUI code
+  const username = localStorage.getItem("username") || "User";
+  const role = (localStorage.getItem("role") || "").toUpperCase();
+  const isDark = theme.palette.mode === "dark";
+  const initials = username[0]?.toUpperCase() ?? "U";
+
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
-  const [mobileMoreAnchorEl, setMobileMoreAnchorEl] =
-    React.useState<null | HTMLElement>(null);
+  const menuOpen = Boolean(anchorEl);
+  const openMenu = (e: React.MouseEvent<HTMLElement>) =>
+    setAnchorEl(e.currentTarget);
+  const closeMenu = () => setAnchorEl(null);
 
-  const isMenuOpen = Boolean(anchorEl);
-  const isMobileMenuOpen = Boolean(mobileMoreAnchorEl);
+  const [query, setQuery] = React.useState("");
+  const [showResults, setShowResults] = React.useState(false);
 
-  const handleProfileMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
-    setAnchorEl(event.currentTarget);
+  const filtered =
+    query.trim().length > 0
+      ? ALL_PAGES.filter((p) =>
+          p.label.toLowerCase().includes(query.toLowerCase()),
+        )
+      : [];
+
+  const handleSearchSelect = (path: string) => {
+    navigate(path);
+    setQuery("");
+    setShowResults(false);
   };
 
-  const handleMobileMenuClose = () => {
-    setMobileMoreAnchorEl(null);
+  const clearSearch = () => {
+    setQuery("");
+    setShowResults(false);
   };
 
-  const handleMenuClose = () => {
-    setAnchorEl(null);
-    handleMobileMenuClose();
+  const handleToggleTheme = () => {
+    const next = isDark ? "light" : "dark";
+    localStorage.setItem("currentMode", next);
+    setMyMode(next);
   };
 
-  const handleMobileMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
-    setMobileMoreAnchorEl(event.currentTarget);
+  const handleLogout = () => {
+    localStorage.removeItem("role");
+    localStorage.removeItem("token");
+    localStorage.removeItem("username");
+    navigate("/login");
+    closeMenu();
   };
 
-  const menuId = "primary-search-account-menu";
-  const renderMenu = (
-    <Menu
-      anchorEl={anchorEl}
-      anchorOrigin={{
-        vertical: "top",
-        horizontal: "right",
-      }}
-      id={menuId}
-      keepMounted
-      transformOrigin={{
-        vertical: "top",
-        horizontal: "right",
-      }}
-      open={isMenuOpen}
-      onClose={handleMenuClose}
-    >
-      <MenuItem onClick={handleMenuClose}>Profile</MenuItem>
-      <MenuItem onClick={handleMenuClose}>My account</MenuItem>
-    </Menu>
-  );
-
-  const mobileMenuId = "primary-search-account-menu-mobile";
-  const renderMobileMenu = (
-    <Menu
-      anchorEl={mobileMoreAnchorEl}
-      anchorOrigin={{
-        vertical: "top",
-        horizontal: "right",
-      }}
-      id={mobileMenuId}
-      keepMounted
-      transformOrigin={{
-        vertical: "top",
-        horizontal: "right",
-      }}
-      open={isMobileMenuOpen}
-      onClose={handleMobileMenuClose}
-      sx={{ top: "49px" }}
-    >
-      <MenuItem
-        onClick={() => {
-          localStorage.setItem(
-            "currentMode",
-            theme.palette.mode === "dark" ? "light" : "dark",
-          );
-          setMyMode(theme.palette.mode === "light" ? "dark" : "light");
-        }}
-        color="inherit"
-      >
-        <ListItem
-          sx={{
-            ml: "-12px",
-            mr: "-12px",
-          }}
-        >
-          <IconButton>
-            {theme.palette.mode === "dark" ? (
-              <Brightness7 sx={{ color: "orange" }} />
-            ) : (
-              <Brightness4 />
-            )}
-          </IconButton>
-        </ListItem>
-        <p>Display</p>
-      </MenuItem>
-      <MenuItem onClick={handleProfileMenuOpen}>
-        <IconButton
-          size="large"
-          aria-label="account of current user"
-          aria-controls="primary-search-account-menu"
-          aria-haspopup="true"
-          color="inherit"
-        >
-          <AccountCircle />
-        </IconButton>
-        <p>Profile</p>
-      </MenuItem>
-    </Menu>
-  );
-  // End MUI code
-
-  // End Ibrahim Work
   return (
-    <>
-      <Box
+    <Box sx={{ flexGrow: 1 }}>
+      <AppBar
+        position="fixed"
+        elevation={0}
         sx={{
-          flexGrow: 1,
+          width: { sm: `calc(100% - ${sidebarWidth}px)` },
+          ml: { sm: `${sidebarWidth}px` },
+          bgcolor: theme.palette.background.paper,
+          borderBottom: `1px solid ${theme.palette.divider}`,
+          color: theme.palette.text.primary,
+          zIndex: theme.zIndex.drawer - 1,
         }}
       >
-        <AppBar
-          position="fixed"
+        <Toolbar
           sx={{
-            width: { sm: `calc(100% - ${sidebarWidth}px)` },
-            ml: `${sidebarWidth}px`,
+            gap: 1.5,
+            minHeight: { xs: 57, sm: 63 },
+            px: { xs: 1.5, sm: 3 },
           }}
         >
-          <Toolbar>
-            <IconButton
-              onClick={() => {
-                setDrawerType("temporary");
-                setnoneORblock("block");
+          <IconButton
+            onClick={() => {
+              setDrawerType("temporary");
+              setnoneORblock("block");
+            }}
+            size="small"
+            sx={{
+              display: { sm: "none" },
+              color: theme.palette.text.secondary,
+              flexShrink: 0,
+            }}
+          >
+            <MenuIcon sx={{ fontSize: 22 }} />
+          </IconButton>
+
+          <ClickAwayListener onClickAway={() => setShowResults(false)}>
+            <Box
+              sx={{
+                flex: 1,
+                maxWidth: 550,
+                minWidth: 200,
+                position: "relative",
               }}
-              sx={{ display: { sm: "none" }, mr: "9px" }}
             >
-              <MenuIcon />
-            </IconButton>
-            <Search sx={{ width: { sm: "500px" } }}>
-              <SearchIconWrapper>
-                <SearchIcon />
-              </SearchIconWrapper>
-              <StyledInputBase
-                placeholder="Search"
-                inputProps={{ "aria-label": "search" }}
-                sx={{ width: { maxWidth: "500px" } }}
-              />
-            </Search>
-            <Box sx={{ flexGrow: 1 }} />
-            <Box sx={{ display: { xs: "none", md: "flex" } }}>
-              <ListItem
-                sx={{
-                  display: "flex",
-                  justifyContent: "center",
-                }}
-              >
-                <IconButton
-                  onClick={() => {
-                    localStorage.setItem(
-                      "currentMode",
-                      theme.palette.mode === "dark" ? "light" : "dark",
-                    );
-                    setMyMode(
-                      theme.palette.mode === "light" ? "dark" : "light",
-                    );
+              <SearchWrapper>
+                <SearchIconWrap>
+                  <SearchIcon sx={{ fontSize: 18 }} />
+                </SearchIconWrap>
+                <StyledInput
+                  placeholder="Search pages…"
+                  value={query}
+                  inputProps={{ "aria-label": "search" }}
+                  onChange={(e) => {
+                    setQuery(e.target.value);
+                    setShowResults(true);
                   }}
-                  color="inherit"
+                  onFocus={() => {
+                    if (query) setShowResults(true);
+                  }}
+                  endAdornment={
+                    query ? (
+                      <IconButton
+                        size="small"
+                        onClick={clearSearch}
+                        sx={{ mr: 0.5, color: "text.disabled" }}
+                      >
+                        <CloseIcon sx={{ fontSize: 15 }} />
+                      </IconButton>
+                    ) : null
+                  }
+                />
+              </SearchWrapper>
+
+              {showResults && filtered.length > 0 && (
+                <Paper
+                  elevation={0}
+                  sx={{
+                    position: "absolute",
+                    top: "calc(100% + 6px)",
+                    left: 0,
+                    right: 0,
+                    zIndex: 1400,
+                    borderRadius: 2.5,
+                    border: `1px solid ${theme.palette.divider}`,
+                    boxShadow: "0 8px 28px rgba(0,0,0,0.13)",
+                    overflow: "hidden",
+                  }}
                 >
-                  {theme.palette.mode === "dark" ? (
-                    <Brightness7 sx={{ color: "orange" }} />
-                  ) : (
-                    <Brightness4 />
-                  )}
-                </IconButton>
-              </ListItem>
-              <IconButton
-                size="large"
-                edge="end"
-                aria-label="account of current user"
-                aria-controls={menuId}
-                aria-haspopup="true"
-                onClick={handleProfileMenuOpen}
-                color="inherit"
-              >
-                <AccountCircle />
-              </IconButton>
+                  <Typography
+                    variant="caption"
+                    fontWeight={700}
+                    color="text.disabled"
+                    sx={{
+                      px: 2,
+                      pt: 1.2,
+                      pb: 0.5,
+                      display: "block",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.06em",
+                      fontSize: "0.65rem",
+                    }}
+                  >
+                    Pages
+                  </Typography>
+                  <List dense disablePadding sx={{ pb: 0.5 }}>
+                    {filtered.map((page) => (
+                      <ListItemButton
+                        key={page.path}
+                        selected={location.pathname === page.path}
+                        onClick={() => handleSearchSelect(page.path)}
+                        sx={{
+                          mx: 0.5,
+                          borderRadius: 1.5,
+                          py: 0.9,
+                          "&.Mui-selected": {
+                            bgcolor: alpha(theme.palette.primary.main, 0.1),
+                            "& .MuiListItemIcon-root": {
+                              color: theme.palette.primary.main,
+                            },
+                            "& .MuiListItemText-primary": {
+                              color: theme.palette.primary.main,
+                              fontWeight: 700,
+                            },
+                          },
+                        }}
+                      >
+                        <ListItemIcon
+                          sx={{
+                            minWidth: 32,
+                            color: theme.palette.text.secondary,
+                          }}
+                        >
+                          {page.icon}
+                        </ListItemIcon>
+                        <ListItemText
+                          primary={page.label}
+                          primaryTypographyProps={{
+                            fontSize: "0.875rem",
+                            fontWeight: 600,
+                          }}
+                        />
+                      </ListItemButton>
+                    ))}
+                  </List>
+                </Paper>
+              )}
+
+              {showResults &&
+                query.trim().length > 0 &&
+                filtered.length === 0 && (
+                  <Paper
+                    elevation={0}
+                    sx={{
+                      position: "absolute",
+                      top: "calc(100% + 6px)",
+                      left: 0,
+                      right: 0,
+                      zIndex: 1400,
+                      borderRadius: 2.5,
+                      border: `1px solid ${theme.palette.divider}`,
+                      boxShadow: "0 8px 28px rgba(0,0,0,0.13)",
+                      py: 2.5,
+                      textAlign: "center",
+                    }}
+                  >
+                    <Typography variant="body2" color="text.secondary">
+                      No pages found for "
+                      <Box component="span" fontWeight={700}>
+                        {query}
+                      </Box>
+                      "
+                    </Typography>
+                  </Paper>
+                )}
             </Box>
-            <Box sx={{ display: { xs: "flex", md: "none" } }}>
-              <IconButton
-                size="large"
-                aria-label="show more"
-                aria-controls={mobileMenuId}
-                aria-haspopup="true"
-                onClick={handleMobileMenuOpen}
-                color="inherit"
+          </ClickAwayListener>
+
+          <Box sx={{ flexGrow: 1 }} />
+
+          <Tooltip
+            title={isDark ? "Switch to light mode" : "Switch to dark mode"}
+          >
+            <IconButton
+              onClick={handleToggleTheme}
+              size="small"
+              sx={{
+                color: theme.palette.text.secondary,
+                border: `1px solid ${theme.palette.divider}`,
+                borderRadius: "8px",
+                p: 0.8,
+                transition: "all 0.15s",
+                "&:hover": {
+                  borderColor: theme.palette.primary.main,
+                  color: theme.palette.primary.main,
+                  bgcolor: alpha(theme.palette.primary.main, 0.06),
+                },
+              }}
+            >
+              {isDark ? (
+                <Brightness7Icon sx={{ fontSize: 18, color: "orange" }} />
+              ) : (
+                <Brightness4Icon sx={{ fontSize: 18 }} />
+              )}
+            </IconButton>
+          </Tooltip>
+
+          <Box
+            onClick={openMenu}
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: 1,
+              pl: { xs: 0.6, sm: 1 },
+              pr: { xs: 0.6, sm: 1.2 },
+              py: 0.6,
+              borderRadius: "10px",
+              cursor: "pointer",
+              border: `1px solid ${theme.palette.divider}`,
+              transition: "all 0.15s",
+              userSelect: "none",
+              flexShrink: 0,
+              "&:hover": {
+                bgcolor: theme.palette.action.hover,
+                borderColor: theme.palette.primary.main,
+              },
+            }}
+          >
+            <Avatar
+              sx={{
+                width: 28,
+                height: 28,
+                fontSize: "0.72rem",
+                fontWeight: 800,
+                bgcolor: theme.palette.primary.main,
+                flexShrink: 0,
+              }}
+            >
+              {initials}
+            </Avatar>
+            <Box sx={{ display: { xs: "none", sm: "block" } }}>
+              <Typography
+                variant="body2"
+                fontWeight={700}
+                lineHeight={1.2}
+                noWrap
+                sx={{ maxWidth: 120 }}
               >
-                <MoreIcon />
-              </IconButton>
+                {username}
+              </Typography>
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                lineHeight={1}
+                sx={{ fontSize: "0.65rem" }}
+              >
+                {role}
+              </Typography>
             </Box>
-          </Toolbar>
-        </AppBar>
-        {renderMobileMenu}
-        {renderMenu}
-      </Box>
-    </>
+            <KeyboardArrowDownIcon
+              sx={{
+                fontSize: 16,
+                color: "text.secondary",
+                display: { xs: "none", sm: "flex" },
+                transition: "transform 0.2s",
+                transform: menuOpen ? "rotate(180deg)" : "rotate(0deg)",
+              }}
+            />
+          </Box>
+        </Toolbar>
+      </AppBar>
+
+      <Menu
+        anchorEl={anchorEl}
+        open={menuOpen}
+        onClose={closeMenu}
+        transformOrigin={{ horizontal: "right", vertical: "top" }}
+        anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
+        PaperProps={{
+          elevation: 0,
+          sx: {
+            mt: 1,
+            minWidth: 215,
+            borderRadius: 2.5,
+            border: `1px solid ${theme.palette.divider}`,
+            boxShadow: "0 8px 28px rgba(0,0,0,0.12)",
+          },
+        }}
+      >
+        <Box sx={{ px: 2, py: 1.5 }}>
+          <Box display="flex" alignItems="center" gap={1.2}>
+            <Avatar
+              sx={{
+                width: 36,
+                height: 36,
+                fontSize: "0.85rem",
+                fontWeight: 800,
+                bgcolor: theme.palette.primary.main,
+              }}
+            >
+              {initials}
+            </Avatar>
+            <Box>
+              <Typography variant="body2" fontWeight={800} lineHeight={1.2}>
+                {username}
+              </Typography>
+              {role && (
+                <Chip
+                  label={role}
+                  size="small"
+                  color={ROLE_COLOR[role] ?? "default"}
+                  sx={{
+                    height: 17,
+                    fontSize: "0.6rem",
+                    fontWeight: 700,
+                    borderRadius: 1,
+                    mt: 0.3,
+                    "& .MuiChip-label": { px: 0.7 },
+                  }}
+                />
+              )}
+            </Box>
+          </Box>
+        </Box>
+
+        <Divider />
+
+        <MenuItem
+          onClick={() => {
+            handleToggleTheme();
+            closeMenu();
+          }}
+          sx={{ gap: 1.5, py: 1.1, mx: 0.5, borderRadius: 1.5 }}
+        >
+          {isDark ? (
+            <Brightness7Icon fontSize="small" sx={{ color: "orange" }} />
+          ) : (
+            <Brightness4Icon fontSize="small" color="action" />
+          )}
+          <Typography variant="body2" fontWeight={600}>
+            {isDark ? "Light Mode" : "Dark Mode"}
+          </Typography>
+        </MenuItem>
+
+        <MenuItem
+          onClick={() => {
+            navigate("/settings");
+            closeMenu();
+          }}
+          sx={{ gap: 1.5, py: 1.1, mx: 0.5, borderRadius: 1.5 }}
+        >
+          <SettingsIcon fontSize="small" color="action" />
+          <Typography variant="body2" fontWeight={600}>
+            Settings
+          </Typography>
+        </MenuItem>
+
+        <Divider />
+
+        <MenuItem
+          onClick={handleLogout}
+          sx={{
+            gap: 1.5,
+            py: 1.1,
+            mx: 0.5,
+            borderRadius: 1.5,
+            "&:hover": { bgcolor: `${theme.palette.error.main}14` },
+          }}
+        >
+          <LogoutIcon fontSize="small" color="error" />
+          <Typography variant="body2" fontWeight={600} color="error">
+            Logout
+          </Typography>
+        </MenuItem>
+      </Menu>
+    </Box>
   );
 };
 

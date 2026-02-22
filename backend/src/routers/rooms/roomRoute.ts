@@ -1,4 +1,3 @@
-// routers/rooms/roomRoute.ts
 import express from "express";
 import {
   changeRoomStatus,
