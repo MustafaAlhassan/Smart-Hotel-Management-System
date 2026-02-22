@@ -22,15 +22,20 @@ import {
   Snackbar,
   Alert,
   useTheme,
+  useMediaQuery,
   Stack,
   Divider,
   Skeleton,
+  Card,
+  CardContent,
 } from "@mui/material";
 import {
   Print as PrintIcon,
   Payment as PaymentIcon,
   Visibility as VisibilityIcon,
   AddCircleOutline as AddCircleOutlineIcon,
+  CalendarToday as CalendarTodayIcon,
+  AttachMoney as AttachMoneyIcon,
 } from "@mui/icons-material";
 import api from "../services/api";
 
@@ -77,11 +82,9 @@ const bookingCache: Record<string, any> = {};
 const PRINT_STYLES = `
   @media print {
     @page { margin: 0; size: A4; }
-
     body * { visibility: hidden !important; }
     #invoice-print-area,
     #invoice-print-area * { visibility: visible !important; }
-
     #invoice-print-area {
       position: fixed !important;
       inset: 0 !important;
@@ -90,8 +93,6 @@ const PRINT_STYLES = `
       -webkit-print-color-adjust: exact !important;
       print-color-adjust: exact !important;
     }
-
-    /* Default all text inside print area to dark */
     #invoice-print-area p,
     #invoice-print-area span,
     #invoice-print-area td,
@@ -107,40 +108,29 @@ const PRINT_STYLES = `
       -webkit-print-color-adjust: exact !important;
       print-color-adjust: exact !important;
     }
-
-    /* Muted / secondary text */
-    #invoice-print-area .p-secondary {
-      color: #475569 !important;
-    }
-
-    /* Table header */
+    #invoice-print-area .p-secondary { color: #475569 !important; }
     #invoice-print-area .p-thead th {
       background-color: #f1f5f9 !important;
       color: #334155 !important;
       -webkit-print-color-adjust: exact !important;
       print-color-adjust: exact !important;
     }
-
-    /* Total row */
     #invoice-print-area .p-total-row td {
       background-color: #1e293b !important;
       color: #ffffff !important;
       -webkit-print-color-adjust: exact !important;
       print-color-adjust: exact !important;
     }
-
-    /* Payment status */
     #invoice-print-area .p-status-paid    { color: #16a34a !important; }
     #invoice-print-area .p-status-partial { color: #0284c7 !important; }
     #invoice-print-area .p-status-pending { color: #d97706 !important; }
-
-    /* Hide buttons */
     .no-print { display: none !important; }
   }
 `;
 
 const InvoicesPage = () => {
   const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
   const [invoices, setInvoices] = useState<IInvoice[]>([]);
   const [availableServices, setAvailableServices] = useState<IService[]>([]);
@@ -184,7 +174,6 @@ const InvoicesPage = () => {
   const resolveGuest = useCallback(
     async (booking: any): Promise<IGuest | null> => {
       if (!booking) return null;
-
       if (typeof booking === "string") {
         if (!bookingCache[booking]) {
           try {
@@ -196,20 +185,16 @@ const InvoicesPage = () => {
         }
         booking = bookingCache[booking];
       }
-
       if (!booking?.guest) return null;
-
       if (typeof booking.guest === "object" && booking.guest.firstName) {
         const guest = booking.guest as IGuest;
         guestCache[guest._id] = guest;
         return guest;
       }
-
       const guestId =
         typeof booking.guest === "string" ? booking.guest : booking.guest._id;
       if (!guestId) return null;
       if (guestCache[guestId]) return guestCache[guestId];
-
       try {
         const res = await api.get(`/guests/${guestId}`);
         const guest: IGuest = res.data.data || res.data;
@@ -227,11 +212,9 @@ const InvoicesPage = () => {
       const loadingMap: Record<string, boolean> = {};
       invoiceList.forEach((inv) => (loadingMap[inv._id] = true));
       setGuestsLoading(loadingMap);
-
       const results = await Promise.allSettled(
         invoiceList.map((inv) => resolveGuest(inv.booking)),
       );
-
       const guestMap: Record<string, IGuest | null> = {};
       const doneMap: Record<string, boolean> = {};
       results.forEach((result, idx) => {
@@ -239,7 +222,6 @@ const InvoicesPage = () => {
         guestMap[id] = result.status === "fulfilled" ? result.value : null;
         doneMap[id] = false;
       });
-
       setInvoiceGuests(guestMap);
       setGuestsLoading(doneMap);
     },
@@ -253,31 +235,24 @@ const InvoicesPage = () => {
         api.get("/invoices"),
         api.get("/services"),
       ]);
-
       if (invoicesResult.status === "rejected") {
         const err = invoicesResult.reason;
-        const msg =
+        showSnackbar(
           err?.response?.data?.message ||
-          err?.message ||
-          "Failed to fetch invoices";
-        console.error("Invoices fetch error:", err);
-        showSnackbar(msg, "error");
+            err?.message ||
+            "Failed to fetch invoices",
+          "error",
+        );
         return;
       }
-
       const fetchedInvoices: IInvoice[] = invoicesResult.value.data;
       setInvoices(fetchedInvoices);
-
       if (servicesResult.status === "fulfilled") {
         const sData = servicesResult.value.data;
         setAvailableServices(sData.data || sData);
-      } else {
-        console.error("Services fetch error:", servicesResult.reason);
       }
-
       resolveGuestsForInvoices(fetchedInvoices);
     } catch (error: any) {
-      console.error("fetchData error:", error);
       showSnackbar(error?.message || "Failed to fetch data", "error");
     } finally {
       setLoading(false);
@@ -320,7 +295,6 @@ const InvoicesPage = () => {
     setCurrentGuest(null);
     setPrintLoading(true);
     setOpenPrintDialog(true);
-
     try {
       const cachedGuest = invoiceGuests[invoice._id];
       if (cachedGuest) {
@@ -372,7 +346,6 @@ const InvoicesPage = () => {
       setOpenAddServiceDialog(false);
       fetchData();
     } catch (error: any) {
-      console.error("Add Service Error:", error);
       showSnackbar(
         error.response?.data?.message || "Failed to add service",
         "error",
@@ -404,24 +377,33 @@ const InvoicesPage = () => {
   return (
     <Box
       sx={{
-        p: { xs: 2, md: 5 },
         width: "100%",
-        maxWidth: 1400,
-        mx: "auto",
+        p: { xs: 2, md: 4 },
+        boxSizing: "border-box",
         "@media print": { display: openPrintDialog ? "block" : "none", p: 0 },
       }}
     >
       <style>{PRINT_STYLES}</style>
 
+      {/* Header */}
       <Box
-        display="flex"
-        justifyContent="space-between"
-        alignItems="flex-end"
-        mb={5}
-        sx={{ "@media print": { display: "none" } }}
+        sx={{
+          display: "flex",
+          flexDirection: { xs: "column", sm: "row" },
+          justifyContent: "space-between",
+          alignItems: { xs: "stretch", sm: "flex-end" },
+          gap: 2,
+          mb: 4,
+          "@media print": { display: "none" },
+        }}
       >
         <Box>
-          <Typography variant="h4" fontWeight={900} letterSpacing={-0.5}>
+          <Typography
+            variant="h4"
+            fontWeight={900}
+            letterSpacing={-0.5}
+            sx={{ fontSize: { xs: "1.75rem", md: "2.125rem" } }}
+          >
             Invoices
           </Typography>
           <Typography variant="body2" color="text.secondary" mt={0.5}>
@@ -430,135 +412,265 @@ const InvoicesPage = () => {
         </Box>
       </Box>
 
-      <TableContainer
-        component={Paper}
-        elevation={0}
-        sx={{
-          borderRadius: 3,
-          border: `1px solid ${theme.palette.divider}`,
-          "@media print": { display: "none" },
-        }}
-      >
-        <Table sx={{ minWidth: 900 }}>
-          <TableHead>
-            <TableRow sx={{ bgcolor: theme.palette.action.hover }}>
-              {[
-                "Invoice ID",
-                "Guest Name",
-                "Issue Date",
-                "Total Amount",
-                "Status",
-                "Actions",
-              ].map((h) => (
-                <TableCell
-                  key={h}
-                  align={
-                    h === "Actions" || h === "Total Amount" ? "right" : "left"
-                  }
-                  sx={{
-                    fontWeight: 700,
-                    fontSize: "0.75rem",
-                    textTransform: "uppercase",
-                    py: 2,
-                  }}
+      {/* Mobile Card View */}
+      {isMobile ? (
+        <Box sx={{ "@media print": { display: "none" } }}>
+          {invoices.length === 0 ? (
+            <Typography
+              variant="body1"
+              color="text.secondary"
+              textAlign="center"
+              py={5}
+            >
+              No invoices found.
+            </Typography>
+          ) : (
+            invoices.map((invoice) => {
+              const guest = invoiceGuests[invoice._id];
+              const isGuestLoading = guestsLoading[invoice._id];
+              return (
+                <Card
+                  key={invoice._id}
+                  sx={{ mb: 2, borderRadius: "12px", boxShadow: 2 }}
                 >
-                  {h}
-                </TableCell>
-              ))}
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {invoices.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={6} align="center" sx={{ py: 5 }}>
-                  No invoices found.
-                </TableCell>
-              </TableRow>
-            ) : (
-              invoices.map((invoice) => {
-                const guest = invoiceGuests[invoice._id];
-                const isGuestLoading = guestsLoading[invoice._id];
-                return (
-                  <TableRow
-                    key={invoice._id}
-                    sx={{
-                      "&:hover": { bgcolor: theme.palette.action.hover },
-                      transition: "background 0.15s",
-                    }}
-                  >
-                    <TableCell>
-                      <Typography variant="body2" fontWeight={700}>
-                        {invoice._id.slice(-8).toUpperCase()}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
+                  <CardContent>
+                    <Box
+                      display="flex"
+                      justifyContent="space-between"
+                      alignItems="center"
+                      mb={1}
+                    >
                       {isGuestLoading ? (
-                        <Skeleton variant="text" width={120} height={20} />
-                      ) : guest ? (
-                        <Typography variant="body2" fontWeight={600}>
-                          {guest.firstName} {guest.lastName}
-                        </Typography>
+                        <Skeleton variant="text" width={140} height={28} />
                       ) : (
-                        <Typography variant="body2" color="text.disabled">
-                          Unknown Guest
+                        <Typography variant="h6" fontWeight={700}>
+                          {guest
+                            ? `${guest.firstName} ${guest.lastName}`
+                            : "Unknown Guest"}
                         </Typography>
                       )}
-                    </TableCell>
-                    <TableCell>
-                      <Typography variant="body2">
-                        {new Date(invoice.issueDate).toLocaleDateString()}
-                      </Typography>
-                    </TableCell>
-                    <TableCell align="right">
-                      <Typography variant="body2" fontWeight={800}>
-                        ${invoice.totalAmountDue.toFixed(2)}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
                       <Chip
                         label={invoice.paymentStatus}
                         size="small"
                         color={getStatusChipColor(invoice.paymentStatus)}
                         sx={{ fontWeight: 700, borderRadius: 1.5 }}
                       />
-                    </TableCell>
-                    <TableCell align="right">
-                      <Stack
-                        direction="row"
-                        justifyContent="flex-end"
-                        spacing={1}
+                    </Box>
+                    <Divider sx={{ mb: 2 }} />
+                    <Stack spacing={1.5}>
+                      <Box display="flex" alignItems="center" gap={1}>
+                        <Typography
+                          variant="caption"
+                          color="text.secondary"
+                          fontWeight={600}
+                          sx={{ minWidth: 80 }}
+                        >
+                          Invoice ID
+                        </Typography>
+                        <Typography variant="body2" fontWeight={700}>
+                          {invoice._id.slice(-8).toUpperCase()}
+                        </Typography>
+                      </Box>
+                      <Box display="flex" alignItems="center" gap={1}>
+                        <CalendarTodayIcon
+                          fontSize="small"
+                          sx={{ opacity: 0.6, fontSize: 16 }}
+                        />
+                        <Typography variant="body2" color="text.secondary">
+                          {new Date(invoice.issueDate).toLocaleDateString()}
+                        </Typography>
+                      </Box>
+                      <Box display="flex" alignItems="center" gap={1}>
+                        <AttachMoneyIcon
+                          fontSize="small"
+                          sx={{ opacity: 0.6, fontSize: 16 }}
+                        />
+                        <Typography
+                          variant="body2"
+                          fontWeight={800}
+                          color="success.main"
+                        >
+                          ${invoice.totalAmountDue.toFixed(2)}
+                        </Typography>
+                      </Box>
+                    </Stack>
+                    <Divider sx={{ my: 2 }} />
+                    <Stack
+                      direction="row"
+                      spacing={1}
+                      justifyContent="flex-end"
+                    >
+                      <IconButton
+                        size="small"
+                        color="success"
+                        onClick={() => handleOpenAddService(invoice)}
                       >
-                        <IconButton
-                          size="small"
-                          color="success"
-                          onClick={() => handleOpenAddService(invoice)}
+                        <AddCircleOutlineIcon fontSize="small" />
+                      </IconButton>
+                      <IconButton
+                        size="small"
+                        color="primary"
+                        onClick={() => handleOpenPayment(invoice)}
+                      >
+                        <PaymentIcon fontSize="small" />
+                      </IconButton>
+                      <IconButton
+                        size="small"
+                        color="secondary"
+                        onClick={() => handleOpenPrint(invoice)}
+                      >
+                        <VisibilityIcon fontSize="small" />
+                      </IconButton>
+                    </Stack>
+                  </CardContent>
+                </Card>
+              );
+            })
+          )}
+        </Box>
+      ) : (
+        /* Desktop Table View */
+        <TableContainer
+          component={Paper}
+          elevation={0}
+          sx={{
+            borderRadius: 3,
+            border: `1px solid ${theme.palette.divider}`,
+            overflowX: "auto",
+            "@media print": { display: "none" },
+          }}
+        >
+          <Table sx={{ minWidth: 900 }}>
+            <TableHead>
+              <TableRow sx={{ bgcolor: theme.palette.action.hover }}>
+                {[
+                  "Invoice ID",
+                  "Guest Name",
+                  "Issue Date",
+                  "Total Amount",
+                  "Status",
+                  "Actions",
+                ].map((h) => (
+                  <TableCell
+                    key={h}
+                    align={
+                      h === "Actions" || h === "Total Amount" ? "right" : "left"
+                    }
+                    sx={{
+                      fontWeight: 700,
+                      fontSize: "0.75rem",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.06em",
+                      color: "text.secondary",
+                      py: 2,
+                    }}
+                  >
+                    {h}
+                  </TableCell>
+                ))}
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {invoices.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} align="center" sx={{ py: 5 }}>
+                    <Typography variant="body1" color="text.secondary">
+                      No invoices found.
+                    </Typography>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                invoices.map((invoice) => {
+                  const guest = invoiceGuests[invoice._id];
+                  const isGuestLoading = guestsLoading[invoice._id];
+                  return (
+                    <TableRow
+                      key={invoice._id}
+                      sx={{
+                        "&:last-child td": { border: 0 },
+                        "&:hover": { bgcolor: theme.palette.action.hover },
+                        transition: "background 0.15s",
+                      }}
+                    >
+                      <TableCell>
+                        <Typography variant="body2" fontWeight={700}>
+                          {invoice._id.slice(-8).toUpperCase()}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        {isGuestLoading ? (
+                          <Skeleton variant="text" width={120} height={20} />
+                        ) : guest ? (
+                          <Typography variant="body2" fontWeight={600}>
+                            {guest.firstName} {guest.lastName}
+                          </Typography>
+                        ) : (
+                          <Typography variant="body2" color="text.disabled">
+                            Unknown Guest
+                          </Typography>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2">
+                          {new Date(invoice.issueDate).toLocaleDateString()}
+                        </Typography>
+                      </TableCell>
+                      <TableCell align="right">
+                        <Typography
+                          variant="body2"
+                          fontWeight={700}
+                          color="success.main"
                         >
-                          <AddCircleOutlineIcon fontSize="small" />
-                        </IconButton>
-                        <IconButton
+                          ${invoice.totalAmountDue.toFixed(2)}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Chip
+                          label={invoice.paymentStatus}
                           size="small"
-                          color="primary"
-                          onClick={() => handleOpenPayment(invoice)}
+                          color={getStatusChipColor(invoice.paymentStatus)}
+                          sx={{ fontWeight: 700, borderRadius: 1.5 }}
+                        />
+                      </TableCell>
+                      <TableCell align="right">
+                        <Stack
+                          direction="row"
+                          justifyContent="flex-end"
+                          spacing={1}
                         >
-                          <PaymentIcon fontSize="small" />
-                        </IconButton>
-                        <IconButton
-                          size="small"
-                          color="secondary"
-                          onClick={() => handleOpenPrint(invoice)}
-                        >
-                          <VisibilityIcon fontSize="small" />
-                        </IconButton>
-                      </Stack>
-                    </TableCell>
-                  </TableRow>
-                );
-              })
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
+                          <IconButton
+                            size="small"
+                            color="success"
+                            onClick={() => handleOpenAddService(invoice)}
+                          >
+                            <AddCircleOutlineIcon fontSize="small" />
+                          </IconButton>
+                          <IconButton
+                            size="small"
+                            color="primary"
+                            onClick={() => handleOpenPayment(invoice)}
+                          >
+                            <PaymentIcon fontSize="small" />
+                          </IconButton>
+                          <IconButton
+                            size="small"
+                            color="secondary"
+                            onClick={() => handleOpenPrint(invoice)}
+                          >
+                            <VisibilityIcon fontSize="small" />
+                          </IconButton>
+                        </Stack>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      )}
 
+      {/* Update Payment Dialog */}
       <Dialog
         open={openPaymentDialog}
         onClose={() => setOpenPaymentDialog(false)}
@@ -607,8 +719,12 @@ const InvoicesPage = () => {
             </TextField>
           </Box>
         </DialogContent>
-        <DialogActions sx={{ p: 2 }}>
-          <Button onClick={() => setOpenPaymentDialog(false)} color="inherit">
+        <DialogActions sx={{ p: 2, px: 3 }}>
+          <Button
+            onClick={() => setOpenPaymentDialog(false)}
+            color="inherit"
+            sx={{ fontWeight: 600 }}
+          >
             Cancel
           </Button>
           <Button
@@ -626,6 +742,7 @@ const InvoicesPage = () => {
         </DialogActions>
       </Dialog>
 
+      {/* Add Service Dialog */}
       <Dialog
         open={openAddServiceDialog}
         onClose={() => setOpenAddServiceDialog(false)}
@@ -666,10 +783,11 @@ const InvoicesPage = () => {
             />
           </Box>
         </DialogContent>
-        <DialogActions sx={{ p: 2 }}>
+        <DialogActions sx={{ p: 2, px: 3 }}>
           <Button
             onClick={() => setOpenAddServiceDialog(false)}
             color="inherit"
+            sx={{ fontWeight: 600 }}
           >
             Cancel
           </Button>
@@ -688,6 +806,7 @@ const InvoicesPage = () => {
         </DialogActions>
       </Dialog>
 
+      {/* Print / View Invoice Dialog */}
       <Dialog
         open={openPrintDialog}
         onClose={() => setOpenPrintDialog(false)}
@@ -839,7 +958,6 @@ const InvoicesPage = () => {
                         ${currentInvoice.totalRoomCharge.toFixed(2)}
                       </TableCell>
                     </TableRow>
-
                     {currentInvoice.usedServices?.map((item, index) => (
                       <TableRow key={index}>
                         <TableCell sx={{ py: 2, px: 0 }}>
@@ -854,7 +972,6 @@ const InvoicesPage = () => {
                         </TableCell>
                       </TableRow>
                     ))}
-
                     <TableRow>
                       <TableCell
                         colSpan={3}
@@ -867,7 +984,6 @@ const InvoicesPage = () => {
                         ${currentInvoice.taxAmount.toFixed(2)}
                       </TableCell>
                     </TableRow>
-
                     <TableRow
                       className="p-total-row"
                       sx={{
@@ -878,22 +994,13 @@ const InvoicesPage = () => {
                       <TableCell
                         colSpan={3}
                         align="right"
-                        sx={{
-                          py: 2,
-                          px: 1,
-                          fontWeight: 800,
-                          fontSize: "1rem",
-                        }}
+                        sx={{ py: 2, px: 1, fontWeight: 800, fontSize: "1rem" }}
                       >
                         TOTAL DUE
                       </TableCell>
                       <TableCell
                         align="right"
-                        sx={{
-                          fontWeight: 900,
-                          fontSize: "1.1rem",
-                          px: 0,
-                        }}
+                        sx={{ fontWeight: 900, fontSize: "1.1rem", px: 0 }}
                       >
                         ${currentInvoice.totalAmountDue.toFixed(2)}
                       </TableCell>
@@ -927,8 +1034,12 @@ const InvoicesPage = () => {
           )}
         </DialogContent>
 
-        <DialogActions className="no-print" sx={{ p: 3 }}>
-          <Button onClick={() => setOpenPrintDialog(false)} color="inherit">
+        <DialogActions className="no-print" sx={{ p: 2, px: 3 }}>
+          <Button
+            onClick={() => setOpenPrintDialog(false)}
+            color="inherit"
+            sx={{ fontWeight: 600 }}
+          >
             Close
           </Button>
           <Button
@@ -947,8 +1058,10 @@ const InvoicesPage = () => {
         open={snackbar.open}
         autoHideDuration={4000}
         onClose={() => setSnackbar({ ...snackbar, open: false })}
+        anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
       >
         <Alert
+          onClose={() => setSnackbar({ ...snackbar, open: false })}
           severity={snackbar.severity}
           variant="filled"
           sx={{ borderRadius: 2 }}
