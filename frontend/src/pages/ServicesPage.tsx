@@ -24,7 +24,11 @@ import {
   Snackbar,
   Alert,
   useTheme,
+  useMediaQuery,
   Stack,
+  Card,
+  CardContent,
+  Divider,
 } from "@mui/material";
 import {
   Add as AddIcon,
@@ -65,6 +69,7 @@ const initialFormState = {
 
 const ServicesPage = () => {
   const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
   const [services, setServices] = useState<IService[]>([]);
   const [loading, setLoading] = useState(true);
@@ -195,23 +200,26 @@ const ServicesPage = () => {
   }
 
   return (
-    <Box
-      sx={{
-        p: { xs: 2, md: 5 },
-        width: "100%",
-        boxSizing: "border-box",
-        maxWidth: 1400,
-        mx: "auto",
-      }}
-    >
+    <Box sx={{ width: "100%", p: { xs: 2, md: 4 }, boxSizing: "border-box" }}>
+      {/* Header */}
       <Box
-        display="flex"
-        justifyContent="space-between"
-        alignItems="flex-end"
-        mb={5}
+        sx={{
+          display: "flex",
+          flexDirection: { xs: "column", sm: "row" },
+          justifyContent: "space-between",
+          alignItems: { xs: "stretch", sm: "flex-end" },
+          gap: 2,
+          mb: 4,
+          width: "100%",
+        }}
       >
         <Box>
-          <Typography variant="h4" fontWeight={900} letterSpacing={-0.5}>
+          <Typography
+            variant="h4"
+            fontWeight={900}
+            letterSpacing={-0.5}
+            sx={{ fontSize: { xs: "1.75rem", md: "2.125rem" } }}
+          >
             Services
           </Typography>
           <Typography variant="body2" color="text.secondary" mt={0.5}>
@@ -223,129 +231,48 @@ const ServicesPage = () => {
           startIcon={<AddIcon />}
           onClick={handleOpenAddNew}
           sx={{
-            borderRadius: 2.5,
+            borderRadius: "10px",
             fontWeight: 700,
-            px: 3,
+            px: 4,
             py: 1.2,
+            textTransform: "none",
             boxShadow: "none",
+            width: { xs: "100%", sm: "auto" },
           }}
         >
           Add Service
         </Button>
       </Box>
 
-      <TableContainer
-        component={Paper}
-        elevation={0}
-        sx={{
-          borderRadius: 3,
-          border: `1px solid ${theme.palette.divider}`,
-          overflowX: "auto",
-        }}
-      >
-        <Table sx={{ minWidth: 800 }}>
-          <TableHead>
-            <TableRow sx={{ bgcolor: theme.palette.action.hover }}>
-              {[
-                "Name",
-                "Category",
-                "Price",
-                "Taxable",
-                "Description",
-                "Actions",
-              ].map((h) => (
-                <TableCell
-                  key={h}
-                  align={h === "Actions" || h === "Price" ? "right" : "left"}
-                  sx={{
-                    fontWeight: 700,
-                    fontSize: "0.75rem",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.06em",
-                    color: "text.secondary",
-                    py: 2,
-                  }}
-                >
-                  {h}
-                </TableCell>
-              ))}
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {services.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={6} align="center" sx={{ py: 5 }}>
-                  <Typography variant="body1" color="text.secondary">
-                    No services found. Click "Add Service" to create one.
-                  </Typography>
-                </TableCell>
-              </TableRow>
-            ) : (
-              services.map((service) => (
-                <TableRow
-                  key={service._id}
-                  sx={{
-                    "&:last-child td": { border: 0 },
-                    "&:hover": { bgcolor: theme.palette.action.hover },
-                    transition: "background 0.15s",
-                  }}
-                >
-                  <TableCell>
-                    <Typography variant="body2" fontWeight={700}>
+      {/* Mobile Card View */}
+      {isMobile ? (
+        <Box>
+          {services.length === 0 ? (
+            <Typography
+              variant="body1"
+              color="text.secondary"
+              textAlign="center"
+              py={5}
+            >
+              No services found. Click "Add Service" to create one.
+            </Typography>
+          ) : (
+            services.map((service) => (
+              <Card
+                key={service._id}
+                sx={{ mb: 2, borderRadius: "12px", boxShadow: 2 }}
+              >
+                <CardContent>
+                  <Box
+                    display="flex"
+                    justifyContent="space-between"
+                    alignItems="center"
+                    mb={1}
+                  >
+                    <Typography variant="h6" fontWeight={700}>
                       {service.name}
                     </Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Chip
-                      icon={getCategoryIcon(service.category)}
-                      label={service.category}
-                      size="small"
-                      color="primary"
-                      variant="outlined"
-                      sx={{ fontWeight: 600, borderRadius: 1.5 }}
-                    />
-                  </TableCell>
-                  <TableCell align="right">
-                    <Typography
-                      variant="body2"
-                      fontWeight={700}
-                      color="success.main"
-                    >
-                      ${service.price.toFixed(2)}
-                    </Typography>
-                  </TableCell>
-                  <TableCell>
-                    {service.isTaxable ? (
-                      <Chip
-                        label="Yes"
-                        size="small"
-                        color="default"
-                        sx={{ height: 22, fontSize: "0.7rem" }}
-                      />
-                    ) : (
-                      <Typography variant="body2" color="text.secondary">
-                        -
-                      </Typography>
-                    )}
-                  </TableCell>
-                  <TableCell
-                    sx={{
-                      maxWidth: 250,
-                      whiteSpace: "nowrap",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                    }}
-                  >
-                    <Typography variant="body2" color="text.secondary">
-                      {service.description || "-"}
-                    </Typography>
-                  </TableCell>
-                  <TableCell align="right">
-                    <Stack
-                      direction="row"
-                      justifyContent="flex-end"
-                      spacing={1}
-                    >
+                    <Box>
                       <IconButton
                         size="small"
                         color="primary"
@@ -360,15 +287,198 @@ const ServicesPage = () => {
                       >
                         <DeleteIcon fontSize="small" />
                       </IconButton>
-                    </Stack>
+                    </Box>
+                  </Box>
+                  <Divider sx={{ mb: 2 }} />
+                  <Stack spacing={1.5}>
+                    <Box
+                      display="flex"
+                      justifyContent="space-between"
+                      alignItems="center"
+                    >
+                      <Chip
+                        icon={getCategoryIcon(service.category)}
+                        label={service.category}
+                        size="small"
+                        color="primary"
+                        variant="outlined"
+                        sx={{ fontWeight: 600, borderRadius: 1.5 }}
+                      />
+                      <Typography
+                        variant="body1"
+                        fontWeight={800}
+                        color="success.main"
+                      >
+                        ${service.price.toFixed(2)}
+                      </Typography>
+                    </Box>
+                    <Box display="flex" alignItems="center" gap={1}>
+                      <Typography variant="body2" color="text.secondary">
+                        Taxable:
+                      </Typography>
+                      {service.isTaxable ? (
+                        <Chip
+                          label="Yes"
+                          size="small"
+                          color="default"
+                          sx={{ height: 22, fontSize: "0.7rem" }}
+                        />
+                      ) : (
+                        <Typography variant="body2" color="text.secondary">
+                          No
+                        </Typography>
+                      )}
+                    </Box>
+                    {service.description && (
+                      <Typography variant="body2" color="text.secondary">
+                        {service.description}
+                      </Typography>
+                    )}
+                  </Stack>
+                </CardContent>
+              </Card>
+            ))
+          )}
+        </Box>
+      ) : (
+        /* Desktop Table View */
+        <TableContainer
+          component={Paper}
+          elevation={0}
+          sx={{
+            borderRadius: 3,
+            border: `1px solid ${theme.palette.divider}`,
+            overflowX: "auto",
+          }}
+        >
+          <Table sx={{ minWidth: 800 }}>
+            <TableHead>
+              <TableRow sx={{ bgcolor: theme.palette.action.hover }}>
+                {[
+                  "Name",
+                  "Category",
+                  "Price",
+                  "Taxable",
+                  "Description",
+                  "Actions",
+                ].map((h) => (
+                  <TableCell
+                    key={h}
+                    align={h === "Actions" || h === "Price" ? "right" : "left"}
+                    sx={{
+                      fontWeight: 700,
+                      fontSize: "0.75rem",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.06em",
+                      color: "text.secondary",
+                      py: 2,
+                    }}
+                  >
+                    {h}
+                  </TableCell>
+                ))}
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {services.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} align="center" sx={{ py: 5 }}>
+                    <Typography variant="body1" color="text.secondary">
+                      No services found. Click "Add Service" to create one.
+                    </Typography>
                   </TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
+              ) : (
+                services.map((service) => (
+                  <TableRow
+                    key={service._id}
+                    sx={{
+                      "&:last-child td": { border: 0 },
+                      "&:hover": { bgcolor: theme.palette.action.hover },
+                      transition: "background 0.15s",
+                    }}
+                  >
+                    <TableCell>
+                      <Typography variant="body2" fontWeight={700}>
+                        {service.name}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        icon={getCategoryIcon(service.category)}
+                        label={service.category}
+                        size="small"
+                        color="primary"
+                        variant="outlined"
+                        sx={{ fontWeight: 600, borderRadius: 1.5 }}
+                      />
+                    </TableCell>
+                    <TableCell align="right">
+                      <Typography
+                        variant="body2"
+                        fontWeight={700}
+                        color="success.main"
+                      >
+                        ${service.price.toFixed(2)}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      {service.isTaxable ? (
+                        <Chip
+                          label="Yes"
+                          size="small"
+                          color="default"
+                          sx={{ height: 22, fontSize: "0.7rem" }}
+                        />
+                      ) : (
+                        <Typography variant="body2" color="text.secondary">
+                          -
+                        </Typography>
+                      )}
+                    </TableCell>
+                    <TableCell
+                      sx={{
+                        maxWidth: 250,
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                      }}
+                    >
+                      <Typography variant="body2" color="text.secondary">
+                        {service.description || "-"}
+                      </Typography>
+                    </TableCell>
+                    <TableCell align="right">
+                      <Stack
+                        direction="row"
+                        justifyContent="flex-end"
+                        spacing={1}
+                      >
+                        <IconButton
+                          size="small"
+                          color="primary"
+                          onClick={() => handleOpenEdit(service)}
+                        >
+                          <EditIcon fontSize="small" />
+                        </IconButton>
+                        <IconButton
+                          size="small"
+                          color="error"
+                          onClick={() => handleOpenDelete(service)}
+                        >
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      </Stack>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      )}
 
+      {/* Add / Edit Dialog */}
       <Dialog
         open={openForm}
         onClose={() => setOpenForm(false)}
@@ -465,6 +575,7 @@ const ServicesPage = () => {
         </DialogActions>
       </Dialog>
 
+      {/* Delete Confirmation Dialog */}
       <Dialog
         open={openDelete}
         onClose={() => setOpenDelete(false)}
