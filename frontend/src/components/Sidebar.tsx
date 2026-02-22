@@ -5,6 +5,7 @@ import {
   useTheme,
   Collapse,
   Typography,
+  Chip,
   Box,
 } from "@mui/material";
 import List from "@mui/material/List";
@@ -44,7 +45,7 @@ interface SidebarProps {
 export const PAGE_ROLES: Record<string, UserRole[]> = {
   "/dashboard": ["ADMIN", "MANAGER", "RECEPTIONIST", "HOUSEKEEPING"],
   "/rooms": ["ADMIN", "MANAGER", "RECEPTIONIST", "HOUSEKEEPING"],
-  "/room-types": ["ADMIN", "MANAGER", "RECEPTIONIST", "HOUSEKEEPING"],
+  "/room-types": ["ADMIN", "MANAGER", "RECEPTIONIST"],
   "/all-reservations": ["ADMIN", "MANAGER", "RECEPTIONIST"],
   "/booking": ["ADMIN", "MANAGER", "RECEPTIONIST"],
   "/guests": ["ADMIN", "MANAGER", "RECEPTIONIST"],
@@ -213,12 +214,65 @@ const Sidebar = ({
         </Typography>
       </Box>
 
+      <Divider />
+
+      <Box sx={{ px: 1.5, py: 1.5, flexShrink: 0 }}>
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            gap: 1.2,
+            px: 1.5,
+            py: 1.2,
+            borderRadius: 2.5,
+            bgcolor: theme.palette.action.hover,
+          }}
+        >
+          <Avatar
+            sx={{
+              width: 32,
+              height: 32,
+              fontSize: "0.75rem",
+              fontWeight: 800,
+              bgcolor: theme.palette.primary.main,
+              flexShrink: 0,
+            }}
+          >
+            {username[0]?.toUpperCase()}
+          </Avatar>
+          <Box flex={1} minWidth={0}>
+            <Typography
+              variant="body2"
+              fontWeight={700}
+              noWrap
+              lineHeight={1.3}
+            >
+              {username}
+            </Typography>
+            {role && (
+              <Chip
+                label={role}
+                size="small"
+                color={ROLE_COLOR[role] ?? "default"}
+                sx={{
+                  height: 17,
+                  fontSize: "0.6rem",
+                  fontWeight: 700,
+                  borderRadius: 1,
+                  mt: 0.2,
+                  "& .MuiChip-label": { px: 0.7 },
+                }}
+              />
+            )}
+          </Box>
+        </Box>
+      </Box>
+
       <Divider sx={{ mb: 0.5 }} />
 
       <List
         disablePadding
         sx={{
-          mt: "20px",
           flex: 1,
           overflowY: "auto",
           overflowX: "hidden",
@@ -261,21 +315,21 @@ const Sidebar = ({
                   primaryTypographyProps={TEXT_PROPS}
                 />
                 {roomsOpen ? (
-                  <ExpandLess sx={{ fontSize: 17, color: "text.secondary" }} />
+                  <ExpandLess sx={{ fontSize: 25, color: "text.secondary" }} />
                 ) : (
-                  <ExpandMore sx={{ fontSize: 17, color: "text.secondary" }} />
+                  <ExpandMore sx={{ fontSize: 25, color: "text.secondary" }} />
                 )}
               </ListItemButton>
             </ListItem>
             <Collapse in={roomsOpen} timeout="auto" unmountOnExit>
               <List disablePadding>
                 {allowed("/rooms") && (
-                  <ListItem disablePadding sx={{ ml: "25px" }}>
+                  <ListItem disablePaddingsx={{ ml: "20px" }}>
                     <ListItemButton
                       onClick={() => navigate("/rooms")}
                       sx={subItemSx(isActive("/rooms"))}
                     >
-                      <ListItemIcon sx={{ minWidth: 32 }}>
+                      <ListItemIcon sx={{ minWidth: 36 }}>
                         <MeetingRoomIcon sx={{ fontSize: 25 }} />
                       </ListItemIcon>
                       <ListItemText
@@ -286,12 +340,12 @@ const Sidebar = ({
                   </ListItem>
                 )}
                 {allowed("/room-types") && (
-                  <ListItem disablePadding sx={{ ml: "25px" }}>
+                  <ListItem disablePadding sx={{ ml: "20px" }}>
                     <ListItemButton
                       onClick={() => navigate("/room-types")}
                       sx={subItemSx(isActive("/room-types"))}
                     >
-                      <ListItemIcon sx={{ minWidth: 32 }}>
+                      <ListItemIcon sx={{ minWidth: 36 }}>
                         <CategoryIcon sx={{ fontSize: 25 }} />
                       </ListItemIcon>
                       <ListItemText
@@ -321,21 +375,21 @@ const Sidebar = ({
                   primaryTypographyProps={TEXT_PROPS}
                 />
                 {reservationsOpen ? (
-                  <ExpandLess sx={{ fontSize: 17, color: "text.secondary" }} />
+                  <ExpandLess sx={{ fontSize: 25, color: "text.secondary" }} />
                 ) : (
-                  <ExpandMore sx={{ fontSize: 17, color: "text.secondary" }} />
+                  <ExpandMore sx={{ fontSize: 25, color: "text.secondary" }} />
                 )}
               </ListItemButton>
             </ListItem>
             <Collapse in={reservationsOpen} timeout="auto" unmountOnExit>
-              <List disablePadding sx={{ ml: "25px" }}>
+              <List disablePadding>
                 {allowed("/all-reservations") && (
-                  <ListItem disablePadding>
+                  <ListItem disablePadding sx={{ ml: "20px" }}>
                     <ListItemButton
                       onClick={() => navigate("/all-reservations")}
                       sx={subItemSx(isActive("/all-reservations"))}
                     >
-                      <ListItemIcon sx={{ minWidth: 32 }}>
+                      <ListItemIcon sx={{ minWidth: 36 }}>
                         <ListAltIcon sx={{ fontSize: 25 }} />
                       </ListItemIcon>
                       <ListItemText
@@ -346,12 +400,12 @@ const Sidebar = ({
                   </ListItem>
                 )}
                 {allowed("/booking") && (
-                  <ListItem disablePadding>
+                  <ListItem disablePadding sx={{ ml: "20px" }}>
                     <ListItemButton
                       onClick={() => navigate("/booking")}
                       sx={subItemSx(isActive("/booking"))}
                     >
-                      <ListItemIcon sx={{ minWidth: 32 }}>
+                      <ListItemIcon sx={{ minWidth: 36 }}>
                         <AddCircleOutlineIcon sx={{ fontSize: 25 }} />
                       </ListItemIcon>
                       <ListItemText
@@ -437,7 +491,7 @@ const Sidebar = ({
 
       <Divider />
       <List disablePadding sx={{ px: 0.5, py: 1, flexShrink: 0 }}>
-        <ListItem disablePadding sx={{ mt: "15px" }}>
+        <ListItem disablePadding>
           <ListItemButton
             onClick={() => navigate("/settings")}
             sx={navItemSx(isActive("/settings"))}
@@ -452,7 +506,7 @@ const Sidebar = ({
           </ListItemButton>
         </ListItem>
 
-        <ListItem disablePadding sx={{ mb: "25px" }}>
+        <ListItem disablePadding>
           <ListItemButton
             onClick={handleLogout}
             sx={{

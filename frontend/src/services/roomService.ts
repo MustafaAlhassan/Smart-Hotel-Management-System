@@ -9,19 +9,20 @@ export const roomService = {
 
   createRoom: async (data: FormData) => {
     const response = await api.post<IRoom>("/rooms", data, {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
+      headers: { "Content-Type": "multipart/form-data" },
     });
     return response.data;
   },
 
   updateRoom: async (id: string, data: FormData) => {
     const response = await api.put<IRoom>(`/rooms/${id}`, data, {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
+      headers: { "Content-Type": "multipart/form-data" },
     });
+    return response.data;
+  },
+
+  updateRoomStatus: async (id: string, status: string) => {
+    const response = await api.patch(`/rooms/${id}/status`, { status });
     return response.data;
   },
 

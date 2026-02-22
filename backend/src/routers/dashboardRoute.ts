@@ -7,7 +7,12 @@ const dashboardRouter = Router();
 
 dashboardRouter.get(
   "/stats",
-  requireRole([UserRole.ADMIN, UserRole.MANAGER]),
+  requireRole([
+    UserRole.ADMIN,
+    UserRole.MANAGER,
+    UserRole.RECEPTIONIST,
+    UserRole.HOUSEKEEPING,
+  ]),
   getDashboardStats,
 );
 

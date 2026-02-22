@@ -19,6 +19,7 @@ import {
   Alert,
   CircularProgress,
   Divider,
+  useTheme,
 } from "@mui/material";
 import {
   Add as AddIcon,
@@ -29,6 +30,8 @@ import {
   CheckCircle as FeatureIcon,
   Stairs as FloorIcon,
   Warning as WarningIcon,
+  CleaningServices as DirtyIcon,
+  CheckCircleOutline as AvailableIcon,
 } from "@mui/icons-material";
 import { roomService } from "../../services/roomService";
 import { roomTypeService } from "../../services/roomTypeService";
@@ -60,10 +63,15 @@ export interface IRoom {
 }
 
 const RoomsPage = () => {
+  const theme = useTheme();
+  const role = (localStorage.getItem("role") || "").toUpperCase();
+  const isHousekeeping = role === "HOUSEKEEPING";
+
   const [rooms, setRooms] = useState<IRoom[]>([]);
   const [roomTypes, setRoomTypes] = useState<IRoomType[]>([]);
   const [open, setOpen] = useState(false);
   const [saveLoading, setSaveLoading] = useState(false);
+  const [statusLoadingId, setStatusLoadingId] = useState<string | null>(null);
   const [editingRoom, setEditingRoom] = useState<IRoom | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
@@ -86,9 +94,8 @@ const RoomsPage = () => {
 
   const getFullImageUrl = (imagePath: string | undefined) => {
     if (!imagePath) return "";
-    if (imagePath.startsWith("http") || imagePath.startsWith("blob:")) {
+    if (imagePath.startsWith("http") || imagePath.startsWith("blob:"))
       return imagePath;
-    }
     return `${API_BASE_URL}/${imagePath}`;
   };
 
@@ -96,20 +103,22 @@ const RoomsPage = () => {
     try {
       const [roomsData, typesResponse] = await Promise.all([
         roomService.getAllRooms(),
-        roomTypeService.getAllRoomTypes(),
+        isHousekeeping
+          ? Promise.resolve([])
+          : roomTypeService.getAllRoomTypes(),
       ]);
-
       setRooms(Array.isArray(roomsData) ? roomsData : []);
-
-      if (Array.isArray(typesResponse)) {
-        setRoomTypes(typesResponse);
-      } else if (typesResponse && Array.isArray((typesResponse as any).data)) {
-        setRoomTypes((typesResponse as any).data);
-      } else {
-        setRoomTypes([]);
+      if (!isHousekeeping) {
+        if (Array.isArray(typesResponse)) {
+          setRoomTypes(typesResponse);
+        } else if (
+          typesResponse &&
+          Array.isArray((typesResponse as any).data)
+        ) {
+          setRoomTypes((typesResponse as any).data);
+        }
       }
     } catch (error) {
-      console.error("Fetch Error:", error);
       setSnackbar({
         open: true,
         message: "Failed to load data",
@@ -122,15 +131,34 @@ const RoomsPage = () => {
     fetchData();
   }, []);
 
+  const handleStatusChange = async (room: IRoom, newStatus: RoomStatus) => {
+    setStatusLoadingId(room._id + newStatus);
+    try {
+      await roomService.updateRoomStatus(room._id, newStatus);
+      setSnackbar({
+        open: true,
+        message: `Room ${room.roomNumber} marked as ${newStatus}`,
+        severity: "success",
+      });
+      fetchData();
+    } catch (error: any) {
+      setSnackbar({
+        open: true,
+        message: error.response?.data?.error || "Failed to update status",
+        severity: "error",
+      });
+    } finally {
+      setStatusLoadingId(null);
+    }
+  };
+
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (formData.image.startsWith("blob:")) {
+      if (formData.image.startsWith("blob:"))
         URL.revokeObjectURL(formData.image);
-      }
       setSelectedFile(file);
-      const previewUrl = URL.createObjectURL(file);
-      setFormData({ ...formData, image: previewUrl });
+      setFormData({ ...formData, image: URL.createObjectURL(file) });
     }
   };
 
@@ -171,7 +199,6 @@ const RoomsPage = () => {
       });
       return;
     }
-
     try {
       setSaveLoading(true);
       const data = new FormData();
@@ -179,17 +206,12 @@ const RoomsPage = () => {
       data.append("roomType", formData.roomType);
       data.append("floor", formData.floor.toString());
       data.append("status", formData.status);
-
-      if (selectedFile) {
-        data.append("image", selectedFile);
-      }
-
+      if (selectedFile) data.append("image", selectedFile);
       if (editingRoom) {
         await roomService.updateRoom(editingRoom._id, data);
       } else {
         await roomService.createRoom(data);
       }
-
       setSnackbar({
         open: true,
         message: editingRoom ? "Room updated!" : "Room created!",
@@ -198,11 +220,14 @@ const RoomsPage = () => {
       setOpen(false);
       fetchData();
     } catch (error: any) {
-      const msg =
-        error.response?.status === 413
-          ? "Image too large"
-          : "Failed to save room";
-      setSnackbar({ open: true, message: msg, severity: "error" });
+      setSnackbar({
+        open: true,
+        message:
+          error.response?.status === 413
+            ? "Image too large"
+            : "Failed to save room",
+        severity: "error",
+      });
     } finally {
       setSaveLoading(false);
     }
@@ -212,10 +237,8 @@ const RoomsPage = () => {
     setRoomToDelete(id);
     setDeleteConfirmOpen(true);
   };
-
   const handleConfirmDelete = async () => {
     if (!roomToDelete) return;
-
     try {
       await roomService.deleteRoom(roomToDelete);
       setSnackbar({
@@ -224,12 +247,8 @@ const RoomsPage = () => {
         severity: "success",
       });
       fetchData();
-    } catch (error) {
-      setSnackbar({
-        open: true,
-        message: "Delete failed",
-        severity: "error",
-      });
+    } catch {
+      setSnackbar({ open: true, message: "Delete failed", severity: "error" });
     } finally {
       setDeleteConfirmOpen(false);
       setRoomToDelete(null);
@@ -252,9 +271,8 @@ const RoomsPage = () => {
   };
 
   const getRoomTypeData = (room: IRoom): IRoomType | undefined => {
-    if (typeof room.roomType === "object" && room.roomType !== null) {
+    if (typeof room.roomType === "object" && room.roomType !== null)
       return room.roomType as IRoomType;
-    }
     return roomTypes.find((t) => t._id === room.roomType);
   };
 
@@ -271,31 +289,35 @@ const RoomsPage = () => {
         }}
       >
         <Box>
-          <Typography variant="h4" fontWeight="800" sx={{ mb: 1 }}>
+          <Typography variant="h4" fontWeight={800} mb={0.5}>
             Room Management
           </Typography>
           <Typography variant="body1" color="text.secondary">
-            Manage your hotel inventory, prices, and status.
+            {isHousekeeping
+              ? "View rooms and update their cleaning status."
+              : "Manage your hotel inventory, prices, and status."}
           </Typography>
         </Box>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => handleOpen()}
-          size="large"
-          sx={{
-            borderRadius: 3,
-            px: 3,
-            py: 1.5,
-            textTransform: "none",
-            fontSize: "1rem",
-            boxShadow: 4,
-            width: { xs: "100%", sm: "auto" },
-            whiteSpace: "nowrap",
-          }}
-        >
-          Add New Room
-        </Button>
+        {!isHousekeeping && (
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => handleOpen()}
+            size="large"
+            sx={{
+              borderRadius: 3,
+              px: 3,
+              py: 1.5,
+              textTransform: "none",
+              fontSize: "1rem",
+              boxShadow: 4,
+              width: { xs: "100%", sm: "auto" },
+              whiteSpace: "nowrap",
+            }}
+          >
+            Add New Room
+          </Button>
+        )}
       </Box>
 
       <Box
@@ -320,10 +342,7 @@ const RoomsPage = () => {
                 flexDirection: "column",
                 borderRadius: 4,
                 transition: "transform 0.2s, box-shadow 0.2s",
-                "&:hover": {
-                  transform: "translateY(-4px)",
-                  boxShadow: 8,
-                },
+                "&:hover": { transform: "translateY(-4px)", boxShadow: 8 },
               }}
             >
               <Box sx={{ position: "relative" }}>
@@ -361,14 +380,8 @@ const RoomsPage = () => {
                     </Typography>
                   </Box>
                 )}
-
                 <Box
-                  sx={{
-                    position: "absolute",
-                    top: 12,
-                    right: 12,
-                    zIndex: 1,
-                  }}
+                  sx={{ position: "absolute", top: 12, right: 12, zIndex: 1 }}
                 >
                   <Chip
                     label={room.status}
@@ -395,278 +408,347 @@ const RoomsPage = () => {
               </Box>
 
               <CardContent sx={{ flexGrow: 1, p: 2 }}>
-                <Stack
-                  direction="row"
-                  justifyContent="space-between"
-                  alignItems="start"
-                  mb={1}
-                >
-                  <Box>
-                    <Typography
-                      variant="subtitle1"
-                      fontWeight="bold"
-                      color="primary"
+                {!isHousekeeping && (
+                  <>
+                    <Stack
+                      direction="row"
+                      justifyContent="space-between"
+                      alignItems="start"
+                      mb={1}
                     >
-                      {typeData?.name || "Unknown Type"}
+                      <Box>
+                        <Typography
+                          variant="subtitle1"
+                          fontWeight="bold"
+                          color="primary"
+                        >
+                          {typeData?.name || "Unknown Type"}
+                        </Typography>
+                        <Stack
+                          direction="row"
+                          alignItems="center"
+                          spacing={0.5}
+                          sx={{ mt: 0.5 }}
+                        >
+                          <FloorIcon fontSize="small" color="action" />
+                          <Typography variant="body2" color="text.secondary">
+                            Floor {room.floor}
+                          </Typography>
+                        </Stack>
+                      </Box>
+                      <Box textAlign="right">
+                        <Typography variant="h6" fontWeight="bold">
+                          ${typeData?.basePrice || 0}
+                        </Typography>
+                      </Box>
+                    </Stack>
+                    <Divider sx={{ my: 1 }} />
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{
+                        mb: 2,
+                        display: "-webkit-box",
+                        overflow: "hidden",
+                        WebkitBoxOrient: "vertical",
+                        WebkitLineClamp: 2,
+                        height: 40,
+                      }}
+                    >
+                      {typeData?.description ||
+                        "No description available for this room type."}
                     </Typography>
                     <Stack
                       direction="row"
-                      alignItems="center"
-                      spacing={0.5}
-                      sx={{ mt: 0.5 }}
+                      spacing={1}
+                      flexWrap="wrap"
+                      sx={{ gap: 1 }}
                     >
-                      <FloorIcon fontSize="small" color="action" />
-                      <Typography variant="body2" color="text.secondary">
-                        Floor {room.floor}
-                      </Typography>
+                      {typeData?.features?.slice(0, 2).map((feature, idx) => (
+                        <Chip
+                          key={idx}
+                          icon={
+                            <FeatureIcon sx={{ fontSize: "14px !important" }} />
+                          }
+                          label={feature}
+                          size="small"
+                          variant="outlined"
+                          sx={{ borderRadius: 1, fontSize: "0.7rem" }}
+                        />
+                      ))}
+                      {(typeData?.features?.length || 0) > 2 && (
+                        <Chip
+                          label={`+${(typeData?.features?.length || 0) - 2}`}
+                          size="small"
+                          variant="outlined"
+                        />
+                      )}
                     </Stack>
-                  </Box>
-                  <Box textAlign="right">
-                    <Typography
-                      variant="h6"
-                      fontWeight="bold"
-                      color="text.primary"
-                    >
-                      ${typeData?.basePrice || 0}
+                  </>
+                )}
+
+                {isHousekeeping && (
+                  <Stack
+                    direction="row"
+                    alignItems="center"
+                    spacing={0.5}
+                    sx={{ mt: 0.5 }}
+                  >
+                    <FloorIcon fontSize="small" color="action" />
+                    <Typography variant="body2" color="text.secondary">
+                      Floor {room.floor}
                     </Typography>
-                  </Box>
-                </Stack>
-
-                <Divider sx={{ my: 1 }} />
-
-                <Typography
-                  variant="body2"
-                  color="text.secondary"
-                  sx={{
-                    mb: 2,
-                    display: "-webkit-box",
-                    overflow: "hidden",
-                    WebkitBoxOrient: "vertical",
-                    WebkitLineClamp: 2,
-                    height: 40,
-                  }}
-                >
-                  {typeData?.description ||
-                    "No description available for this room type."}
-                </Typography>
-
-                <Stack
-                  direction="row"
-                  spacing={1}
-                  flexWrap="wrap"
-                  sx={{ gap: 1 }}
-                >
-                  {typeData?.features?.slice(0, 2).map((feature, idx) => (
-                    <Chip
-                      key={idx}
-                      icon={
-                        <FeatureIcon sx={{ fontSize: "14px !important" }} />
-                      }
-                      label={feature}
-                      size="small"
-                      variant="outlined"
-                      sx={{ borderRadius: 1, fontSize: "0.7rem" }}
-                    />
-                  ))}
-                  {(typeData?.features?.length || 0) > 2 && (
-                    <Chip
-                      label={`+${(typeData?.features?.length || 0) - 2}`}
-                      size="small"
-                      variant="outlined"
-                    />
-                  )}
-                </Stack>
+                  </Stack>
+                )}
               </CardContent>
 
               <Box sx={{ p: 2, pt: 0, display: "flex", gap: 1 }}>
-                <Button
-                  variant="contained"
-                  fullWidth
-                  startIcon={<EditIcon />}
-                  onClick={() => handleOpen(room)}
-                  sx={{ borderRadius: 2, textTransform: "none" }}
-                >
-                  Edit
-                </Button>
-                <Button
-                  variant="outlined"
-                  color="error"
-                  onClick={() => handleDeleteClick(room._id)}
-                  sx={{ borderRadius: 2, minWidth: 50, px: 0 }}
-                >
-                  <DeleteIcon />
-                </Button>
+                {isHousekeeping ? (
+                  <>
+                    <Button
+                      variant="contained"
+                      fullWidth
+                      color="success"
+                      startIcon={
+                        statusLoadingId === room._id + RoomStatus.AVAILABLE ? (
+                          <CircularProgress size={14} color="inherit" />
+                        ) : (
+                          <AvailableIcon />
+                        )
+                      }
+                      disabled={
+                        room.status === RoomStatus.AVAILABLE ||
+                        !!statusLoadingId
+                      }
+                      onClick={() =>
+                        handleStatusChange(room, RoomStatus.AVAILABLE)
+                      }
+                      sx={{
+                        borderRadius: 2,
+                        textTransform: "none",
+                        fontSize: "0.75rem",
+                      }}
+                    >
+                      Available
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      fullWidth
+                      color="warning"
+                      startIcon={
+                        statusLoadingId === room._id + RoomStatus.DIRTY ? (
+                          <CircularProgress size={14} color="inherit" />
+                        ) : (
+                          <DirtyIcon />
+                        )
+                      }
+                      disabled={
+                        room.status === RoomStatus.DIRTY || !!statusLoadingId
+                      }
+                      onClick={() => handleStatusChange(room, RoomStatus.DIRTY)}
+                      sx={{
+                        borderRadius: 2,
+                        textTransform: "none",
+                        fontSize: "0.75rem",
+                      }}
+                    >
+                      Dirty
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Button
+                      variant="contained"
+                      fullWidth
+                      startIcon={<EditIcon />}
+                      onClick={() => handleOpen(room)}
+                      sx={{ borderRadius: 2, textTransform: "none" }}
+                    >
+                      Edit
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      color="error"
+                      onClick={() => handleDeleteClick(room._id)}
+                      sx={{ borderRadius: 2, minWidth: 50, px: 0 }}
+                    >
+                      <DeleteIcon />
+                    </Button>
+                  </>
+                )}
               </Box>
             </Card>
           );
         })}
       </Box>
 
-      <Dialog
-        open={open}
-        onClose={() => setOpen(false)}
-        fullWidth
-        maxWidth="xs"
-      >
-        <DialogTitle>{editingRoom ? "Edit Room" : "Add New Room"}</DialogTitle>
-        <DialogContent dividers>
-          <Stack spacing={2} sx={{ mt: 1 }}>
-            <TextField
-              label="Room Number"
-              value={formData.roomNumber}
-              fullWidth
-              required
-              onChange={(e) =>
-                setFormData({ ...formData, roomNumber: e.target.value })
-              }
-            />
-
-            <TextField
-              select
-              label="Room Type"
-              value={formData.roomType}
-              fullWidth
-              required
-              onChange={(e) =>
-                setFormData({ ...formData, roomType: e.target.value })
-              }
-            >
-              {roomTypes.map((t) => (
-                <MenuItem key={t._id} value={t._id}>
-                  {t.name}
-                </MenuItem>
-              ))}
-            </TextField>
-
-            <TextField
-              label="Floor"
-              type="number"
-              value={formData.floor}
-              fullWidth
-              required
-              onChange={(e) =>
-                setFormData({ ...formData, floor: e.target.value })
-              }
-            />
-
-            <TextField
-              select
-              label="Status"
-              value={formData.status}
-              fullWidth
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  status: e.target.value as RoomStatus,
-                })
-              }
-            >
-              {Object.values(RoomStatus).map((s) => (
-                <MenuItem key={s} value={s}>
-                  {s}
-                </MenuItem>
-              ))}
-            </TextField>
-
-            <Box
-              sx={{
-                border: "1px dashed grey",
-                p: 2,
-                borderRadius: 1,
-                textAlign: "center",
-              }}
-            >
-              <Button
-                component="label"
-                variant="outlined"
-                startIcon={<UploadIcon />}
-                size="small"
-              >
-                Upload Image
-                <input
-                  type="file"
-                  hidden
-                  accept="image/*"
-                  onChange={handleImageChange}
+      {!isHousekeeping && (
+        <>
+          <Dialog
+            open={open}
+            onClose={() => setOpen(false)}
+            fullWidth
+            maxWidth="xs"
+          >
+            <DialogTitle>
+              {editingRoom ? "Edit Room" : "Add New Room"}
+            </DialogTitle>
+            <DialogContent dividers>
+              <Stack spacing={2} sx={{ mt: 1 }}>
+                <TextField
+                  label="Room Number"
+                  value={formData.roomNumber}
+                  fullWidth
+                  required
+                  onChange={(e) =>
+                    setFormData({ ...formData, roomNumber: e.target.value })
+                  }
                 />
-              </Button>
-
-              {formData.image && (
-                <Box sx={{ mt: 2 }}>
-                  <img
-                    src={getFullImageUrl(formData.image)}
-                    alt="Preview"
-                    style={{
-                      width: "100%",
-                      maxHeight: 150,
-                      objectFit: "contain",
-                      borderRadius: 4,
-                    }}
-                    onError={(e: any) => {
-                      e.target.style.display = "none";
-                    }}
-                  />
+                <TextField
+                  select
+                  label="Room Type"
+                  value={formData.roomType}
+                  fullWidth
+                  required
+                  onChange={(e) =>
+                    setFormData({ ...formData, roomType: e.target.value })
+                  }
+                >
+                  {roomTypes.map((t) => (
+                    <MenuItem key={t._id} value={t._id}>
+                      {t.name}
+                    </MenuItem>
+                  ))}
+                </TextField>
+                <TextField
+                  label="Floor"
+                  type="number"
+                  value={formData.floor}
+                  fullWidth
+                  required
+                  onChange={(e) =>
+                    setFormData({ ...formData, floor: e.target.value })
+                  }
+                />
+                <TextField
+                  select
+                  label="Status"
+                  value={formData.status}
+                  fullWidth
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      status: e.target.value as RoomStatus,
+                    })
+                  }
+                >
+                  {Object.values(RoomStatus).map((s) => (
+                    <MenuItem key={s} value={s}>
+                      {s}
+                    </MenuItem>
+                  ))}
+                </TextField>
+                <Box
+                  sx={{
+                    border: "1px dashed grey",
+                    p: 2,
+                    borderRadius: 1,
+                    textAlign: "center",
+                  }}
+                >
                   <Button
+                    component="label"
+                    variant="outlined"
+                    startIcon={<UploadIcon />}
                     size="small"
-                    color="error"
-                    onClick={() => {
-                      setFormData({ ...formData, image: "" });
-                      setSelectedFile(null);
-                    }}
-                    sx={{ mt: 1 }}
                   >
-                    Remove
+                    Upload Image
+                    <input
+                      type="file"
+                      hidden
+                      accept="image/*"
+                      onChange={handleImageChange}
+                    />
                   </Button>
+                  {formData.image && (
+                    <Box sx={{ mt: 2 }}>
+                      <img
+                        src={getFullImageUrl(formData.image)}
+                        alt="Preview"
+                        style={{
+                          width: "100%",
+                          maxHeight: 150,
+                          objectFit: "contain",
+                          borderRadius: 4,
+                        }}
+                        onError={(e: any) => {
+                          e.target.style.display = "none";
+                        }}
+                      />
+                      <Button
+                        size="small"
+                        color="error"
+                        onClick={() => {
+                          setFormData({ ...formData, image: "" });
+                          setSelectedFile(null);
+                        }}
+                        sx={{ mt: 1 }}
+                      >
+                        Remove
+                      </Button>
+                    </Box>
+                  )}
                 </Box>
-              )}
-            </Box>
-          </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpen(false)}>Cancel</Button>
-          <Button
-            variant="contained"
-            onClick={handleSave}
-            disabled={saveLoading}
-          >
-            {saveLoading ? (
-              <CircularProgress size={24} />
-            ) : editingRoom ? (
-              "Update"
-            ) : (
-              "Create"
-            )}
-          </Button>
-        </DialogActions>
-      </Dialog>
+              </Stack>
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={() => setOpen(false)}>Cancel</Button>
+              <Button
+                variant="contained"
+                onClick={handleSave}
+                disabled={saveLoading}
+              >
+                {saveLoading ? (
+                  <CircularProgress size={24} />
+                ) : editingRoom ? (
+                  "Update"
+                ) : (
+                  "Create"
+                )}
+              </Button>
+            </DialogActions>
+          </Dialog>
 
-      <Dialog
-        open={deleteConfirmOpen}
-        onClose={() => setDeleteConfirmOpen(false)}
-        maxWidth="xs"
-        fullWidth
-      >
-        <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-          <WarningIcon color="error" /> Confirm Delete
-        </DialogTitle>
-        <DialogContent>
-          <Typography>
-            Are you sure you want to delete this room? This action cannot be
-            undone.
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDeleteConfirmOpen(false)}>Cancel</Button>
-          <Button
-            onClick={handleConfirmDelete}
-            color="error"
-            variant="contained"
-            autoFocus
+          <Dialog
+            open={deleteConfirmOpen}
+            onClose={() => setDeleteConfirmOpen(false)}
+            maxWidth="xs"
+            fullWidth
           >
-            Delete
-          </Button>
-        </DialogActions>
-      </Dialog>
+            <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+              <WarningIcon color="error" /> Confirm Delete
+            </DialogTitle>
+            <DialogContent>
+              <Typography>
+                Are you sure you want to delete this room? This action cannot be
+                undone.
+              </Typography>
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={() => setDeleteConfirmOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                onClick={handleConfirmDelete}
+                color="error"
+                variant="contained"
+              >
+                Delete
+              </Button>
+            </DialogActions>
+          </Dialog>
+        </>
+      )}
 
       <Snackbar
         open={snackbar.open}
