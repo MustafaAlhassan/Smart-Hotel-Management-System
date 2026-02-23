@@ -217,7 +217,7 @@ const Navbar = ({
         <Toolbar
           sx={{
             gap: 1.5,
-            minHeight: { xs: 57, sm: 63 },
+            minHeight: { xs: 60, sm: 80 },
             px: { xs: 1.5, sm: 3 },
           }}
         >
@@ -430,8 +430,8 @@ const Navbar = ({
           >
             <Avatar
               sx={{
-                width: 28,
-                height: 28,
+                width: 33,
+                height: 33,
                 fontSize: "0.72rem",
                 fontWeight: 800,
                 bgcolor: theme.palette.primary.main,
@@ -440,7 +440,7 @@ const Navbar = ({
             >
               {initials}
             </Avatar>
-            <Box sx={{ display: { xs: "none", sm: "block" } }}>
+            <Box sx={{ display: { xs: "none", sm: "block", width: "90px" } }}>
               <Typography
                 variant="body2"
                 fontWeight={700}

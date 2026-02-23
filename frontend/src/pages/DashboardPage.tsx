@@ -26,7 +26,6 @@ import {
   MeetingRoom,
   Hotel,
   TrendingUp,
-  BookOnline,
   EventAvailable,
   EventBusy,
   DonutLarge,
@@ -50,6 +49,7 @@ import {
 } from "recharts";
 import api from "../services/api";
 import type { DashboardData } from "../types/types";
+import { useNavigate } from "react-router-dom";
 
 const CARD_SIZE = 170;
 const CHART_HEIGHT = 380;
@@ -59,7 +59,7 @@ const DashboardPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const theme = useTheme();
-
+  const navigate = useNavigate();
   const role = (localStorage.getItem("role") || "").toUpperCase();
   const isHousekeeping = role === "HOUSEKEEPING";
   const isReceptionist = role === "RECEPTIONIST";
@@ -626,6 +626,7 @@ const DashboardPage = () => {
               <ChartCard title="Quick Actions">
                 <Stack spacing={2.5} height="100%" justifyContent="center">
                   <Button
+                    onClick={() => navigate("/booking")}
                     fullWidth
                     variant="contained"
                     startIcon={<AddCircleOutline />}
@@ -639,6 +640,7 @@ const DashboardPage = () => {
                     Create New Booking
                   </Button>
                   <Button
+                    onClick={() => navigate("/guests")}
                     fullWidth
                     variant="outlined"
                     startIcon={<PersonAddAlt />}
