@@ -20,6 +20,7 @@ import {
   CircularProgress,
   Divider,
   useTheme,
+  Tooltip,
 } from "@mui/material";
 import {
   Add as AddIcon,
@@ -32,6 +33,11 @@ import {
   Warning as WarningIcon,
   CleaningServices as DirtyIcon,
   CheckCircleOutline as AvailableIcon,
+  Lock as LockIcon,
+  Visibility as ViewIcon,
+  Hotel as HotelIcon,
+  AttachMoney as PriceIcon,
+  Info as InfoIcon,
 } from "@mui/icons-material";
 import { roomService } from "../../services/roomService";
 import { roomTypeService } from "../../services/roomTypeService";
@@ -65,7 +71,10 @@ export interface IRoom {
 const RoomsPage = () => {
   const theme = useTheme();
   const role = (localStorage.getItem("role") || "").toUpperCase();
+
   const isHousekeeping = role === "HOUSEKEEPING";
+  const isReceptionist = role === "RECEPTIONIST";
+  const isAdminOrManager = role === "ADMIN" || role === "MANAGER";
 
   const [rooms, setRooms] = useState<IRoom[]>([]);
   const [roomTypes, setRoomTypes] = useState<IRoomType[]>([]);
@@ -74,6 +83,8 @@ const RoomsPage = () => {
   const [statusLoadingId, setStatusLoadingId] = useState<string | null>(null);
   const [editingRoom, setEditingRoom] = useState<IRoom | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+
+  const [viewRoom, setViewRoom] = useState<IRoom | null>(null);
 
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [roomToDelete, setRoomToDelete] = useState<string | null>(null);
@@ -295,10 +306,13 @@ const RoomsPage = () => {
           <Typography variant="body1" color="text.secondary">
             {isHousekeeping
               ? "View rooms and update their cleaning status."
-              : "Manage your hotel inventory, prices, and status."}
+              : isReceptionist
+                ? "View full room details. Contact management for any changes."
+                : "Manage your hotel inventory, prices, and status."}
           </Typography>
         </Box>
-        {!isHousekeeping && (
+
+        {isAdminOrManager && (
           <Button
             variant="contained"
             startIcon={<AddIcon />}
@@ -325,12 +339,13 @@ const RoomsPage = () => {
           display: "flex",
           flexWrap: "wrap",
           gap: 3,
-          justifyContent: { xs: "center", sm: "flex-start" },
+          justifyContent: "center",
         }}
       >
         {rooms.map((room) => {
           const typeData = getRoomTypeData(room);
           const imageUrl = getFullImageUrl(room.image);
+          const isOccupied = room.status === RoomStatus.OCCUPIED;
 
           return (
             <Card
@@ -343,6 +358,7 @@ const RoomsPage = () => {
                 borderRadius: 4,
                 transition: "transform 0.2s, box-shadow 0.2s",
                 "&:hover": { transform: "translateY(-4px)", boxShadow: 8 },
+                opacity: isHousekeeping && isOccupied ? 0.82 : 1,
               }}
             >
               <Box sx={{ position: "relative" }}>
@@ -380,15 +396,42 @@ const RoomsPage = () => {
                     </Typography>
                   </Box>
                 )}
+
                 <Box
-                  sx={{ position: "absolute", top: 12, right: 12, zIndex: 1 }}
+                  sx={{
+                    position: "absolute",
+                    top: 12,
+                    right: 12,
+                    zIndex: 1,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 0.5,
+                  }}
                 >
+                  {isHousekeeping && isOccupied && (
+                    <Tooltip title="Occupied — no changes allowed">
+                      <Box
+                        sx={{
+                          bgcolor: "rgba(0,0,0,0.52)",
+                          borderRadius: "50%",
+                          width: 28,
+                          height: 28,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
+                        <LockIcon sx={{ fontSize: 15, color: "#fff" }} />
+                      </Box>
+                    </Tooltip>
+                  )}
                   <Chip
                     label={room.status}
                     color={getStatusColor(room.status) as any}
                     sx={{ fontWeight: "bold", backdropFilter: "blur(4px)" }}
                   />
                 </Box>
+
                 <Box
                   sx={{
                     position: "absolute",
@@ -439,6 +482,9 @@ const RoomsPage = () => {
                       <Box textAlign="right">
                         <Typography variant="h6" fontWeight="bold">
                           ${typeData?.basePrice || 0}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          / night
                         </Typography>
                       </Box>
                     </Stack>
@@ -491,71 +537,134 @@ const RoomsPage = () => {
                   <Stack
                     direction="row"
                     alignItems="center"
-                    spacing={0.5}
+                    justifyContent="space-between"
                     sx={{ mt: 0.5 }}
                   >
-                    <FloorIcon fontSize="small" color="action" />
-                    <Typography variant="body2" color="text.secondary">
-                      Floor {room.floor}
-                    </Typography>
+                    <Stack direction="row" alignItems="center" spacing={0.5}>
+                      <FloorIcon fontSize="small" color="action" />
+                      <Typography variant="body2" color="text.secondary">
+                        Floor {room.floor}
+                      </Typography>
+                    </Stack>
+                    {isOccupied && (
+                      <Chip
+                        size="small"
+                        icon={<LockIcon sx={{ fontSize: "12px !important" }} />}
+                        label="Locked"
+                        sx={{
+                          fontSize: "0.62rem",
+                          height: 20,
+                          bgcolor: theme.palette.error.main + "14",
+                          color: theme.palette.error.main,
+                          border: `1px solid ${theme.palette.error.main}28`,
+                          "& .MuiChip-icon": {
+                            color: theme.palette.error.main,
+                          },
+                        }}
+                      />
+                    )}
                   </Stack>
                 )}
               </CardContent>
 
               <Box sx={{ p: 2, pt: 0, display: "flex", gap: 1 }}>
-                {isHousekeeping ? (
-                  <>
-                    <Button
-                      variant="contained"
-                      fullWidth
-                      color="success"
-                      startIcon={
-                        statusLoadingId === room._id + RoomStatus.AVAILABLE ? (
-                          <CircularProgress size={14} color="inherit" />
-                        ) : (
-                          <AvailableIcon />
-                        )
-                      }
-                      disabled={
-                        room.status === RoomStatus.AVAILABLE ||
-                        !!statusLoadingId
-                      }
-                      onClick={() =>
-                        handleStatusChange(room, RoomStatus.AVAILABLE)
-                      }
+                {isHousekeeping &&
+                  (isOccupied ? (
+                    <Box
                       sx={{
+                        width: "100%",
+                        py: 1,
+                        px: 1.5,
                         borderRadius: 2,
-                        textTransform: "none",
-                        fontSize: "0.75rem",
+                        bgcolor: theme.palette.error.main + "10",
+                        border: `1px solid ${theme.palette.error.main}22`,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: 0.8,
                       }}
                     >
-                      Available
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      fullWidth
-                      color="warning"
-                      startIcon={
-                        statusLoadingId === room._id + RoomStatus.DIRTY ? (
-                          <CircularProgress size={14} color="inherit" />
-                        ) : (
-                          <DirtyIcon />
-                        )
-                      }
-                      disabled={
-                        room.status === RoomStatus.DIRTY || !!statusLoadingId
-                      }
-                      onClick={() => handleStatusChange(room, RoomStatus.DIRTY)}
-                      sx={{
-                        borderRadius: 2,
-                        textTransform: "none",
-                        fontSize: "0.75rem",
-                      }}
-                    >
-                      Dirty
-                    </Button>
-                  </>
-                ) : (
+                      <LockIcon
+                        sx={{ fontSize: 14, color: theme.palette.error.main }}
+                      />
+                      <Typography
+                        variant="caption"
+                        color="error"
+                        fontWeight={600}
+                      >
+                        Occupied — no changes allowed
+                      </Typography>
+                    </Box>
+                  ) : (
+                    <>
+                      <Button
+                        variant="contained"
+                        fullWidth
+                        color="success"
+                        startIcon={
+                          statusLoadingId ===
+                          room._id + RoomStatus.AVAILABLE ? (
+                            <CircularProgress size={14} color="inherit" />
+                          ) : (
+                            <AvailableIcon />
+                          )
+                        }
+                        disabled={
+                          room.status === RoomStatus.AVAILABLE ||
+                          !!statusLoadingId
+                        }
+                        onClick={() =>
+                          handleStatusChange(room, RoomStatus.AVAILABLE)
+                        }
+                        sx={{
+                          borderRadius: 2,
+                          textTransform: "none",
+                          fontSize: "0.75rem",
+                        }}
+                      >
+                        Available
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        fullWidth
+                        color="warning"
+                        startIcon={
+                          statusLoadingId === room._id + RoomStatus.DIRTY ? (
+                            <CircularProgress size={14} color="inherit" />
+                          ) : (
+                            <DirtyIcon />
+                          )
+                        }
+                        disabled={
+                          room.status === RoomStatus.DIRTY || !!statusLoadingId
+                        }
+                        onClick={() =>
+                          handleStatusChange(room, RoomStatus.DIRTY)
+                        }
+                        sx={{
+                          borderRadius: 2,
+                          textTransform: "none",
+                          fontSize: "0.75rem",
+                        }}
+                      >
+                        Dirty
+                      </Button>
+                    </>
+                  ))}
+
+                {isReceptionist && (
+                  <Button
+                    variant="outlined"
+                    fullWidth
+                    startIcon={<ViewIcon />}
+                    onClick={() => setViewRoom(room)}
+                    sx={{ borderRadius: 2, textTransform: "none" }}
+                  >
+                    View Full Info
+                  </Button>
+                )}
+
+                {isAdminOrManager && (
                   <>
                     <Button
                       variant="contained"
@@ -582,7 +691,240 @@ const RoomsPage = () => {
         })}
       </Box>
 
-      {!isHousekeeping && (
+      {isReceptionist &&
+        viewRoom &&
+        (() => {
+          const typeData = getRoomTypeData(viewRoom);
+          const imageUrl = getFullImageUrl(viewRoom.image);
+          return (
+            <Dialog
+              open
+              onClose={() => setViewRoom(null)}
+              maxWidth="sm"
+              fullWidth
+            >
+              <DialogTitle sx={{ pb: 0.5 }}>
+                <Stack
+                  direction="row"
+                  alignItems="center"
+                  justifyContent="space-between"
+                >
+                  <Stack direction="row" alignItems="center" gap={1}>
+                    <HotelIcon color="primary" />
+                    <Typography variant="h6" fontWeight={700}>
+                      Room {viewRoom.roomNumber}
+                    </Typography>
+                  </Stack>
+                  <Chip
+                    label={viewRoom.status}
+                    color={getStatusColor(viewRoom.status) as any}
+                    sx={{ fontWeight: "bold" }}
+                  />
+                </Stack>
+              </DialogTitle>
+
+              <DialogContent dividers sx={{ p: 0 }}>
+                {imageUrl ? (
+                  <Box
+                    component="img"
+                    src={imageUrl}
+                    alt={`Room ${viewRoom.roomNumber}`}
+                    sx={{
+                      width: "100%",
+                      height: 240,
+                      objectFit: "cover",
+                      display: "block",
+                    }}
+                    onError={(e: any) => {
+                      e.target.style.display = "none";
+                    }}
+                  />
+                ) : (
+                  <Box
+                    sx={{
+                      height: 140,
+                      bgcolor: "grey.100",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexDirection: "column",
+                      gap: 1,
+                    }}
+                  >
+                    <NoImageIcon
+                      sx={{ fontSize: 48, color: "text.disabled" }}
+                    />
+                    <Typography variant="caption" color="text.secondary">
+                      No Image Available
+                    </Typography>
+                  </Box>
+                )}
+
+                <Box sx={{ p: 3 }}>
+                  <Stack direction="row" spacing={4} mb={2} flexWrap="wrap">
+                    <Box>
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        fontWeight={600}
+                        sx={{
+                          textTransform: "uppercase",
+                          letterSpacing: "0.08em",
+                        }}
+                      >
+                        Room Type
+                      </Typography>
+                      <Typography
+                        variant="body1"
+                        fontWeight={700}
+                        color="primary"
+                      >
+                        {typeData?.name || "—"}
+                      </Typography>
+                    </Box>
+                    <Box>
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        fontWeight={600}
+                        sx={{
+                          textTransform: "uppercase",
+                          letterSpacing: "0.08em",
+                        }}
+                      >
+                        Floor
+                      </Typography>
+                      <Stack direction="row" alignItems="center" spacing={0.5}>
+                        <FloorIcon fontSize="small" color="action" />
+                        <Typography variant="body1" fontWeight={600}>
+                          Floor {viewRoom.floor}
+                        </Typography>
+                      </Stack>
+                    </Box>
+                    <Box>
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        fontWeight={600}
+                        sx={{
+                          textTransform: "uppercase",
+                          letterSpacing: "0.08em",
+                        }}
+                      >
+                        Price
+                      </Typography>
+                      <Stack direction="row" alignItems="center" spacing={0.5}>
+                        <PriceIcon fontSize="small" color="action" />
+                        <Typography variant="body1" fontWeight={700}>
+                          ${typeData?.price || 0}
+                          <Typography
+                            component="span"
+                            variant="caption"
+                            color="text.secondary"
+                          >
+                            {" "}
+                            / night
+                          </Typography>
+                        </Typography>
+                      </Stack>
+                    </Box>
+                  </Stack>
+
+                  <Divider sx={{ my: 2 }} />
+
+                  {typeData?.description && (
+                    <Box mb={2}>
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        fontWeight={600}
+                        sx={{
+                          textTransform: "uppercase",
+                          letterSpacing: "0.08em",
+                          display: "block",
+                          mb: 0.5,
+                        }}
+                      >
+                        Description
+                      </Typography>
+                      <Typography
+                        variant="body2"
+                        color="text.secondary"
+                        lineHeight={1.7}
+                      >
+                        {typeData.description}
+                      </Typography>
+                    </Box>
+                  )}
+
+                  {typeData?.features && typeData.features.length > 0 && (
+                    <Box mb={2}>
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        fontWeight={600}
+                        sx={{
+                          textTransform: "uppercase",
+                          letterSpacing: "0.08em",
+                          display: "block",
+                          mb: 1,
+                        }}
+                      >
+                        Features
+                      </Typography>
+                      <Stack direction="row" flexWrap="wrap" gap={1}>
+                        {typeData.features.map((feature, idx) => (
+                          <Chip
+                            key={idx}
+                            icon={
+                              <FeatureIcon
+                                sx={{ fontSize: "14px !important" }}
+                              />
+                            }
+                            label={feature}
+                            size="small"
+                            variant="outlined"
+                            color="primary"
+                            sx={{ borderRadius: 1 }}
+                          />
+                        ))}
+                      </Stack>
+                    </Box>
+                  )}
+
+                  <Box
+                    sx={{
+                      p: 1.5,
+                      borderRadius: 2,
+                      bgcolor: theme.palette.info.main + "0f",
+                      border: `1px solid ${theme.palette.info.main}28`,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 1,
+                    }}
+                  >
+                    <InfoIcon sx={{ fontSize: 16, color: "info.main" }} />
+                    <Typography
+                      variant="caption"
+                      color="info.main"
+                      fontWeight={500}
+                    >
+                      View only — contact management for any room modifications.
+                    </Typography>
+                  </Box>
+                </Box>
+              </DialogContent>
+
+              <DialogActions>
+                <Button variant="contained" onClick={() => setViewRoom(null)}>
+                  Close
+                </Button>
+              </DialogActions>
+            </Dialog>
+          );
+        })()}
+
+      {isAdminOrManager && (
         <>
           <Dialog
             open={open}
