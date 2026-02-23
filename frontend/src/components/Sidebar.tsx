@@ -121,7 +121,7 @@ const Sidebar = ({
     transition: "background 0.15s",
     ...(active
       ? {
-          bgcolor: theme.palette.primary.main,
+          bgcolor: theme.palette.primary.dark,
           "& .MuiListItemIcon-root": { color: "#fff" },
           "& .MuiListItemText-primary": { color: "#fff", fontWeight: 700 },
           "&:hover": { bgcolor: theme.palette.primary.dark },
@@ -163,12 +163,10 @@ const Sidebar = ({
     transition: "background 0.15s",
     ...(active
       ? {
-          bgcolor: theme.palette.action.selected,
-          "& .MuiListItemIcon-root": { color: theme.palette.primary.main },
-          "& .MuiListItemText-primary": {
-            color: theme.palette.primary.main,
-            fontWeight: 700,
-          },
+          bgcolor: theme.palette.primary.dark,
+          "& .MuiListItemIcon-root": { color: "#fff" },
+          "& .MuiListItemText-primary": { color: "#fff", fontWeight: 700 },
+          "&:hover": { bgcolor: theme.palette.primary.dark },
         }
       : {
           "& .MuiListItemIcon-root": { color: theme.palette.text.disabled },
@@ -202,73 +200,19 @@ const Sidebar = ({
         <Avatar
           src={Logo}
           variant="square"
-          sx={{ width: 28, height: 28, borderRadius: 1 }}
+          sx={{ width: 45, height: 45, borderRadius: 1 }}
         />
         <Typography
           variant="subtitle1"
           fontWeight={900}
-          letterSpacing={-0.5}
           sx={{ userSelect: "none" }}
+          color="white"
         >
           AMI Hotel
         </Typography>
       </Box>
 
-      <Divider />
-
-      <Box sx={{ px: 1.5, py: 1.5, flexShrink: 0 }}>
-        <Box
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            gap: 1.2,
-            px: 1.5,
-            py: 1.2,
-            borderRadius: 2.5,
-            bgcolor: theme.palette.action.hover,
-          }}
-        >
-          <Avatar
-            sx={{
-              width: 32,
-              height: 32,
-              fontSize: "0.75rem",
-              fontWeight: 800,
-              bgcolor: theme.palette.primary.main,
-              flexShrink: 0,
-            }}
-          >
-            {username[0]?.toUpperCase()}
-          </Avatar>
-          <Box flex={1} minWidth={0}>
-            <Typography
-              variant="body2"
-              fontWeight={700}
-              noWrap
-              lineHeight={1.3}
-            >
-              {username}
-            </Typography>
-            {role && (
-              <Chip
-                label={role}
-                size="small"
-                color={ROLE_COLOR[role] ?? "default"}
-                sx={{
-                  height: 17,
-                  fontSize: "0.6rem",
-                  fontWeight: 700,
-                  borderRadius: 1,
-                  mt: 0.2,
-                  "& .MuiChip-label": { px: 0.7 },
-                }}
-              />
-            )}
-          </Box>
-        </Box>
-      </Box>
-
-      <Divider sx={{ mb: 0.5 }} />
+      <Divider sx={{ mb: 2 }} />
 
       <List
         disablePadding
@@ -291,7 +235,7 @@ const Sidebar = ({
             sx={navItemSx(isActive("/dashboard"))}
           >
             <ListItemIcon sx={{ minWidth: 36 }}>
-              <DashboardIcon sx={{ fontSize: 25 }} />
+              <DashboardIcon sx={{ fontSize: 25, color: "white" }} />
             </ListItemIcon>
             <ListItemText
               primary="Dashboard"
@@ -308,7 +252,7 @@ const Sidebar = ({
                 sx={groupItemSx(roomsOpen, isRoomsGroupActive)}
               >
                 <ListItemIcon sx={{ minWidth: 36 }}>
-                  <NightShelterIcon sx={{ fontSize: 25 }} />
+                  <NightShelterIcon sx={{ fontSize: 25, color: "white" }} />
                 </ListItemIcon>
                 <ListItemText
                   primary="Rooms"
@@ -324,13 +268,15 @@ const Sidebar = ({
             <Collapse in={roomsOpen} timeout="auto" unmountOnExit>
               <List disablePadding>
                 {allowed("/rooms") && (
-                  <ListItem disablePaddingsx={{ ml: "20px" }}>
+                  <ListItem disablePadding sx={{ ml: "8px" }}>
                     <ListItemButton
                       onClick={() => navigate("/rooms")}
                       sx={subItemSx(isActive("/rooms"))}
                     >
                       <ListItemIcon sx={{ minWidth: 36 }}>
-                        <MeetingRoomIcon sx={{ fontSize: 25 }} />
+                        <MeetingRoomIcon
+                          sx={{ fontSize: 25, color: "white" }}
+                        />
                       </ListItemIcon>
                       <ListItemText
                         primary="All Rooms"
@@ -340,13 +286,13 @@ const Sidebar = ({
                   </ListItem>
                 )}
                 {allowed("/room-types") && (
-                  <ListItem disablePadding sx={{ ml: "20px" }}>
+                  <ListItem disablePadding sx={{ ml: "8px" }}>
                     <ListItemButton
                       onClick={() => navigate("/room-types")}
                       sx={subItemSx(isActive("/room-types"))}
                     >
                       <ListItemIcon sx={{ minWidth: 36 }}>
-                        <CategoryIcon sx={{ fontSize: 25 }} />
+                        <CategoryIcon sx={{ fontSize: 25, color: "white" }} />
                       </ListItemIcon>
                       <ListItemText
                         primary="Room Types"
@@ -368,7 +314,7 @@ const Sidebar = ({
                 sx={groupItemSx(reservationsOpen, isReservationsGroupActive)}
               >
                 <ListItemIcon sx={{ minWidth: 36 }}>
-                  <BookOnlineIcon sx={{ fontSize: 25 }} />
+                  <BookOnlineIcon sx={{ fontSize: 25, color: "white" }} />
                 </ListItemIcon>
                 <ListItemText
                   primary="Reservations"
@@ -384,13 +330,13 @@ const Sidebar = ({
             <Collapse in={reservationsOpen} timeout="auto" unmountOnExit>
               <List disablePadding>
                 {allowed("/all-reservations") && (
-                  <ListItem disablePadding sx={{ ml: "20px" }}>
+                  <ListItem disablePadding sx={{ ml: "8px" }}>
                     <ListItemButton
                       onClick={() => navigate("/all-reservations")}
                       sx={subItemSx(isActive("/all-reservations"))}
                     >
                       <ListItemIcon sx={{ minWidth: 36 }}>
-                        <ListAltIcon sx={{ fontSize: 25 }} />
+                        <ListAltIcon sx={{ fontSize: 25, color: "white" }} />
                       </ListItemIcon>
                       <ListItemText
                         primary="All Reservations"
@@ -400,13 +346,15 @@ const Sidebar = ({
                   </ListItem>
                 )}
                 {allowed("/booking") && (
-                  <ListItem disablePadding sx={{ ml: "20px" }}>
+                  <ListItem disablePadding sx={{ ml: "8px" }}>
                     <ListItemButton
                       onClick={() => navigate("/booking")}
                       sx={subItemSx(isActive("/booking"))}
                     >
                       <ListItemIcon sx={{ minWidth: 36 }}>
-                        <AddCircleOutlineIcon sx={{ fontSize: 25 }} />
+                        <AddCircleOutlineIcon
+                          sx={{ fontSize: 25, color: "white" }}
+                        />
                       </ListItemIcon>
                       <ListItemText
                         primary="New Booking"
@@ -427,7 +375,7 @@ const Sidebar = ({
               sx={navItemSx(isActive("/guests"))}
             >
               <ListItemIcon sx={{ minWidth: 36 }}>
-                <PersonAddIcon sx={{ fontSize: 25 }} />
+                <PersonAddIcon sx={{ fontSize: 25, color: "white" }} />
               </ListItemIcon>
               <ListItemText
                 primary="Guests"
@@ -444,7 +392,7 @@ const Sidebar = ({
               sx={navItemSx(isActive("/services"))}
             >
               <ListItemIcon sx={{ minWidth: 36 }}>
-                <RoomServiceIcon sx={{ fontSize: 25 }} />
+                <RoomServiceIcon sx={{ fontSize: 25, color: "white" }} />
               </ListItemIcon>
               <ListItemText
                 primary="Services"
@@ -461,7 +409,7 @@ const Sidebar = ({
               sx={navItemSx(isActive("/invoices"))}
             >
               <ListItemIcon sx={{ minWidth: 36 }}>
-                <DescriptionIcon sx={{ fontSize: 25 }} />
+                <DescriptionIcon sx={{ fontSize: 25, color: "white" }} />
               </ListItemIcon>
               <ListItemText
                 primary="Invoices"
@@ -478,7 +426,7 @@ const Sidebar = ({
               sx={navItemSx(isActive("/users"))}
             >
               <ListItemIcon sx={{ minWidth: 36 }}>
-                <GroupIcon sx={{ fontSize: 25 }} />
+                <GroupIcon sx={{ fontSize: 25, color: "white" }} />
               </ListItemIcon>
               <ListItemText
                 primary="Users"
@@ -497,7 +445,7 @@ const Sidebar = ({
             sx={navItemSx(isActive("/settings"))}
           >
             <ListItemIcon sx={{ minWidth: 36 }}>
-              <SettingsIcon sx={{ fontSize: 25 }} />
+              <SettingsIcon sx={{ fontSize: 25, color: "white" }} />
             </ListItemIcon>
             <ListItemText
               primary="Settings"
