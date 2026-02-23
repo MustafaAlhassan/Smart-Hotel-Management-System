@@ -83,7 +83,7 @@ const NotFoundPage = () => {
             lineHeight: 1,
             letterSpacing: "-0.04em",
             color: isLight
-              ? "rgba(10,112,128,0.12)"
+              ? "rgba(10, 112, 128, 0.46)"
               : "rgba(20, 164, 180, 0.53)",
             userSelect: "none",
             mb: -2,
