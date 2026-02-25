@@ -3,12 +3,15 @@ import * as chatService from "../services/chatService";
 
 export const handleChatMessage = async (req: Request, res: Response) => {
   try {
-    const { message } = req.body;
+    const { message, role } = req.body;
 
     if (!message) {
       return res.status(400).json({ response: "Message is required" });
     }
-    const aiResponse = await chatService.processChatWithAI(message);
+    if (!role) {
+      return res.status(400).json({ response: "Role is required" });
+    }
+    const aiResponse = await chatService.processChatWithAI(message, role);
 
     res.status(200).json({ response: aiResponse });
   } catch (error: any) {
