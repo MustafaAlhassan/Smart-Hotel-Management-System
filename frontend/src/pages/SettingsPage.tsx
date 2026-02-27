@@ -193,10 +193,13 @@ const SettingsPage = () => {
           email: user.email,
         });
       } catch (err: any) {
-        showSnackbar(
-          err.response?.data?.error || "Failed to load profile",
-          "error",
-        );
+        const message = err.response?.data?.error || "Failed to load profile";
+        if (
+          !message.toLowerCase().includes("access denied") &&
+          !message.toLowerCase().includes("permission")
+        ) {
+          showSnackbar(message, "error");
+        }
       } finally {
         setLoading(false);
       }
@@ -366,109 +369,111 @@ const SettingsPage = () => {
         </Paper>
       )}
 
-      <SectionCard
-        icon={<PersonIcon sx={{ fontSize: 18 }} />}
-        title="Profile Information"
-        subtitle="Update your name, username and email"
-      >
-        <Stack spacing={3}>
-          <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+      {profile?.role?.toUpperCase() === "ADMIN" && (
+        <SectionCard
+          icon={<PersonIcon sx={{ fontSize: 18 }} />}
+          title="Profile Information"
+          subtitle="Update your name, username and email"
+        >
+          <Stack spacing={3}>
+            <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+              <TextField
+                label="First Name"
+                fullWidth
+                disabled={!profileEditing}
+                value={profileForm.firstName}
+                onChange={(e) =>
+                  setProfileForm({ ...profileForm, firstName: e.target.value })
+                }
+              />
+              <TextField
+                label="Last Name"
+                fullWidth
+                disabled={!profileEditing}
+                value={profileForm.lastName}
+                onChange={(e) =>
+                  setProfileForm({ ...profileForm, lastName: e.target.value })
+                }
+              />
+            </Stack>
             <TextField
-              label="First Name"
+              label="Username"
               fullWidth
               disabled={!profileEditing}
-              value={profileForm.firstName}
+              value={profileForm.username}
               onChange={(e) =>
-                setProfileForm({ ...profileForm, firstName: e.target.value })
+                setProfileForm({ ...profileForm, username: e.target.value })
               }
             />
             <TextField
-              label="Last Name"
+              label="Email Address"
+              type="email"
               fullWidth
               disabled={!profileEditing}
-              value={profileForm.lastName}
+              value={profileForm.email}
               onChange={(e) =>
-                setProfileForm({ ...profileForm, lastName: e.target.value })
+                setProfileForm({ ...profileForm, email: e.target.value })
               }
             />
-          </Stack>
-          <TextField
-            label="Username"
-            fullWidth
-            disabled={!profileEditing}
-            value={profileForm.username}
-            onChange={(e) =>
-              setProfileForm({ ...profileForm, username: e.target.value })
-            }
-          />
-          <TextField
-            label="Email Address"
-            type="email"
-            fullWidth
-            disabled={!profileEditing}
-            value={profileForm.email}
-            onChange={(e) =>
-              setProfileForm({ ...profileForm, email: e.target.value })
-            }
-          />
 
-          <Box
-            display="flex"
-            justifyContent="flex-end"
-            gap={1.5}
-            flexDirection={{ xs: "column", sm: "row" }}
-          >
-            {!profileEditing ? (
-              <Button
-                variant="outlined"
-                startIcon={<EditIcon />}
-                onClick={() => setProfileEditing(true)}
-                sx={{
-                  borderRadius: 2,
-                  fontWeight: 700,
-                  textTransform: "none",
-                  width: { xs: "100%", sm: "auto" },
-                }}
-              >
-                Edit Profile
-              </Button>
-            ) : (
-              <>
+            <Box
+              display="flex"
+              justifyContent="flex-end"
+              gap={1.5}
+              flexDirection={{ xs: "column", sm: "row" }}
+            >
+              {!profileEditing ? (
                 <Button
-                  onClick={handleCancelEdit}
-                  color="inherit"
-                  sx={{
-                    fontWeight: 600,
-                    textTransform: "none",
-                    width: { xs: "100%", sm: "auto" },
-                  }}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  variant="contained"
-                  startIcon={profileLoading ? null : <SaveIcon />}
-                  onClick={handleSaveProfile}
-                  disabled={profileLoading}
+                  variant="outlined"
+                  startIcon={<EditIcon />}
+                  onClick={() => setProfileEditing(true)}
                   sx={{
                     borderRadius: 2,
                     fontWeight: 700,
                     textTransform: "none",
-                    px: 3,
                     width: { xs: "100%", sm: "auto" },
                   }}
                 >
-                  {profileLoading ? (
-                    <CircularProgress size={18} color="inherit" />
-                  ) : (
-                    "Save Changes"
-                  )}
+                  Edit Profile
                 </Button>
-              </>
-            )}
-          </Box>
-        </Stack>
-      </SectionCard>
+              ) : (
+                <>
+                  <Button
+                    onClick={handleCancelEdit}
+                    color="inherit"
+                    sx={{
+                      fontWeight: 600,
+                      textTransform: "none",
+                      width: { xs: "100%", sm: "auto" },
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="contained"
+                    startIcon={profileLoading ? null : <SaveIcon />}
+                    onClick={handleSaveProfile}
+                    disabled={profileLoading}
+                    sx={{
+                      borderRadius: 2,
+                      fontWeight: 700,
+                      textTransform: "none",
+                      px: 3,
+                      width: { xs: "100%", sm: "auto" },
+                    }}
+                  >
+                    {profileLoading ? (
+                      <CircularProgress size={18} color="inherit" />
+                    ) : (
+                      "Save Changes"
+                    )}
+                  </Button>
+                </>
+              )}
+            </Box>
+          </Stack>
+        </SectionCard>
+      )}
 
       <SectionCard
         icon={<LockIcon sx={{ fontSize: 18 }} />}
