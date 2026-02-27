@@ -40,6 +40,7 @@ import HotelIcon from "@mui/icons-material/Hotel";
 import AttachMoneyIcon from "@mui/icons-material/AttachMoney";
 import PersonIcon from "@mui/icons-material/Person";
 import ReceiptIcon from "@mui/icons-material/Receipt";
+import WarningAmberRoundedIcon from "@mui/icons-material/WarningAmberRounded";
 import { useNavigate } from "react-router-dom";
 import api from "../../services/api";
 
@@ -61,6 +62,10 @@ const AllReservationsPage = () => {
     totalPrice: 0,
     notes: "",
   });
+
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [bookingToCancel, setBookingToCancel] = useState<any>(null);
+  const [cancelLoading, setCancelLoading] = useState(false);
 
   const [snackbar, setSnackbar] = useState({
     open: false,
@@ -95,37 +100,46 @@ const AllReservationsPage = () => {
 
   const calculateTotal = (booking: any) => {
     if (booking.totalPrice && booking.totalPrice > 0) return booking.totalPrice;
-
     const room = booking.room;
-
     const pricePerNight = room?.basePrice || room?.roomType?.basePrice || 0;
-
     if (!booking.checkInDate || !booking.checkOutDate) return 0;
-
     const start = new Date(booking.checkInDate);
     const end = new Date(booking.checkOutDate);
     const diff = Math.ceil(
       (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24),
     );
     const nights = diff > 0 ? diff : 0;
-
     return nights * pricePerNight;
   };
 
-  const handleCancelBooking = async (id: string) => {
-    if (!window.confirm("Are you sure you want to cancel this booking?"))
-      return;
+  const handleOpenCancelDialog = (booking: any) => {
+    setBookingToCancel(booking);
+    setCancelDialogOpen(true);
+  };
 
+  const handleCloseCancelDialog = () => {
+    setCancelDialogOpen(false);
+    setBookingToCancel(null);
+  };
+
+  const handleConfirmCancel = async () => {
+    if (!bookingToCancel) return;
+    setCancelLoading(true);
     try {
-      await api.delete(`/bookings/${id}`);
+      await api.delete(`/bookings/${bookingToCancel._id}`);
       setBookings((prev) =>
-        prev.map((b) => (b._id === id ? { ...b, status: "Cancelled" } : b)),
+        prev.map((b) =>
+          b._id === bookingToCancel._id ? { ...b, status: "Cancelled" } : b,
+        ),
       );
       showMessage("Booking cancelled successfully.");
+      handleCloseCancelDialog();
     } catch (err: any) {
       const errorMsg =
         err.response?.data?.message || "Error cancelling booking.";
       showMessage(errorMsg, "error");
+    } finally {
+      setCancelLoading(false);
     }
   };
 
@@ -141,7 +155,6 @@ const AllReservationsPage = () => {
 
   const handleEditClick = (booking: any) => {
     setCurrentBooking(booking);
-
     setEditFormData({
       checkInDate: booking.checkInDate ? booking.checkInDate.split("T")[0] : "",
       checkOutDate: booking.checkOutDate
@@ -166,14 +179,12 @@ const AllReservationsPage = () => {
 
   const handleEditSave = async () => {
     if (!currentBooking) return;
-
     try {
       const response = await api.put(
         `/bookings/${currentBooking._id}`,
         editFormData,
       );
       const updatedBooking = response.data.data || response.data;
-
       setBookings((prev) =>
         prev.map((b) => (b._id === currentBooking._id ? updatedBooking : b)),
       );
@@ -201,12 +212,12 @@ const AllReservationsPage = () => {
     };
     fetchRooms();
   }, []);
+
   const filteredBookings = bookings.filter((booking) => {
     const guestName =
       `${booking.guest?.firstName || ""} ${booking.guest?.lastName || ""}`.toLowerCase();
     const roomNumber = booking.room?.roomNumber?.toString() || "";
     const email = booking.guest?.email || "";
-
     return (
       guestName.includes(searchTerm.toLowerCase()) ||
       roomNumber.includes(searchTerm) ||
@@ -315,7 +326,6 @@ const AllReservationsPage = () => {
           {filteredBookings.length > 0 ? (
             filteredBookings.map((booking) => {
               const totalPrice = calculateTotal(booking);
-
               return (
                 <Card
                   key={booking._id}
@@ -416,7 +426,7 @@ const AllReservationsPage = () => {
                         color="error"
                         size="small"
                         startIcon={<CancelIcon />}
-                        onClick={() => handleCancelBooking(booking._id)}
+                        onClick={() => handleOpenCancelDialog(booking)}
                         sx={{ borderRadius: "8px" }}
                       >
                         Cancel
@@ -468,7 +478,6 @@ const AllReservationsPage = () => {
               {filteredBookings.length > 0 ? (
                 filteredBookings.map((booking) => {
                   const totalPrice = calculateTotal(booking);
-
                   return (
                     <TableRow
                       key={booking._id}
@@ -529,7 +538,7 @@ const AllReservationsPage = () => {
                           <IconButton
                             color="error"
                             size="small"
-                            onClick={() => handleCancelBooking(booking._id)}
+                            onClick={() => handleOpenCancelDialog(booking)}
                           >
                             <CancelIcon fontSize="small" />
                           </IconButton>
@@ -551,6 +560,150 @@ const AllReservationsPage = () => {
           </Table>
         </TableContainer>
       )}
+
+      <Dialog
+        open={cancelDialogOpen}
+        onClose={handleCloseCancelDialog}
+        maxWidth="xs"
+        fullWidth
+        PaperProps={{ sx: { borderRadius: 3, p: 1 } }}
+      >
+        <DialogTitle sx={{ pb: 1 }}>
+          <Box display="flex" alignItems="center" gap={1.5}>
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: 40,
+                height: 40,
+                borderRadius: "50%",
+                bgcolor: "error.lighter",
+                color: "error.main",
+                flexShrink: 0,
+              }}
+            >
+              <WarningAmberRoundedIcon />
+            </Box>
+            <Typography fontWeight={800} fontSize="1.1rem">
+              Cancel Reservation
+            </Typography>
+          </Box>
+        </DialogTitle>
+
+        <DialogContent sx={{ pb: 1 }}>
+          <Typography variant="body2" color="text.secondary" mb={2}>
+            You are about to cancel the reservation for:
+          </Typography>
+          {bookingToCancel && (
+            <Paper
+              elevation={0}
+              sx={{
+                p: 2,
+                borderRadius: 2,
+                bgcolor: theme.palette.action.hover,
+                border: `1px solid ${theme.palette.divider}`,
+              }}
+            >
+              <Stack spacing={1}>
+                <Box display="flex" justifyContent="space-between">
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    fontWeight={600}
+                  >
+                    Guest
+                  </Typography>
+                  <Typography variant="body2" fontWeight={700}>
+                    {bookingToCancel.guest?.firstName}{" "}
+                    {bookingToCancel.guest?.lastName}
+                  </Typography>
+                </Box>
+                <Divider />
+                <Box display="flex" justifyContent="space-between">
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    fontWeight={600}
+                  >
+                    Room
+                  </Typography>
+                  <Typography variant="body2" fontWeight={600}>
+                    {bookingToCancel.room?.roomNumber || "N/A"}
+                  </Typography>
+                </Box>
+                <Divider />
+                <Box display="flex" justifyContent="space-between">
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    fontWeight={600}
+                  >
+                    Check-in
+                  </Typography>
+                  <Typography variant="body2">
+                    {new Date(bookingToCancel.checkInDate).toLocaleDateString()}
+                  </Typography>
+                </Box>
+                <Divider />
+                <Box display="flex" justifyContent="space-between">
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    fontWeight={600}
+                  >
+                    Check-out
+                  </Typography>
+                  <Typography variant="body2">
+                    {new Date(
+                      bookingToCancel.checkOutDate,
+                    ).toLocaleDateString()}
+                  </Typography>
+                </Box>
+              </Stack>
+            </Paper>
+          )}
+          <Typography
+            variant="body2"
+            color="error.main"
+            fontWeight={600}
+            mt={2}
+          >
+            This action cannot be undone.
+          </Typography>
+        </DialogContent>
+
+        <DialogActions sx={{ p: 2.5, pt: 1.5, gap: 1 }}>
+          <Button
+            onClick={handleCloseCancelDialog}
+            variant="outlined"
+            color="inherit"
+            sx={{ borderRadius: "8px", textTransform: "none", fontWeight: 600 }}
+            disabled={cancelLoading}
+          >
+            Keep Reservation
+          </Button>
+          <Button
+            onClick={handleConfirmCancel}
+            variant="contained"
+            color="error"
+            disabled={cancelLoading}
+            sx={{
+              borderRadius: "8px",
+              textTransform: "none",
+              fontWeight: 700,
+              minWidth: 120,
+            }}
+          >
+            {cancelLoading ? (
+              <CircularProgress size={18} color="inherit" />
+            ) : (
+              "Yes, Cancel"
+            )}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       <Dialog
         open={editDialogOpen}
         onClose={handleEditClose}
@@ -658,6 +811,7 @@ const AllReservationsPage = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
       <Snackbar
         open={snackbar.open}
         autoHideDuration={4000}

@@ -3,9 +3,6 @@ import {
   Container,
   Typography,
   Button,
-  Card,
-  CardContent,
-  CardMedia,
   Box,
   Dialog,
   DialogTitle,
@@ -21,6 +18,7 @@ import {
   Divider,
   useTheme,
   Tooltip,
+  alpha,
 } from "@mui/material";
 import {
   Add as AddIcon,
@@ -36,8 +34,9 @@ import {
   Lock as LockIcon,
   Visibility as ViewIcon,
   Hotel as HotelIcon,
-  AttachMoney as PriceIcon,
   Info as InfoIcon,
+  Bed as BedIcon,
+  AttachMoney as MoneyIcon,
 } from "@mui/icons-material";
 import { roomService } from "../../services/roomService";
 import { roomTypeService } from "../../services/roomTypeService";
@@ -55,6 +54,7 @@ export interface IRoomType {
   _id: string;
   name: string;
   price: number;
+  basePrice?: number;
   description?: string;
   features?: string[];
 }
@@ -68,8 +68,39 @@ export interface IRoom {
   image?: string;
 }
 
+const statusConfig: Record<
+  string,
+  { color: string; bg: string; border: string; chipColor: any }
+> = {
+  [RoomStatus.AVAILABLE]: {
+    color: "#16a34a",
+    bg: "rgba(22,163,74,0.10)",
+    border: "rgba(22,163,74,0.25)",
+    chipColor: "success",
+  },
+  [RoomStatus.OCCUPIED]: {
+    color: "#dc2626",
+    bg: "rgba(220,38,38,0.10)",
+    border: "rgba(220,38,38,0.25)",
+    chipColor: "error",
+  },
+  [RoomStatus.DIRTY]: {
+    color: "#9333ea",
+    bg: "rgba(147,51,234,0.10)",
+    border: "rgba(147,51,234,0.25)",
+    chipColor: "secondary",
+  },
+  [RoomStatus.MAINTENANCE]: {
+    color: "#d97706",
+    bg: "rgba(217,119,6,0.10)",
+    border: "rgba(217,119,6,0.25)",
+    chipColor: "warning",
+  },
+};
+
 const RoomsPage = () => {
   const theme = useTheme();
+  const isDark = theme.palette.mode === "dark";
   const role = (localStorage.getItem("role") || "").toUpperCase();
 
   const isHousekeeping = role === "HOUSEKEEPING";
@@ -83,9 +114,7 @@ const RoomsPage = () => {
   const [statusLoadingId, setStatusLoadingId] = useState<string | null>(null);
   const [editingRoom, setEditingRoom] = useState<IRoom | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-
   const [viewRoom, setViewRoom] = useState<IRoom | null>(null);
-
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [roomToDelete, setRoomToDelete] = useState<string | null>(null);
 
@@ -129,7 +158,7 @@ const RoomsPage = () => {
           setRoomTypes((typesResponse as any).data);
         }
       }
-    } catch (error) {
+    } catch {
       setSnackbar({
         open: true,
         message: "Failed to load data",
@@ -248,6 +277,7 @@ const RoomsPage = () => {
     setRoomToDelete(id);
     setDeleteConfirmOpen(true);
   };
+
   const handleConfirmDelete = async () => {
     if (!roomToDelete) return;
     try {
@@ -266,21 +296,6 @@ const RoomsPage = () => {
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case RoomStatus.AVAILABLE:
-        return "success";
-      case RoomStatus.OCCUPIED:
-        return "error";
-      case RoomStatus.MAINTENANCE:
-        return "warning";
-      case RoomStatus.DIRTY:
-        return "secondary";
-      default:
-        return "default";
-    }
-  };
-
   const getRoomTypeData = (room: IRoom): IRoomType | undefined => {
     if (typeof room.roomType === "object" && room.roomType !== null)
       return room.roomType as IRoomType;
@@ -288,22 +303,27 @@ const RoomsPage = () => {
   };
 
   return (
-    <Container maxWidth="xl" sx={{ mt: 4, pb: 6 }}>
+    <Container maxWidth="xl" sx={{ mt: 4, pb: 8 }}>
       <Box
         sx={{
           display: "flex",
           flexDirection: { xs: "column", sm: "row" },
           justifyContent: "space-between",
           alignItems: { xs: "flex-start", sm: "center" },
-          mb: 4,
+          mb: 5,
           gap: 2,
         }}
       >
         <Box>
-          <Typography variant="h4" fontWeight={800} mb={0.5}>
+          <Typography
+            variant="h4"
+            fontWeight={800}
+            letterSpacing={-0.5}
+            mb={0.5}
+          >
             Room Management
           </Typography>
-          <Typography variant="body1" color="text.secondary">
+          <Typography variant="body2" color="text.secondary">
             {isHousekeeping
               ? "View rooms and update their cleaning status."
               : isReceptionist
@@ -311,7 +331,6 @@ const RoomsPage = () => {
                 : "Manage your hotel inventory, prices, and status."}
           </Typography>
         </Box>
-
         {isAdminOrManager && (
           <Button
             variant="contained"
@@ -323,7 +342,8 @@ const RoomsPage = () => {
               px: 3,
               py: 1.5,
               textTransform: "none",
-              fontSize: "1rem",
+              fontSize: "0.95rem",
+              fontWeight: 700,
               boxShadow: 4,
               width: { xs: "100%", sm: "auto" },
               whiteSpace: "nowrap",
@@ -336,63 +356,91 @@ const RoomsPage = () => {
 
       <Box
         sx={{
-          display: "flex",
-          flexWrap: "wrap",
+          display: "grid",
+          gridTemplateColumns: {
+            xs: "1fr",
+            sm: "repeat(2, 1fr)",
+            md: "repeat(3, 1fr)",
+            lg: "repeat(4, 1fr)",
+          },
           gap: 3,
-          justifyContent: "center",
         }}
       >
         {rooms.map((room) => {
           const typeData = getRoomTypeData(room);
           const imageUrl = getFullImageUrl(room.image);
           const isOccupied = room.status === RoomStatus.OCCUPIED;
+          const sc =
+            statusConfig[room.status] || statusConfig[RoomStatus.AVAILABLE];
 
           return (
-            <Card
+            <Box
               key={room._id}
-              elevation={3}
               sx={{
-                width: "250px",
+                borderRadius: 4,
+                overflow: "hidden",
+                border: `1px solid ${isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.07)"}`,
+                bgcolor: isDark ? "rgba(255,255,255,0.03)" : "#fff",
+                boxShadow: isDark
+                  ? "0 4px 24px rgba(0,0,0,0.4)"
+                  : "0 2px 16px rgba(0,0,0,0.06)",
                 display: "flex",
                 flexDirection: "column",
-                borderRadius: 4,
-                transition: "transform 0.2s, box-shadow 0.2s",
-                "&:hover": { transform: "translateY(-4px)", boxShadow: 8 },
-                opacity: isHousekeeping && isOccupied ? 0.82 : 1,
+                transition: "transform 0.2s ease, box-shadow 0.2s ease",
+                "&:hover": {
+                  transform: "translateY(-4px)",
+                  boxShadow: isDark
+                    ? "0 12px 40px rgba(0,0,0,0.6)"
+                    : "0 8px 32px rgba(0,0,0,0.12)",
+                },
               }}
             >
               <Box sx={{ position: "relative" }}>
                 {imageUrl ? (
-                  <CardMedia
+                  <Box
                     component="img"
-                    sx={{ height: 180, objectFit: "cover" }}
-                    image={imageUrl}
+                    src={imageUrl}
                     alt={`Room ${room.roomNumber}`}
                     onError={(e: any) => {
                       e.target.src =
-                        "https://via.placeholder.com/250x180?text=Error";
+                        "https://via.placeholder.com/400x220?text=No+Image";
+                    }}
+                    sx={{
+                      width: "100%",
+                      height: 200,
+                      objectFit: "cover",
+                      display: "block",
                     }}
                   />
                 ) : (
                   <Box
                     sx={{
-                      height: 180,
-                      bgcolor: "grey.100",
+                      height: 200,
+                      background: isDark
+                        ? "linear-gradient(135deg, #1e293b 0%, #0f172a 100%)"
+                        : "linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%)",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
                       flexDirection: "column",
+                      gap: 1,
                     }}
                   >
-                    <NoImageIcon
-                      sx={{ fontSize: 60, color: "text.disabled", mb: 1 }}
+                    <BedIcon
+                      sx={{
+                        fontSize: 52,
+                        color: isDark
+                          ? "rgba(255,255,255,0.15)"
+                          : "rgba(0,0,0,0.12)",
+                      }}
                     />
                     <Typography
                       variant="caption"
-                      color="text.secondary"
-                      fontWeight="bold"
+                      color="text.disabled"
+                      fontWeight={600}
+                      letterSpacing={1}
                     >
-                      No Image
+                      NO IMAGE
                     </Typography>
                   </Box>
                 )}
@@ -400,36 +448,57 @@ const RoomsPage = () => {
                 <Box
                   sx={{
                     position: "absolute",
+                    inset: 0,
+                    background:
+                      "linear-gradient(to top, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.18) 50%, transparent 100%)",
+                  }}
+                />
+
+                <Box
+                  sx={{
+                    position: "absolute",
                     top: 12,
+                    left: 12,
                     right: 12,
-                    zIndex: 1,
                     display: "flex",
+                    justifyContent: "space-between",
                     alignItems: "center",
-                    gap: 0.5,
                   }}
                 >
                   {isHousekeeping && isOccupied && (
                     <Tooltip title="Occupied — no changes allowed">
                       <Box
                         sx={{
-                          bgcolor: "rgba(0,0,0,0.52)",
+                          bgcolor: "rgba(0,0,0,0.55)",
+                          backdropFilter: "blur(6px)",
                           borderRadius: "50%",
-                          width: 28,
-                          height: 28,
+                          width: 30,
+                          height: 30,
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
                         }}
                       >
-                        <LockIcon sx={{ fontSize: 15, color: "#fff" }} />
+                        <LockIcon sx={{ fontSize: 14, color: "#fff" }} />
                       </Box>
                     </Tooltip>
                   )}
-                  <Chip
-                    label={room.status}
-                    color={getStatusColor(room.status) as any}
-                    sx={{ fontWeight: "bold", backdropFilter: "blur(4px)" }}
-                  />
+                  <Box sx={{ ml: "auto" }}>
+                    <Chip
+                      label={room.status}
+                      size="small"
+                      sx={{
+                        fontWeight: 700,
+                        fontSize: "0.68rem",
+                        letterSpacing: "0.04em",
+                        bgcolor: sc.bg,
+                        color: sc.color,
+                        border: `1px solid ${sc.border}`,
+                        backdropFilter: "blur(8px)",
+                        height: 24,
+                      }}
+                    />
+                  </Box>
                 </Box>
 
                 <Box
@@ -438,255 +507,334 @@ const RoomsPage = () => {
                     bottom: 0,
                     left: 0,
                     right: 0,
-                    background:
-                      "linear-gradient(to top, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0) 100%)",
-                    p: 2,
-                    pt: 4,
+                    p: "12px 14px 10px",
                   }}
                 >
-                  <Typography variant="h5" fontWeight="bold" color="white">
+                  <Typography
+                    variant="h5"
+                    fontWeight={800}
+                    color="#fff"
+                    letterSpacing={-0.5}
+                    lineHeight={1}
+                  >
                     {room.roomNumber}
                   </Typography>
+                  {!isHousekeeping && typeData?.name && (
+                    <Typography
+                      variant="caption"
+                      sx={{ color: "rgba(255,255,255,0.72)", fontWeight: 500 }}
+                    >
+                      {typeData.name}
+                    </Typography>
+                  )}
                 </Box>
               </Box>
 
-              <CardContent sx={{ flexGrow: 1, p: 2 }}>
+              <Box
+                sx={{
+                  p: 2,
+                  flex: 1,
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 1.5,
+                }}
+              >
                 {!isHousekeeping && (
                   <>
-                    <Stack
-                      direction="row"
-                      justifyContent="space-between"
-                      alignItems="start"
-                      mb={1}
-                    >
-                      <Box>
-                        <Typography
-                          variant="subtitle1"
-                          fontWeight="bold"
-                          color="primary"
-                        >
-                          {typeData?.name || "Unknown Type"}
-                        </Typography>
-                        <Stack
-                          direction="row"
-                          alignItems="center"
-                          spacing={0.5}
-                          sx={{ mt: 0.5 }}
-                        >
-                          <FloorIcon fontSize="small" color="action" />
-                          <Typography variant="body2" color="text.secondary">
-                            Floor {room.floor}
-                          </Typography>
-                        </Stack>
-                      </Box>
-                      <Box textAlign="right">
-                        <Typography variant="h6" fontWeight="bold">
-                          ${typeData?.basePrice || 0}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          / night
-                        </Typography>
-                      </Box>
-                    </Stack>
-                    <Divider sx={{ my: 1 }} />
-                    <Typography
-                      variant="body2"
-                      color="text.secondary"
+                    <Box
                       sx={{
-                        mb: 2,
-                        display: "-webkit-box",
-                        overflow: "hidden",
-                        WebkitBoxOrient: "vertical",
-                        WebkitLineClamp: 2,
-                        height: 40,
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
                       }}
                     >
-                      {typeData?.description ||
-                        "No description available for this room type."}
-                    </Typography>
-                    <Stack
-                      direction="row"
-                      spacing={1}
-                      flexWrap="wrap"
-                      sx={{ gap: 1 }}
-                    >
-                      {typeData?.features?.slice(0, 2).map((feature, idx) => (
-                        <Chip
-                          key={idx}
-                          icon={
-                            <FeatureIcon sx={{ fontSize: "14px !important" }} />
-                          }
-                          label={feature}
-                          size="small"
-                          variant="outlined"
-                          sx={{ borderRadius: 1, fontSize: "0.7rem" }}
+                      <Stack direction="row" alignItems="center" spacing={0.5}>
+                        <FloorIcon
+                          sx={{ fontSize: 15, color: "text.secondary" }}
                         />
-                      ))}
-                      {(typeData?.features?.length || 0) > 2 && (
-                        <Chip
-                          label={`+${(typeData?.features?.length || 0) - 2}`}
-                          size="small"
-                          variant="outlined"
-                        />
-                      )}
-                    </Stack>
+                        <Typography
+                          variant="body2"
+                          color="text.secondary"
+                          fontWeight={500}
+                        >
+                          Floor {room.floor}
+                        </Typography>
+                      </Stack>
+                      <Stack
+                        direction="row"
+                        alignItems="baseline"
+                        spacing={0.3}
+                      >
+                        <Typography
+                          variant="body1"
+                          fontWeight={800}
+                          color="primary.main"
+                        >
+                          ${typeData?.basePrice ?? typeData?.price ?? 0}
+                        </Typography>
+                        <Typography variant="caption" color="text.disabled">
+                          / night
+                        </Typography>
+                      </Stack>
+                    </Box>
+
+                    {typeData?.description && (
+                      <Typography
+                        variant="body2"
+                        color="text.secondary"
+                        sx={{
+                          lineHeight: 1.6,
+                          display: "-webkit-box",
+                          WebkitLineClamp: 3,
+                          WebkitBoxOrient: "vertical",
+                          overflow: "hidden",
+                          minHeight: "3.2em",
+                        }}
+                      >
+                        {typeData.description}
+                      </Typography>
+                    )}
+
+                    {typeData?.features && typeData.features.length > 0 && (
+                      <Stack
+                        direction="row"
+                        flexWrap="wrap"
+                        gap={0.7}
+                        sx={{ mt: 0.5 }}
+                      >
+                        {typeData.features.slice(0, 3).map((feature, idx) => (
+                          <Chip
+                            key={idx}
+                            label={feature}
+                            size="small"
+                            icon={
+                              <FeatureIcon
+                                sx={{ fontSize: "11px !important" }}
+                              />
+                            }
+                            variant="outlined"
+                            sx={{
+                              borderRadius: 1.5,
+                              fontSize: "0.65rem",
+                              height: 22,
+                              fontWeight: 600,
+                              color: "text.secondary",
+                              borderColor: isDark
+                                ? "rgba(255,255,255,0.12)"
+                                : "rgba(0,0,0,0.12)",
+                            }}
+                          />
+                        ))}
+                        {(typeData.features.length || 0) > 3 && (
+                          <Chip
+                            label={`+${typeData.features.length - 3}`}
+                            size="small"
+                            variant="outlined"
+                            sx={{
+                              borderRadius: 1.5,
+                              fontSize: "0.65rem",
+                              height: 22,
+                              fontWeight: 600,
+                              color: "text.secondary",
+                              borderColor: isDark
+                                ? "rgba(255,255,255,0.12)"
+                                : "rgba(0,0,0,0.12)",
+                            }}
+                          />
+                        )}
+                      </Stack>
+                    )}
                   </>
                 )}
 
                 {isHousekeeping && (
-                  <Stack
-                    direction="row"
-                    alignItems="center"
-                    justifyContent="space-between"
-                    sx={{ mt: 0.5 }}
+                  <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                    }}
                   >
                     <Stack direction="row" alignItems="center" spacing={0.5}>
-                      <FloorIcon fontSize="small" color="action" />
-                      <Typography variant="body2" color="text.secondary">
+                      <FloorIcon
+                        sx={{ fontSize: 15, color: "text.secondary" }}
+                      />
+                      <Typography
+                        variant="body2"
+                        color="text.secondary"
+                        fontWeight={500}
+                      >
                         Floor {room.floor}
                       </Typography>
                     </Stack>
                     {isOccupied && (
                       <Chip
                         size="small"
-                        icon={<LockIcon sx={{ fontSize: "12px !important" }} />}
+                        icon={<LockIcon sx={{ fontSize: "11px !important" }} />}
                         label="Locked"
                         sx={{
                           fontSize: "0.62rem",
                           height: 20,
-                          bgcolor: theme.palette.error.main + "14",
+                          fontWeight: 700,
+                          bgcolor: alpha(theme.palette.error.main, 0.08),
                           color: theme.palette.error.main,
-                          border: `1px solid ${theme.palette.error.main}28`,
+                          border: `1px solid ${alpha(theme.palette.error.main, 0.2)}`,
                           "& .MuiChip-icon": {
                             color: theme.palette.error.main,
                           },
                         }}
                       />
                     )}
-                  </Stack>
+                  </Box>
                 )}
-              </CardContent>
 
-              <Box sx={{ p: 2, pt: 0, display: "flex", gap: 1 }}>
-                {isHousekeeping &&
-                  (isOccupied ? (
-                    <Box
+                <Divider sx={{ mt: "auto", mb: 0.5, opacity: 0.5 }} />
+
+                <Box sx={{ display: "flex", gap: 1 }}>
+                  {isHousekeeping &&
+                    (isOccupied ? (
+                      <Box
+                        sx={{
+                          width: "100%",
+                          py: 0.9,
+                          px: 1.5,
+                          borderRadius: 2,
+                          bgcolor: alpha(theme.palette.error.main, 0.06),
+                          border: `1px solid ${alpha(theme.palette.error.main, 0.16)}`,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: 0.7,
+                        }}
+                      >
+                        <LockIcon
+                          sx={{ fontSize: 13, color: theme.palette.error.main }}
+                        />
+                        <Typography
+                          variant="caption"
+                          color="error"
+                          fontWeight={600}
+                        >
+                          Occupied — no changes allowed
+                        </Typography>
+                      </Box>
+                    ) : (
+                      <>
+                        <Button
+                          variant="contained"
+                          fullWidth
+                          color="success"
+                          size="small"
+                          startIcon={
+                            statusLoadingId ===
+                            room._id + RoomStatus.AVAILABLE ? (
+                              <CircularProgress size={13} color="inherit" />
+                            ) : (
+                              <AvailableIcon
+                                sx={{ fontSize: "16px !important" }}
+                              />
+                            )
+                          }
+                          disabled={
+                            room.status === RoomStatus.AVAILABLE ||
+                            !!statusLoadingId
+                          }
+                          onClick={() =>
+                            handleStatusChange(room, RoomStatus.AVAILABLE)
+                          }
+                          sx={{
+                            borderRadius: 2,
+                            textTransform: "none",
+                            fontSize: "0.78rem",
+                            fontWeight: 700,
+                          }}
+                        >
+                          Available
+                        </Button>
+                        <Button
+                          variant="outlined"
+                          fullWidth
+                          color="warning"
+                          size="small"
+                          startIcon={
+                            statusLoadingId === room._id + RoomStatus.DIRTY ? (
+                              <CircularProgress size={13} color="inherit" />
+                            ) : (
+                              <DirtyIcon sx={{ fontSize: "16px !important" }} />
+                            )
+                          }
+                          disabled={
+                            room.status === RoomStatus.DIRTY ||
+                            !!statusLoadingId
+                          }
+                          onClick={() =>
+                            handleStatusChange(room, RoomStatus.DIRTY)
+                          }
+                          sx={{
+                            borderRadius: 2,
+                            textTransform: "none",
+                            fontSize: "0.78rem",
+                            fontWeight: 700,
+                          }}
+                        >
+                          Dirty
+                        </Button>
+                      </>
+                    ))}
+
+                  {isReceptionist && (
+                    <Button
+                      variant="outlined"
+                      fullWidth
+                      size="small"
+                      startIcon={
+                        <ViewIcon sx={{ fontSize: "16px !important" }} />
+                      }
+                      onClick={() => setViewRoom(room)}
                       sx={{
-                        width: "100%",
-                        py: 1,
-                        px: 1.5,
                         borderRadius: 2,
-                        bgcolor: theme.palette.error.main + "10",
-                        border: `1px solid ${theme.palette.error.main}22`,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        gap: 0.8,
+                        textTransform: "none",
+                        fontWeight: 700,
+                        fontSize: "0.78rem",
                       }}
                     >
-                      <LockIcon
-                        sx={{ fontSize: 14, color: theme.palette.error.main }}
-                      />
-                      <Typography
-                        variant="caption"
-                        color="error"
-                        fontWeight={600}
-                      >
-                        Occupied — no changes allowed
-                      </Typography>
-                    </Box>
-                  ) : (
+                      View Full Info
+                    </Button>
+                  )}
+
+                  {isAdminOrManager && (
                     <>
                       <Button
                         variant="contained"
                         fullWidth
-                        color="success"
+                        size="small"
                         startIcon={
-                          statusLoadingId ===
-                          room._id + RoomStatus.AVAILABLE ? (
-                            <CircularProgress size={14} color="inherit" />
-                          ) : (
-                            <AvailableIcon />
-                          )
+                          <EditIcon sx={{ fontSize: "16px !important" }} />
                         }
-                        disabled={
-                          room.status === RoomStatus.AVAILABLE ||
-                          !!statusLoadingId
-                        }
-                        onClick={() =>
-                          handleStatusChange(room, RoomStatus.AVAILABLE)
-                        }
+                        onClick={() => handleOpen(room)}
                         sx={{
                           borderRadius: 2,
                           textTransform: "none",
-                          fontSize: "0.75rem",
+                          fontWeight: 700,
+                          fontSize: "0.78rem",
                         }}
                       >
-                        Available
+                        Edit
                       </Button>
                       <Button
                         variant="outlined"
-                        fullWidth
-                        color="warning"
-                        startIcon={
-                          statusLoadingId === room._id + RoomStatus.DIRTY ? (
-                            <CircularProgress size={14} color="inherit" />
-                          ) : (
-                            <DirtyIcon />
-                          )
-                        }
-                        disabled={
-                          room.status === RoomStatus.DIRTY || !!statusLoadingId
-                        }
-                        onClick={() =>
-                          handleStatusChange(room, RoomStatus.DIRTY)
-                        }
-                        sx={{
-                          borderRadius: 2,
-                          textTransform: "none",
-                          fontSize: "0.75rem",
-                        }}
+                        color="error"
+                        size="small"
+                        onClick={() => handleDeleteClick(room._id)}
+                        sx={{ borderRadius: 2, minWidth: 40, px: 0 }}
                       >
-                        Dirty
+                        <DeleteIcon sx={{ fontSize: 18 }} />
                       </Button>
                     </>
-                  ))}
-
-                {isReceptionist && (
-                  <Button
-                    variant="outlined"
-                    fullWidth
-                    startIcon={<ViewIcon />}
-                    onClick={() => setViewRoom(room)}
-                    sx={{ borderRadius: 2, textTransform: "none" }}
-                  >
-                    View Full Info
-                  </Button>
-                )}
-
-                {isAdminOrManager && (
-                  <>
-                    <Button
-                      variant="contained"
-                      fullWidth
-                      startIcon={<EditIcon />}
-                      onClick={() => handleOpen(room)}
-                      sx={{ borderRadius: 2, textTransform: "none" }}
-                    >
-                      Edit
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      color="error"
-                      onClick={() => handleDeleteClick(room._id)}
-                      sx={{ borderRadius: 2, minWidth: 50, px: 0 }}
-                    >
-                      <DeleteIcon />
-                    </Button>
-                  </>
-                )}
+                  )}
+                </Box>
               </Box>
-            </Card>
+            </Box>
           );
         })}
       </Box>
@@ -696,12 +844,15 @@ const RoomsPage = () => {
         (() => {
           const typeData = getRoomTypeData(viewRoom);
           const imageUrl = getFullImageUrl(viewRoom.image);
+          const sc =
+            statusConfig[viewRoom.status] || statusConfig[RoomStatus.AVAILABLE];
           return (
             <Dialog
               open
               onClose={() => setViewRoom(null)}
               maxWidth="sm"
               fullWidth
+              PaperProps={{ sx: { borderRadius: 3 } }}
             >
               <DialogTitle sx={{ pb: 0.5 }}>
                 <Stack
@@ -717,12 +868,16 @@ const RoomsPage = () => {
                   </Stack>
                   <Chip
                     label={viewRoom.status}
-                    color={getStatusColor(viewRoom.status) as any}
-                    sx={{ fontWeight: "bold" }}
+                    size="small"
+                    sx={{
+                      fontWeight: 700,
+                      bgcolor: sc.bg,
+                      color: sc.color,
+                      border: `1px solid ${sc.border}`,
+                    }}
                   />
                 </Stack>
               </DialogTitle>
-
               <DialogContent dividers sx={{ p: 0 }}>
                 {imageUrl ? (
                   <Box
@@ -759,7 +914,6 @@ const RoomsPage = () => {
                     </Typography>
                   </Box>
                 )}
-
                 <Box sx={{ p: 3 }}>
                   <Stack direction="row" spacing={4} mb={2} flexWrap="wrap">
                     <Box>
@@ -813,25 +967,20 @@ const RoomsPage = () => {
                       >
                         Price
                       </Typography>
-                      <Stack direction="row" alignItems="center" spacing={0.5}>
-                        <PriceIcon fontSize="small" color="action" />
-                        <Typography variant="body1" fontWeight={700}>
-                          ${typeData?.price || 0}
-                          <Typography
-                            component="span"
-                            variant="caption"
-                            color="text.secondary"
-                          >
-                            {" "}
-                            / night
-                          </Typography>
+                      <Typography variant="body1" fontWeight={700}>
+                        ${typeData?.basePrice ?? typeData?.price ?? 0}
+                        <Typography
+                          component="span"
+                          variant="caption"
+                          color="text.secondary"
+                        >
+                          {" "}
+                          / night
                         </Typography>
-                      </Stack>
+                      </Typography>
                     </Box>
                   </Stack>
-
                   <Divider sx={{ my: 2 }} />
-
                   {typeData?.description && (
                     <Box mb={2}>
                       <Typography
@@ -856,7 +1005,6 @@ const RoomsPage = () => {
                       </Typography>
                     </Box>
                   )}
-
                   {typeData?.features && typeData.features.length > 0 && (
                     <Box mb={2}>
                       <Typography
@@ -891,13 +1039,12 @@ const RoomsPage = () => {
                       </Stack>
                     </Box>
                   )}
-
                   <Box
                     sx={{
                       p: 1.5,
                       borderRadius: 2,
-                      bgcolor: theme.palette.info.main + "0f",
-                      border: `1px solid ${theme.palette.info.main}28`,
+                      bgcolor: alpha(theme.palette.info.main, 0.06),
+                      border: `1px solid ${alpha(theme.palette.info.main, 0.16)}`,
                       display: "flex",
                       alignItems: "center",
                       gap: 1,
@@ -914,7 +1061,6 @@ const RoomsPage = () => {
                   </Box>
                 </Box>
               </DialogContent>
-
               <DialogActions>
                 <Button variant="contained" onClick={() => setViewRoom(null)}>
                   Close
@@ -931,8 +1077,9 @@ const RoomsPage = () => {
             onClose={() => setOpen(false)}
             fullWidth
             maxWidth="xs"
+            PaperProps={{ sx: { borderRadius: 3 } }}
           >
-            <DialogTitle>
+            <DialogTitle fontWeight={800}>
               {editingRoom ? "Edit Room" : "Add New Room"}
             </DialogTitle>
             <DialogContent dividers>
@@ -992,10 +1139,11 @@ const RoomsPage = () => {
                 </TextField>
                 <Box
                   sx={{
-                    border: "1px dashed grey",
+                    border: `1px dashed ${alpha(theme.palette.primary.main, 0.35)}`,
                     p: 2,
-                    borderRadius: 1,
+                    borderRadius: 2,
                     textAlign: "center",
+                    bgcolor: alpha(theme.palette.primary.main, 0.02),
                   }}
                 >
                   <Button
@@ -1043,15 +1191,22 @@ const RoomsPage = () => {
                 </Box>
               </Stack>
             </DialogContent>
-            <DialogActions>
-              <Button onClick={() => setOpen(false)}>Cancel</Button>
+            <DialogActions sx={{ p: 2, px: 3 }}>
+              <Button
+                onClick={() => setOpen(false)}
+                color="inherit"
+                sx={{ fontWeight: 600 }}
+              >
+                Cancel
+              </Button>
               <Button
                 variant="contained"
                 onClick={handleSave}
                 disabled={saveLoading}
+                sx={{ borderRadius: 2, fontWeight: 700, minWidth: 90 }}
               >
                 {saveLoading ? (
-                  <CircularProgress size={24} />
+                  <CircularProgress size={18} color="inherit" />
                 ) : editingRoom ? (
                   "Update"
                 ) : (
@@ -1066,24 +1221,63 @@ const RoomsPage = () => {
             onClose={() => setDeleteConfirmOpen(false)}
             maxWidth="xs"
             fullWidth
+            PaperProps={{ sx: { borderRadius: 3 } }}
           >
-            <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-              <WarningIcon color="error" /> Confirm Delete
+            <DialogTitle
+              sx={{ display: "flex", alignItems: "center", gap: 1.5, pb: 1 }}
+            >
+              <Box
+                sx={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 2,
+                  bgcolor: alpha(theme.palette.error.main, 0.1),
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                }}
+              >
+                <WarningIcon
+                  sx={{ color: theme.palette.error.main, fontSize: 22 }}
+                />
+              </Box>
+              <Box>
+                <Typography
+                  variant="subtitle1"
+                  fontWeight={800}
+                  lineHeight={1.2}
+                >
+                  Delete Room
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  This action cannot be undone
+                </Typography>
+              </Box>
             </DialogTitle>
             <DialogContent>
-              <Typography>
-                Are you sure you want to delete this room? This action cannot be
-                undone.
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                lineHeight={1.7}
+              >
+                Are you sure you want to permanently delete this room? All
+                associated data will be removed and cannot be recovered.
               </Typography>
             </DialogContent>
-            <DialogActions>
-              <Button onClick={() => setDeleteConfirmOpen(false)}>
+            <DialogActions sx={{ p: 2, px: 3, gap: 1 }}>
+              <Button
+                onClick={() => setDeleteConfirmOpen(false)}
+                color="inherit"
+                sx={{ fontWeight: 600, borderRadius: 2 }}
+              >
                 Cancel
               </Button>
               <Button
                 onClick={handleConfirmDelete}
                 color="error"
                 variant="contained"
+                sx={{ borderRadius: 2, fontWeight: 700, minWidth: 90 }}
               >
                 Delete
               </Button>
@@ -1098,7 +1292,12 @@ const RoomsPage = () => {
         onClose={() => setSnackbar({ ...snackbar, open: false })}
         anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
       >
-        <Alert severity={snackbar.severity} variant="filled">
+        <Alert
+          onClose={() => setSnackbar({ ...snackbar, open: false })}
+          severity={snackbar.severity}
+          variant="filled"
+          sx={{ borderRadius: 2 }}
+        >
           {snackbar.message}
         </Alert>
       </Snackbar>

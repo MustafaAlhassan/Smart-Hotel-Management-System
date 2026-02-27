@@ -329,22 +329,6 @@ const Sidebar = ({
             </ListItem>
             <Collapse in={reservationsOpen} timeout="auto" unmountOnExit>
               <List disablePadding>
-                {allowed("/all-reservations") && (
-                  <ListItem disablePadding sx={{ ml: "8px" }}>
-                    <ListItemButton
-                      onClick={() => navigate("/all-reservations")}
-                      sx={subItemSx(isActive("/all-reservations"))}
-                    >
-                      <ListItemIcon sx={{ minWidth: 36 }}>
-                        <ListAltIcon sx={{ fontSize: 25, color: "white" }} />
-                      </ListItemIcon>
-                      <ListItemText
-                        primary="All Reservations"
-                        primaryTypographyProps={SUB_TEXT_PROPS}
-                      />
-                    </ListItemButton>
-                  </ListItem>
-                )}
                 {allowed("/booking") && (
                   <ListItem disablePadding sx={{ ml: "8px" }}>
                     <ListItemButton
@@ -358,6 +342,22 @@ const Sidebar = ({
                       </ListItemIcon>
                       <ListItemText
                         primary="New Booking"
+                        primaryTypographyProps={SUB_TEXT_PROPS}
+                      />
+                    </ListItemButton>
+                  </ListItem>
+                )}
+                {allowed("/all-reservations") && (
+                  <ListItem disablePadding sx={{ ml: "8px" }}>
+                    <ListItemButton
+                      onClick={() => navigate("/all-reservations")}
+                      sx={subItemSx(isActive("/all-reservations"))}
+                    >
+                      <ListItemIcon sx={{ minWidth: 36 }}>
+                        <ListAltIcon sx={{ fontSize: 25, color: "white" }} />
+                      </ListItemIcon>
+                      <ListItemText
+                        primary="All Reservations"
                         primaryTypographyProps={SUB_TEXT_PROPS}
                       />
                     </ListItemButton>
