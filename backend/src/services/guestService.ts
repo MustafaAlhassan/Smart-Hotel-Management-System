@@ -56,5 +56,14 @@ export const updateGuestInfo = async (
 };
 
 export const removeGuest = async (id: string) => {
+  const guest = await getGuestById(id);
+
+  if (!guest) {
+    throw new Error("Guest not found");
+  }
+
+  if (guest.bookingCount > 0) {
+    throw new Error("You cannot delete a user who has previous reservations.");
+  }
   return await GuestModel.findByIdAndDelete(id);
 };

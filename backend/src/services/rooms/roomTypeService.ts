@@ -27,5 +27,12 @@ export const updateRoomTypeInfo = async (
 };
 
 export const removeRoomType = async (id: string) => {
+  const roomType = await getRoomTypeById(id);
+  if (!roomType) throw new Error("Room Type is Not Found");
+
+  if (roomType.roomCount > 0) {
+    throw new Error("You cannot delete a room Type who has related to Rooms.");
+  }
+
   return await RoomTypeModel.findByIdAndDelete(id);
 };

@@ -26,7 +26,7 @@ export const createInvoice = async (
   });
 
   if (!booking) throw new Error("Booking not found");
-
+  
   const TAX_RATE = 0.1;
   const roomPrice = (booking.room as any).roomType.basePrice;
   const nights = calculateNights(booking.checkInDate, booking.checkOutDate);
