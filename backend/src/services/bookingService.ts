@@ -5,6 +5,7 @@ import {
   markRoomAsDirty,
   markRoomAsClean,
 } from "./rooms/roomService";
+import { GuestModel } from "../models/guestModel";
 
 export const checkRoomAvailability = async (
   roomId: string | Types.ObjectId,
@@ -51,7 +52,7 @@ export const addBooking = async (
   const newBooking = new BookingModel(data);
   await newBooking.save();
 
-  await markRoomAsOccupied(data.room.toString());
+  await GuestModel.findByIdAndUpdate(data.guest, { $inc: { bookingCount: 1 } });
 
   return newBooking.populate([
     { path: "guest", select: "firstName lastName email phoneNumber address" },
@@ -189,6 +190,10 @@ export const cancelBookingService = async (id: string) => {
   if (!booking) throw new Error("Booking not found");
 
   await markRoomAsClean(booking.room.toString());
+
+  await GuestModel.findByIdAndUpdate(booking.guest, {
+    $inc: { bookingCount: -1 },
+  });
 
   return booking.populate([
     { path: "guest", select: "firstName lastName email phoneNumber address" },

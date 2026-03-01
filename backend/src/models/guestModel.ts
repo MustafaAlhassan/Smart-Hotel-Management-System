@@ -7,6 +7,7 @@ export interface IGuest extends Document {
   lastName: string;
   email: string;
   phoneNumber: string;
+  bookingCount: number;
   address?: string;
   createdAt: Date;
   updatedAt: Date;
@@ -26,9 +27,15 @@ const guestSchema = new Schema<IGuest>(
       match: [/^\S+@\S+\.\S+$/, "Please use a valid email address."],
     },
     phoneNumber: { type: String, required: true, trim: true },
+    bookingCount: {
+      type: Number,
+      required: true,
+      default: 0,
+      min: [0, "Booking count cannot be negative"],
+    },
     address: { type: String, required: false, trim: true },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 export const GuestModel = mongoose.model<IGuest>("Guest", guestSchema);

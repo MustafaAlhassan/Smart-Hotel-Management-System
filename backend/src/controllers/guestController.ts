@@ -7,7 +7,6 @@ import {
   removeGuest,
   updateGuestInfo,
 } from "../services/guestService";
-import { GuestModel } from "../models/guestModel";
 
 const handleError = (error: any, res: Response) => {
   if (error.code === 11000) {
@@ -30,8 +29,8 @@ const handleError = (error: any, res: Response) => {
     });
   }
 
-  console.error("Server Error:", error);
-  res.status(500).json({ message: "Server Error" });
+  console.error("Server Error:", error.message);
+  res.status(400).json({ message: error.message });
 };
 
 const isIdInvalid = (id: string, res: Response) => {

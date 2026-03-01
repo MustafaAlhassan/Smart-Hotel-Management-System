@@ -2,6 +2,7 @@ import mongoose, { Schema, Document, Types } from "mongoose";
 
 export interface IInvoiceServiceItem {
   service: Types.ObjectId;
+  name: string;
   quantity: number;
   price: number;
   total: number;
