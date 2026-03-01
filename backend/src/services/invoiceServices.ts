@@ -52,6 +52,7 @@ export const createInvoice = async (
 
     processedServices.push({
       service: serviceDoc._id,
+      name: serviceDoc.name,
       quantity: item.quantity,
       price: serviceDoc.price,
       total: itemTotal,

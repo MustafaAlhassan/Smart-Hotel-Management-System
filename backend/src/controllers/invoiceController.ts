@@ -77,11 +77,12 @@ export const addServiceToInvoice = async (req: Request, res: Response) => {
       return res.status(404).json({ message: "Service not found in database" });
     }
 
-    const price = serviceDetails.price; // Grabs the real price (e.g., 30)
+    const price = serviceDetails.price;
     const itemTotal = price * quantity;
 
     invoice.usedServices.push({
       service: serviceId,
+      name: serviceDetails.name,
       quantity: quantity,
       price: price,
       total: itemTotal,
