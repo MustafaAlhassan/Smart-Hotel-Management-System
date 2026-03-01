@@ -5,6 +5,7 @@ import { GuestModel } from "../models/guestModel";
 import { InvoiceModel } from "../models/invoiceModel";
 import { ServiceModel } from "../models/serviceModel";
 import { UserRole } from "../models/userModel";
+import { HotelModel } from "../models/hotelModel";
 
 const addDays = (date: Date, days: number): Date => {
   const d = new Date(date);
@@ -530,11 +531,13 @@ export const processChatWithAI = async (
   const API_KEY = process.env.GEMINI_API_KEY;
   if (!API_KEY) throw new Error("API Key missing");
 
+  const hotel = await HotelModel.findOne().select("taxRate");
+
   const hotelInfo = `
 ==============================
 HOTEL POLICIES & GENERAL INFO
 ==============================
-- Hotel Name: AMI Hotel
+- Hotel Name: ${hotel?.name}
 - Check-in: 1:00 PM | Check-out: 11:00 AM
 - Today's Date: ${formatDate(new Date())}
 - Room Status Definitions:

@@ -1,33 +1,42 @@
 import { InvoiceModel, IInvoiceServiceItem } from "../models/invoiceModel";
 import { BookingModel } from "../models/bookingModel";
 import { ServiceModel, IService } from "../models/serviceModel";
+import { HotelModel } from "../models/hotelModel";
 import { markRoomAsDirty } from "./rooms/roomService";
 
 const calculateNights = (checkIn: Date, checkOut: Date): number => {
   const diffTime = Math.abs(
-    new Date(checkOut).getTime() - new Date(checkIn).getTime()
+    new Date(checkOut).getTime() - new Date(checkIn).getTime(),
   );
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   return diffDays === 0 ? 1 : diffDays;
 };
 
+const getHotelTaxRate = async (): Promise<number> => {
+  const hotel = await HotelModel.findOne().select("taxRate");
+  if (!hotel) return 0;
+  return hotel.taxRate;
+};
+
 export const createInvoice = async (
   bookingId: string,
-  serviceRequestItems: { serviceId: string; quantity: number }[] = []
+  serviceRequestItems: { serviceId: string; quantity: number }[] = [],
 ) => {
   const existingInvoice = await InvoiceModel.findOne({ booking: bookingId });
   if (existingInvoice) {
     throw new Error("Invoice already exists for this booking");
   }
 
-  const booking = await BookingModel.findById(bookingId).populate({
-    path: "room",
-    populate: { path: "roomType" },
-  });
+  const [booking, TAX_RATE] = await Promise.all([
+    BookingModel.findById(bookingId).populate({
+      path: "room",
+      populate: { path: "roomType" },
+    }),
+    getHotelTaxRate(),
+  ]);
 
   if (!booking) throw new Error("Booking not found");
-  
-  const TAX_RATE = 0.1;
+
   const roomPrice = (booking.room as any).roomType.basePrice;
   const nights = calculateNights(booking.checkInDate, booking.checkOutDate);
   const totalRoomCharge = roomPrice * nights;
@@ -38,9 +47,8 @@ export const createInvoice = async (
 
   for (const item of serviceRequestItems) {
     const serviceDoc = (await ServiceModel.findById(
-      item.serviceId
+      item.serviceId,
     )) as IService;
-
     if (!serviceDoc) throw new Error(`Service not found: ${item.serviceId}`);
 
     const itemTotal = serviceDoc.price * item.quantity;
@@ -76,7 +84,7 @@ export const createInvoice = async (
 
 export const findAllInvoices = async () => {
   return await InvoiceModel.find()
-    .sort({ createdAt: -1 }) 
+    .sort({ createdAt: -1 })
     .populate("booking", "guest room")
     .populate("usedServices.service", "name");
 };
@@ -96,19 +104,20 @@ export const getInvoiceByBookingId = async (bookingId: string) => {
 export const updateInvoiceStatus = async (
   id: string,
   paymentStatus: "Paid" | "Pending" | "Partially Paid",
-  paymentMethod?: string
+  paymentMethod?: string,
 ) => {
   const invoice = await InvoiceModel.findByIdAndUpdate(
     id,
     { paymentStatus, paymentMethod },
-    { new: true, runValidators: true }
+    { new: true, runValidators: true },
   ).populate("booking");
 
   if (!invoice) throw new Error("Invoice not found");
 
   if (paymentStatus === "Paid" && invoice.booking) {
-    const booking: any = invoice.booking; 
+    const booking: any = invoice.booking;
     await markRoomAsDirty(booking.room);
   }
+
   return invoice;
 };
