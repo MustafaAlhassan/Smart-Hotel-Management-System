@@ -8,9 +8,7 @@ import {
   Fab,
   Avatar,
   Slide,
-  CircularProgress,
   useTheme,
-  alpha,
 } from "@mui/material";
 import {
   Chat as ChatIcon,
@@ -56,10 +54,11 @@ export const Chatbot = () => {
     setIsLoading(true);
 
     try {
+      const role = localStorage.getItem("role") || "";
       const response = await fetch("http://localhost:5000/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: userMessage }),
+        body: JSON.stringify({ message: userMessage, role }),
       });
 
       const data = await response.json();
@@ -83,7 +82,6 @@ export const Chatbot = () => {
     }
   };
 
-  // Theme-aware color tokens
   const colors = {
     headerBg: isDark
       ? "linear-gradient(135deg, #070E1A 0%, #0A1624 100%)"
@@ -187,7 +185,6 @@ export const Chatbot = () => {
             border: `1px solid ${colors.paperBorder}`,
           }}
         >
-          {/* Header */}
           <Box
             sx={{
               p: "14px 16px",
@@ -277,7 +274,6 @@ export const Chatbot = () => {
             </IconButton>
           </Box>
 
-          {/* Messages Area */}
           <Box
             sx={{
               flex: 1,
@@ -356,7 +352,6 @@ export const Chatbot = () => {
                     pricing, or hotel amenities.
                   </Typography>
                 </Box>
-                {/* Quick Prompts */}
                 <Box
                   sx={{
                     display: "flex",
@@ -484,7 +479,6 @@ export const Chatbot = () => {
               </Box>
             ))}
 
-            {/* Typing Indicator */}
             {isLoading && (
               <Box sx={{ display: "flex", alignItems: "flex-end", gap: 1 }}>
                 <Avatar
@@ -529,7 +523,6 @@ export const Chatbot = () => {
             <div ref={messagesEndRef} />
           </Box>
 
-          {/* Input Area */}
           <Box
             sx={{
               px: 2,
@@ -615,7 +608,6 @@ export const Chatbot = () => {
         </Paper>
       </Slide>
 
-      {/* FAB */}
       <Box
         sx={{
           position: "fixed",
@@ -624,7 +616,6 @@ export const Chatbot = () => {
           zIndex: 9999,
         }}
       >
-        {/* Pulse ring */}
         {fabPulse && !isOpen && (
           <Box
             sx={{

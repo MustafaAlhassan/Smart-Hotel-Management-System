@@ -110,7 +110,7 @@ const ReservationPage = () => {
 
   const checkGuest = async () => {
     if (!guestData.idNumber && !guestData.email) {
-      setError("Please enter Email or Passport ID.");
+      setError("Please enter Email or Passport Number.");
       return;
     }
     setLoading(true);
@@ -300,7 +300,7 @@ const ReservationPage = () => {
                   <Divider>OR</Divider>
                   <TextField
                     fullWidth
-                    label="Passport / ID Number"
+                    label="Passport Number"
                     name="idNumber"
                     value={guestData.idNumber}
                     onChange={handleInputChange}
@@ -350,7 +350,7 @@ const ReservationPage = () => {
                 <Grid item xs={12}>
                   <TextField
                     sx={{ width: "250px" }}
-                    label="Passport ID"
+                    label="Passport Number"
                     name="idNumber"
                     value={guestData.idNumber}
                     onChange={handleInputChange}

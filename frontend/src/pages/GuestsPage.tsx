@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback } from "react";
 import {
   Box,
   Paper,
@@ -29,6 +29,7 @@ import {
   DialogActions,
   Grid,
   Pagination,
+  Chip,
 } from "@mui/material";
 import {
   Search as SearchIcon,
@@ -40,6 +41,7 @@ import {
   Phone as PhoneIcon,
   Badge as BadgeIcon,
   Home as HomeIcon,
+  BookOnline as BookingIcon,
 } from "@mui/icons-material";
 import api from "../services/api";
 
@@ -152,7 +154,6 @@ const GuestsPage = () => {
 
   return (
     <Box sx={{ width: "100%", p: { xs: 2, md: 4 }, boxSizing: "border-box" }}>
-      {/* Header Section */}
       <Box
         sx={{
           display: "flex",
@@ -168,11 +169,17 @@ const GuestsPage = () => {
           <Typography
             variant="h4"
             fontWeight="800"
-            sx={{ fontSize: { xs: "1.75rem", md: "2.125rem" } }}
+            sx={{
+              fontSize: { xs: "1.75rem", md: "2.125rem", textAlign: "left" },
+            }}
           >
-            Guest Management
+            Guests Management
           </Typography>
-          <Typography variant="body1" color="text.secondary">
+          <Typography
+            variant="body1"
+            color="text.secondary"
+            sx={{ textAlign: "left" }}
+          >
             View and manage your hotel guest database
           </Typography>
         </Box>
@@ -193,7 +200,6 @@ const GuestsPage = () => {
         </Button>
       </Box>
 
-      {/* Search Section */}
       <Paper
         elevation={0}
         sx={{
@@ -229,7 +235,6 @@ const GuestsPage = () => {
           <CircularProgress size={50} />
         </Box>
       ) : isMobile ? (
-        /* Mobile Card View */
         <Box>
           {guests.map((guest) => (
             <Card
@@ -301,13 +306,30 @@ const GuestsPage = () => {
                       {guest.address || "No address"}
                     </Typography>
                   </Box>
+                  <Box display="flex" alignItems="center" gap={1}>
+                    <BookingIcon
+                      fontSize="small"
+                      color="action"
+                      sx={{ opacity: 0.7 }}
+                    />
+                    <Chip
+                      label={`${guest.bookingCount ?? 0} ${(guest.bookingCount ?? 0) === 1 ? "Booking" : "Bookings"}`}
+                      size="small"
+                      color={guest.bookingCount > 0 ? "primary" : "default"}
+                      variant={guest.bookingCount > 0 ? "filled" : "outlined"}
+                      sx={{
+                        fontWeight: 700,
+                        borderRadius: 1.5,
+                        fontSize: "0.7rem",
+                      }}
+                    />
+                  </Box>
                 </Stack>
               </CardContent>
             </Card>
           ))}
         </Box>
       ) : (
-        /* Desktop Table View */
         <TableContainer
           component={Paper}
           sx={{
@@ -323,6 +345,7 @@ const GuestsPage = () => {
                 <TableCell sx={{ fontWeight: "bold" }}>ID Number</TableCell>
                 <TableCell sx={{ fontWeight: "bold" }}>Contact Info</TableCell>
                 <TableCell sx={{ fontWeight: "bold" }}>Address</TableCell>
+                <TableCell sx={{ fontWeight: "bold" }}>Bookings</TableCell>
                 <TableCell align="center" sx={{ fontWeight: "bold" }}>
                   Actions
                 </TableCell>
@@ -346,6 +369,19 @@ const GuestsPage = () => {
                       <Typography variant="body2" noWrap>
                         {guest.address || "—"}
                       </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        label={guest.bookingCount ?? 0}
+                        size="small"
+                        color={guest.bookingCount > 0 ? "primary" : "default"}
+                        variant={guest.bookingCount > 0 ? "filled" : "outlined"}
+                        sx={{
+                          fontWeight: 700,
+                          borderRadius: 1.5,
+                          minWidth: 32,
+                        }}
+                      />
                     </TableCell>
                     <TableCell align="center">
                       <Tooltip title="Edit">
@@ -371,7 +407,7 @@ const GuestsPage = () => {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={5} align="center" sx={{ py: 5 }}>
+                  <TableCell colSpan={6} align="center" sx={{ py: 5 }}>
                     No guests found.
                   </TableCell>
                 </TableRow>
@@ -381,7 +417,6 @@ const GuestsPage = () => {
         </TableContainer>
       )}
 
-      {/* Pagination */}
       <Box sx={{ mt: 3, display: "flex", justifyContent: "center" }}>
         <Pagination
           count={totalPages}
@@ -392,7 +427,6 @@ const GuestsPage = () => {
         />
       </Box>
 
-      {/* Add/Edit Dialog */}
       <Dialog
         open={openDialog}
         onClose={() => setOpenDialog(false)}
