@@ -17,8 +17,16 @@ import {
   CircularProgress,
   Divider,
   useTheme,
+  useMediaQuery,
   Tooltip,
   alpha,
+  Pagination,
+  InputAdornment,
+  IconButton,
+  FormControl,
+  InputLabel,
+  Select,
+  Collapse,
 } from "@mui/material";
 import {
   Add as AddIcon,
@@ -36,12 +44,17 @@ import {
   Hotel as HotelIcon,
   Info as InfoIcon,
   Bed as BedIcon,
-  AttachMoney as MoneyIcon,
+  Search as SearchIcon,
+  Clear as ClearIcon,
+  FilterList as FilterIcon,
+  ExpandMore as ExpandMoreIcon,
+  ExpandLess as ExpandLessIcon,
 } from "@mui/icons-material";
 import { roomService } from "../../services/roomService";
 import { roomTypeService } from "../../services/roomTypeService";
 
 const API_BASE_URL = "http://localhost:5000";
+const PAGE_SIZE = 10;
 
 export enum RoomStatus {
   AVAILABLE = "Available",
@@ -101,6 +114,7 @@ const statusConfig: Record<
 const RoomsPage = () => {
   const theme = useTheme();
   const isDark = theme.palette.mode === "dark";
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const role = (localStorage.getItem("role") || "").toUpperCase();
 
   const isHousekeeping = role === "HOUSEKEEPING";
@@ -117,6 +131,13 @@ const RoomsPage = () => {
   const [viewRoom, setViewRoom] = useState<IRoom | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [roomToDelete, setRoomToDelete] = useState<string | null>(null);
+
+  const [page, setPage] = useState(1);
+  const [filtersOpen, setFiltersOpen] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [roomTypeFilter, setRoomTypeFilter] = useState("");
+  const [floorFilter, setFloorFilter] = useState("");
 
   const [snackbar, setSnackbar] = useState({
     open: false,
@@ -170,6 +191,51 @@ const RoomsPage = () => {
   useEffect(() => {
     fetchData();
   }, []);
+
+  const getRoomTypeData = (room: IRoom): IRoomType | undefined => {
+    if (typeof room.roomType === "object" && room.roomType !== null)
+      return room.roomType as IRoomType;
+    return roomTypes.find((t) => t._id === room.roomType);
+  };
+
+  const allFloors = Array.from(new Set(rooms.map((r) => r.floor))).sort(
+    (a, b) => a - b,
+  );
+
+  const filtered = rooms.filter((room) => {
+    const typeData = getRoomTypeData(room);
+    const q = searchQuery.toLowerCase();
+    const matchSearch =
+      !q ||
+      room.roomNumber.toLowerCase().includes(q) ||
+      (typeData?.name || "").toLowerCase().includes(q) ||
+      String(room.floor).includes(q);
+    const matchStatus = !statusFilter || room.status === statusFilter;
+    const matchType =
+      !roomTypeFilter ||
+      (typeof room.roomType === "string"
+        ? room.roomType === roomTypeFilter
+        : (room.roomType as IRoomType)?._id === roomTypeFilter);
+    const matchFloor = !floorFilter || String(room.floor) === floorFilter;
+    return matchSearch && matchStatus && matchType && matchFloor;
+  });
+
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  const hasFilters =
+    !!searchQuery || !!statusFilter || !!roomTypeFilter || !!floorFilter;
+
+  const clearFilters = () => {
+    setSearchQuery("");
+    setStatusFilter("");
+    setRoomTypeFilter("");
+    setFloorFilter("");
+    setPage(1);
+  };
+
+  const surface = isDark ? alpha("#fff", 0.03) : "#fff";
+  const border = isDark ? alpha("#fff", 0.08) : alpha("#000", 0.07);
 
   const handleStatusChange = async (room: IRoom, newStatus: RoomStatus) => {
     setStatusLoadingId(room._id + newStatus);
@@ -296,14 +362,8 @@ const RoomsPage = () => {
     }
   };
 
-  const getRoomTypeData = (room: IRoom): IRoomType | undefined => {
-    if (typeof room.roomType === "object" && room.roomType !== null)
-      return room.roomType as IRoomType;
-    return roomTypes.find((t) => t._id === room.roomType);
-  };
-
   return (
-    <Container maxWidth="xl" sx={{ mt: 4, pb: 8 }}>
+    <Container maxWidth="xl" sx={{ mt: 4, pb: 8, px: { xs: 2, sm: 3 } }}>
       <Box
         sx={{
           display: "flex",
@@ -320,10 +380,15 @@ const RoomsPage = () => {
             fontWeight={800}
             letterSpacing={-0.5}
             mb={0.5}
+            sx={{ textAlign: "left" }}
           >
-            Room Management
+            Rooms Management
           </Typography>
-          <Typography variant="body2" color="text.secondary">
+          <Typography
+            variant="body2"
+            color="text.secondary"
+            sx={{ textAlign: "left" }}
+          >
             {isHousekeeping
               ? "View rooms and update their cleaning status."
               : isReceptionist
@@ -356,488 +421,755 @@ const RoomsPage = () => {
 
       <Box
         sx={{
-          display: "grid",
-          gridTemplateColumns: {
-            xs: "1fr",
-            sm: "repeat(2, 1fr)",
-            md: "repeat(3, 1fr)",
-            lg: "repeat(4, 1fr)",
-          },
-          gap: 3,
+          mb: { xs: 3, md: 4 },
+          borderRadius: 3,
+          border: `1px solid ${border}`,
+          bgcolor: isDark
+            ? alpha("#fff", 0.03)
+            : alpha(theme.palette.primary.main, 0.02),
+          overflow: "hidden",
         }}
       >
-        {rooms.map((room) => {
-          const typeData = getRoomTypeData(room);
-          const imageUrl = getFullImageUrl(room.image);
-          const isOccupied = room.status === RoomStatus.OCCUPIED;
-          const sc =
-            statusConfig[room.status] || statusConfig[RoomStatus.AVAILABLE];
+        <Box
+          onClick={() => isMobile && setFiltersOpen((p) => !p)}
+          sx={{
+            px: { xs: 2, md: 2.5 },
+            py: 1.5,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            cursor: isMobile ? "pointer" : "default",
+          }}
+        >
+          <Stack direction="row" alignItems="center" spacing={1}>
+            <FilterIcon sx={{ fontSize: 17, color: "text.secondary" }} />
+            <Typography variant="body2" fontWeight={700} color="text.secondary">
+              Filters & Search
+            </Typography>
+            {hasFilters && (
+              <Chip
+                label="Active"
+                size="small"
+                color="primary"
+                sx={{ height: 18, fontSize: "0.6rem", fontWeight: 700 }}
+              />
+            )}
+          </Stack>
+          {isMobile && (
+            <IconButton size="small" sx={{ p: 0.5 }}>
+              {filtersOpen ? (
+                <ExpandLessIcon fontSize="small" />
+              ) : (
+                <ExpandMoreIcon fontSize="small" />
+              )}
+            </IconButton>
+          )}
+        </Box>
 
-          return (
-            <Box
-              key={room._id}
+        <Collapse in={isMobile ? filtersOpen : true}>
+          <Box
+            sx={{
+              px: { xs: 2, md: 2.5 },
+              pb: 2,
+              display: "flex",
+              flexDirection: { xs: "column", sm: "row" },
+              flexWrap: "wrap",
+              gap: 1.5,
+            }}
+          >
+            <TextField
+              placeholder="Search room number, type, floor…"
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setPage(1);
+              }}
+              size="small"
+              fullWidth={isMobile}
+              sx={{ flex: "2 1 200px" }}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon sx={{ fontSize: 17, color: "text.disabled" }} />
+                  </InputAdornment>
+                ),
+                endAdornment: searchQuery ? (
+                  <InputAdornment position="end">
+                    <IconButton
+                      size="small"
+                      onClick={() => {
+                        setSearchQuery("");
+                        setPage(1);
+                      }}
+                    >
+                      <ClearIcon sx={{ fontSize: 14 }} />
+                    </IconButton>
+                  </InputAdornment>
+                ) : null,
+                sx: { borderRadius: 2, bgcolor: surface },
+              }}
+            />
+
+            <FormControl
+              size="small"
+              fullWidth={isMobile}
+              sx={{ flex: "1 1 140px" }}
+            >
+              <InputLabel>Status</InputLabel>
+              <Select
+                value={statusFilter}
+                label="Status"
+                onChange={(e) => {
+                  setStatusFilter(e.target.value);
+                  setPage(1);
+                }}
+                sx={{ borderRadius: 2, bgcolor: surface }}
+              >
+                <MenuItem value="">All Statuses</MenuItem>
+                {Object.values(RoomStatus).map((s) => (
+                  <MenuItem key={s} value={s}>
+                    {s}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+
+            {!isHousekeeping && (
+              <FormControl
+                size="small"
+                fullWidth={isMobile}
+                sx={{ flex: "1 1 150px" }}
+              >
+                <InputLabel>Room Type</InputLabel>
+                <Select
+                  value={roomTypeFilter}
+                  label="Room Type"
+                  onChange={(e) => {
+                    setRoomTypeFilter(e.target.value);
+                    setPage(1);
+                  }}
+                  sx={{ borderRadius: 2, bgcolor: surface }}
+                >
+                  <MenuItem value="">All Types</MenuItem>
+                  {roomTypes.map((t) => (
+                    <MenuItem key={t._id} value={t._id}>
+                      {t.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            )}
+
+            <FormControl
+              size="small"
+              fullWidth={isMobile}
+              sx={{ flex: "1 1 120px" }}
+            >
+              <InputLabel>Floor</InputLabel>
+              <Select
+                value={floorFilter}
+                label="Floor"
+                onChange={(e) => {
+                  setFloorFilter(e.target.value);
+                  setPage(1);
+                }}
+                sx={{ borderRadius: 2, bgcolor: surface }}
+              >
+                <MenuItem value="">All Floors</MenuItem>
+                {allFloors.map((f) => (
+                  <MenuItem key={f} value={String(f)}>
+                    Floor {f}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+
+            {hasFilters && (
+              <Button
+                variant="outlined"
+                size="small"
+                startIcon={<ClearIcon sx={{ fontSize: 14 }} />}
+                onClick={clearFilters}
+                fullWidth={isMobile}
+                sx={{
+                  borderRadius: 2,
+                  textTransform: "none",
+                  fontWeight: 600,
+                  whiteSpace: "nowrap",
+                  alignSelf: "center",
+                }}
+              >
+                Clear
+              </Button>
+            )}
+          </Box>
+        </Collapse>
+      </Box>
+
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+        {filtered.length} {filtered.length === 1 ? "room" : "rooms"} found
+        {totalPages > 1 && ` — page ${page} of ${totalPages}`}
+      </Typography>
+
+      {filtered.length === 0 ? (
+        <Box
+          sx={{
+            textAlign: "center",
+            py: { xs: 6, md: 10 },
+            borderRadius: 3,
+            border: `1px dashed ${border}`,
+          }}
+        >
+          <BedIcon sx={{ fontSize: 52, color: "text.disabled", mb: 2 }} />
+          <Typography variant="h6" fontWeight={700} color="text.secondary">
+            No rooms found
+          </Typography>
+          <Typography variant="body2" color="text.disabled" mt={0.5}>
+            {hasFilters
+              ? "Try adjusting your filters"
+              : "Add your first room to get started"}
+          </Typography>
+          {hasFilters && (
+            <Button
+              variant="outlined"
+              size="small"
+              onClick={clearFilters}
               sx={{
-                borderRadius: 4,
-                overflow: "hidden",
-                border: `1px solid ${isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.07)"}`,
-                bgcolor: isDark ? "rgba(255,255,255,0.03)" : "#fff",
-                boxShadow: isDark
-                  ? "0 4px 24px rgba(0,0,0,0.4)"
-                  : "0 2px 16px rgba(0,0,0,0.06)",
-                display: "flex",
-                flexDirection: "column",
-                transition: "transform 0.2s ease, box-shadow 0.2s ease",
-                "&:hover": {
-                  transform: "translateY(-4px)",
-                  boxShadow: isDark
-                    ? "0 12px 40px rgba(0,0,0,0.6)"
-                    : "0 8px 32px rgba(0,0,0,0.12)",
-                },
+                mt: 2,
+                borderRadius: 2,
+                textTransform: "none",
+                fontWeight: 600,
               }}
             >
-              <Box sx={{ position: "relative" }}>
-                {imageUrl ? (
-                  <Box
-                    component="img"
-                    src={imageUrl}
-                    alt={`Room ${room.roomNumber}`}
-                    onError={(e: any) => {
-                      e.target.src =
-                        "https://via.placeholder.com/400x220?text=No+Image";
-                    }}
-                    sx={{
-                      width: "100%",
-                      height: 200,
-                      objectFit: "cover",
-                      display: "block",
-                    }}
-                  />
-                ) : (
-                  <Box
-                    sx={{
-                      height: 200,
-                      background: isDark
-                        ? "linear-gradient(135deg, #1e293b 0%, #0f172a 100%)"
-                        : "linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      flexDirection: "column",
-                      gap: 1,
-                    }}
-                  >
-                    <BedIcon
-                      sx={{
-                        fontSize: 52,
-                        color: isDark
-                          ? "rgba(255,255,255,0.15)"
-                          : "rgba(0,0,0,0.12)",
-                      }}
-                    />
-                    <Typography
-                      variant="caption"
-                      color="text.disabled"
-                      fontWeight={600}
-                      letterSpacing={1}
-                    >
-                      NO IMAGE
-                    </Typography>
-                  </Box>
-                )}
+              Clear filters
+            </Button>
+          )}
+        </Box>
+      ) : (
+        <>
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: {
+                xs: "1fr",
+                sm: "repeat(2, 1fr)",
+                md: "repeat(3, 1fr)",
+                lg: "repeat(4, 1fr)",
+              },
+              gap: 3,
+            }}
+          >
+            {paginated.map((room) => {
+              const typeData = getRoomTypeData(room);
+              const imageUrl = getFullImageUrl(room.image);
+              const isOccupied = room.status === RoomStatus.OCCUPIED;
+              const sc =
+                statusConfig[room.status] || statusConfig[RoomStatus.AVAILABLE];
 
+              return (
                 <Box
+                  key={room._id}
                   sx={{
-                    position: "absolute",
-                    inset: 0,
-                    background:
-                      "linear-gradient(to top, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.18) 50%, transparent 100%)",
-                  }}
-                />
-
-                <Box
-                  sx={{
-                    position: "absolute",
-                    top: 12,
-                    left: 12,
-                    right: 12,
+                    borderRadius: 4,
+                    overflow: "hidden",
+                    border: `1px solid ${isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.07)"}`,
+                    bgcolor: isDark ? "rgba(255,255,255,0.03)" : "#fff",
+                    boxShadow: isDark
+                      ? "0 4px 24px rgba(0,0,0,0.4)"
+                      : "0 2px 16px rgba(0,0,0,0.06)",
                     display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
+                    flexDirection: "column",
+                    transition: "transform 0.2s ease, box-shadow 0.2s ease",
+                    "&:hover": {
+                      transform: "translateY(-4px)",
+                      boxShadow: isDark
+                        ? "0 12px 40px rgba(0,0,0,0.6)"
+                        : "0 8px 32px rgba(0,0,0,0.12)",
+                    },
                   }}
                 >
-                  {isHousekeeping && isOccupied && (
-                    <Tooltip title="Occupied — no changes allowed">
+                  <Box sx={{ position: "relative" }}>
+                    {imageUrl ? (
+                      <Box
+                        component="img"
+                        src={imageUrl}
+                        alt={`Room ${room.roomNumber}`}
+                        onError={(e: any) => {
+                          e.target.src =
+                            "https://via.placeholder.com/400x220?text=No+Image";
+                        }}
+                        sx={{
+                          width: "100%",
+                          height: 200,
+                          objectFit: "cover",
+                          display: "block",
+                        }}
+                      />
+                    ) : (
                       <Box
                         sx={{
-                          bgcolor: "rgba(0,0,0,0.55)",
-                          backdropFilter: "blur(6px)",
-                          borderRadius: "50%",
-                          width: 30,
-                          height: 30,
+                          height: 200,
+                          background: isDark
+                            ? "linear-gradient(135deg, #1e293b 0%, #0f172a 100%)"
+                            : "linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%)",
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
+                          flexDirection: "column",
+                          gap: 1,
                         }}
                       >
-                        <LockIcon sx={{ fontSize: 14, color: "#fff" }} />
+                        <BedIcon
+                          sx={{
+                            fontSize: 52,
+                            color: isDark
+                              ? "rgba(255,255,255,0.15)"
+                              : "rgba(0,0,0,0.12)",
+                          }}
+                        />
+                        <Typography
+                          variant="caption"
+                          color="text.disabled"
+                          fontWeight={600}
+                          letterSpacing={1}
+                        >
+                          NO IMAGE
+                        </Typography>
                       </Box>
-                    </Tooltip>
-                  )}
-                  <Box sx={{ ml: "auto" }}>
-                    <Chip
-                      label={room.status}
-                      size="small"
-                      sx={{
-                        fontWeight: 700,
-                        fontSize: "0.68rem",
-                        letterSpacing: "0.04em",
-                        bgcolor: sc.bg,
-                        color: sc.color,
-                        border: `1px solid ${sc.border}`,
-                        backdropFilter: "blur(8px)",
-                        height: 24,
-                      }}
-                    />
-                  </Box>
-                </Box>
+                    )}
 
-                <Box
-                  sx={{
-                    position: "absolute",
-                    bottom: 0,
-                    left: 0,
-                    right: 0,
-                    p: "12px 14px 10px",
-                  }}
-                >
-                  <Typography
-                    variant="h5"
-                    fontWeight={800}
-                    color="#fff"
-                    letterSpacing={-0.5}
-                    lineHeight={1}
-                  >
-                    {room.roomNumber}
-                  </Typography>
-                  {!isHousekeeping && typeData?.name && (
-                    <Typography
-                      variant="caption"
-                      sx={{ color: "rgba(255,255,255,0.72)", fontWeight: 500 }}
-                    >
-                      {typeData.name}
-                    </Typography>
-                  )}
-                </Box>
-              </Box>
-
-              <Box
-                sx={{
-                  p: 2,
-                  flex: 1,
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 1.5,
-                }}
-              >
-                {!isHousekeeping && (
-                  <>
                     <Box
                       sx={{
+                        position: "absolute",
+                        inset: 0,
+                        background:
+                          "linear-gradient(to top, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.18) 50%, transparent 100%)",
+                      }}
+                    />
+
+                    <Box
+                      sx={{
+                        position: "absolute",
+                        top: 12,
+                        left: 12,
+                        right: 12,
                         display: "flex",
                         justifyContent: "space-between",
                         alignItems: "center",
                       }}
                     >
-                      <Stack direction="row" alignItems="center" spacing={0.5}>
-                        <FloorIcon
-                          sx={{ fontSize: 15, color: "text.secondary" }}
+                      {isHousekeeping && isOccupied && (
+                        <Tooltip title="Occupied — no changes allowed">
+                          <Box
+                            sx={{
+                              bgcolor: "rgba(0,0,0,0.55)",
+                              backdropFilter: "blur(6px)",
+                              borderRadius: "50%",
+                              width: 30,
+                              height: 30,
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                            }}
+                          >
+                            <LockIcon sx={{ fontSize: 14, color: "#fff" }} />
+                          </Box>
+                        </Tooltip>
+                      )}
+                      <Box sx={{ ml: "auto" }}>
+                        <Chip
+                          label={room.status}
+                          size="small"
+                          sx={{
+                            fontWeight: 700,
+                            fontSize: "0.68rem",
+                            letterSpacing: "0.04em",
+                            bgcolor: sc.bg,
+                            color: sc.color,
+                            border: `1px solid ${sc.border}`,
+                            backdropFilter: "blur(8px)",
+                            height: 24,
+                          }}
                         />
-                        <Typography
-                          variant="body2"
-                          color="text.secondary"
-                          fontWeight={500}
-                        >
-                          Floor {room.floor}
-                        </Typography>
-                      </Stack>
-                      <Stack
-                        direction="row"
-                        alignItems="baseline"
-                        spacing={0.3}
-                      >
-                        <Typography
-                          variant="body1"
-                          fontWeight={800}
-                          color="primary.main"
-                        >
-                          ${typeData?.basePrice ?? typeData?.price ?? 0}
-                        </Typography>
-                        <Typography variant="caption" color="text.disabled">
-                          / night
-                        </Typography>
-                      </Stack>
+                      </Box>
                     </Box>
 
-                    {typeData?.description && (
+                    <Box
+                      sx={{
+                        position: "absolute",
+                        bottom: 0,
+                        left: 0,
+                        right: 0,
+                        p: "12px 14px 10px",
+                      }}
+                    >
                       <Typography
-                        variant="body2"
-                        color="text.secondary"
-                        sx={{
-                          lineHeight: 1.6,
-                          display: "-webkit-box",
-                          WebkitLineClamp: 3,
-                          WebkitBoxOrient: "vertical",
-                          overflow: "hidden",
-                          minHeight: "3.2em",
-                        }}
+                        variant="h5"
+                        fontWeight={800}
+                        color="#fff"
+                        letterSpacing={-0.5}
+                        lineHeight={1}
                       >
-                        {typeData.description}
+                        {room.roomNumber}
                       </Typography>
+                      {!isHousekeeping && typeData?.name && (
+                        <Typography
+                          variant="caption"
+                          sx={{
+                            color: "rgba(255,255,255,0.72)",
+                            fontWeight: 500,
+                          }}
+                        >
+                          {typeData.name}
+                        </Typography>
+                      )}
+                    </Box>
+                  </Box>
+
+                  <Box
+                    sx={{
+                      p: 2,
+                      flex: 1,
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 1.5,
+                    }}
+                  >
+                    {!isHousekeeping && (
+                      <>
+                        <Box
+                          sx={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                          }}
+                        >
+                          <Stack
+                            direction="row"
+                            alignItems="center"
+                            spacing={0.5}
+                          >
+                            <FloorIcon
+                              sx={{ fontSize: 15, color: "text.secondary" }}
+                            />
+                            <Typography
+                              variant="body2"
+                              color="text.secondary"
+                              fontWeight={500}
+                            >
+                              Floor {room.floor}
+                            </Typography>
+                          </Stack>
+                          <Stack
+                            direction="row"
+                            alignItems="baseline"
+                            spacing={0.3}
+                          >
+                            <Typography
+                              variant="body1"
+                              fontWeight={800}
+                              color="primary.main"
+                            >
+                              ${typeData?.basePrice ?? typeData?.price ?? 0}
+                            </Typography>
+                            <Typography variant="caption" color="text.disabled">
+                              / night
+                            </Typography>
+                          </Stack>
+                        </Box>
+
+                        {typeData?.description && (
+                          <Typography
+                            variant="body2"
+                            color="text.secondary"
+                            sx={{
+                              lineHeight: 1.6,
+                              display: "-webkit-box",
+                              WebkitLineClamp: 3,
+                              WebkitBoxOrient: "vertical",
+                              overflow: "hidden",
+                              minHeight: "3.2em",
+                            }}
+                          >
+                            {typeData.description}
+                          </Typography>
+                        )}
+
+                        {typeData?.features && typeData.features.length > 0 && (
+                          <Stack
+                            direction="row"
+                            flexWrap="wrap"
+                            gap={0.7}
+                            sx={{ mt: 0.5 }}
+                          >
+                            {typeData.features
+                              .slice(0, 3)
+                              .map((feature, idx) => (
+                                <Chip
+                                  key={idx}
+                                  label={feature}
+                                  size="small"
+                                  icon={
+                                    <FeatureIcon
+                                      sx={{ fontSize: "11px !important" }}
+                                    />
+                                  }
+                                  variant="outlined"
+                                  sx={{
+                                    borderRadius: 1.5,
+                                    fontSize: "0.65rem",
+                                    height: 22,
+                                    fontWeight: 600,
+                                    color: "text.secondary",
+                                    borderColor: isDark
+                                      ? "rgba(255,255,255,0.12)"
+                                      : "rgba(0,0,0,0.12)",
+                                  }}
+                                />
+                              ))}
+                            {(typeData.features.length || 0) > 3 && (
+                              <Chip
+                                label={`+${typeData.features.length - 3}`}
+                                size="small"
+                                variant="outlined"
+                                sx={{
+                                  borderRadius: 1.5,
+                                  fontSize: "0.65rem",
+                                  height: 22,
+                                  fontWeight: 600,
+                                  color: "text.secondary",
+                                  borderColor: isDark
+                                    ? "rgba(255,255,255,0.12)"
+                                    : "rgba(0,0,0,0.12)",
+                                }}
+                              />
+                            )}
+                          </Stack>
+                        )}
+                      </>
                     )}
 
-                    {typeData?.features && typeData.features.length > 0 && (
-                      <Stack
-                        direction="row"
-                        flexWrap="wrap"
-                        gap={0.7}
-                        sx={{ mt: 0.5 }}
+                    {isHousekeeping && (
+                      <Box
+                        sx={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                        }}
                       >
-                        {typeData.features.slice(0, 3).map((feature, idx) => (
+                        <Stack
+                          direction="row"
+                          alignItems="center"
+                          spacing={0.5}
+                        >
+                          <FloorIcon
+                            sx={{ fontSize: 15, color: "text.secondary" }}
+                          />
+                          <Typography
+                            variant="body2"
+                            color="text.secondary"
+                            fontWeight={500}
+                          >
+                            Floor {room.floor}
+                          </Typography>
+                        </Stack>
+                        {isOccupied && (
                           <Chip
-                            key={idx}
-                            label={feature}
                             size="small"
                             icon={
-                              <FeatureIcon
-                                sx={{ fontSize: "11px !important" }}
-                              />
+                              <LockIcon sx={{ fontSize: "11px !important" }} />
                             }
-                            variant="outlined"
+                            label="Locked"
                             sx={{
-                              borderRadius: 1.5,
-                              fontSize: "0.65rem",
-                              height: 22,
-                              fontWeight: 600,
-                              color: "text.secondary",
-                              borderColor: isDark
-                                ? "rgba(255,255,255,0.12)"
-                                : "rgba(0,0,0,0.12)",
-                            }}
-                          />
-                        ))}
-                        {(typeData.features.length || 0) > 3 && (
-                          <Chip
-                            label={`+${typeData.features.length - 3}`}
-                            size="small"
-                            variant="outlined"
-                            sx={{
-                              borderRadius: 1.5,
-                              fontSize: "0.65rem",
-                              height: 22,
-                              fontWeight: 600,
-                              color: "text.secondary",
-                              borderColor: isDark
-                                ? "rgba(255,255,255,0.12)"
-                                : "rgba(0,0,0,0.12)",
+                              fontSize: "0.62rem",
+                              height: 20,
+                              fontWeight: 700,
+                              bgcolor: alpha(theme.palette.error.main, 0.08),
+                              color: theme.palette.error.main,
+                              border: `1px solid ${alpha(theme.palette.error.main, 0.2)}`,
+                              "& .MuiChip-icon": {
+                                color: theme.palette.error.main,
+                              },
                             }}
                           />
                         )}
-                      </Stack>
-                    )}
-                  </>
-                )}
-
-                {isHousekeeping && (
-                  <Box
-                    sx={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                    }}
-                  >
-                    <Stack direction="row" alignItems="center" spacing={0.5}>
-                      <FloorIcon
-                        sx={{ fontSize: 15, color: "text.secondary" }}
-                      />
-                      <Typography
-                        variant="body2"
-                        color="text.secondary"
-                        fontWeight={500}
-                      >
-                        Floor {room.floor}
-                      </Typography>
-                    </Stack>
-                    {isOccupied && (
-                      <Chip
-                        size="small"
-                        icon={<LockIcon sx={{ fontSize: "11px !important" }} />}
-                        label="Locked"
-                        sx={{
-                          fontSize: "0.62rem",
-                          height: 20,
-                          fontWeight: 700,
-                          bgcolor: alpha(theme.palette.error.main, 0.08),
-                          color: theme.palette.error.main,
-                          border: `1px solid ${alpha(theme.palette.error.main, 0.2)}`,
-                          "& .MuiChip-icon": {
-                            color: theme.palette.error.main,
-                          },
-                        }}
-                      />
-                    )}
-                  </Box>
-                )}
-
-                <Divider sx={{ mt: "auto", mb: 0.5, opacity: 0.5 }} />
-
-                <Box sx={{ display: "flex", gap: 1 }}>
-                  {isHousekeeping &&
-                    (isOccupied ? (
-                      <Box
-                        sx={{
-                          width: "100%",
-                          py: 0.9,
-                          px: 1.5,
-                          borderRadius: 2,
-                          bgcolor: alpha(theme.palette.error.main, 0.06),
-                          border: `1px solid ${alpha(theme.palette.error.main, 0.16)}`,
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          gap: 0.7,
-                        }}
-                      >
-                        <LockIcon
-                          sx={{ fontSize: 13, color: theme.palette.error.main }}
-                        />
-                        <Typography
-                          variant="caption"
-                          color="error"
-                          fontWeight={600}
-                        >
-                          Occupied — no changes allowed
-                        </Typography>
                       </Box>
-                    ) : (
-                      <>
-                        <Button
-                          variant="contained"
-                          fullWidth
-                          color="success"
-                          size="small"
-                          startIcon={
-                            statusLoadingId ===
-                            room._id + RoomStatus.AVAILABLE ? (
-                              <CircularProgress size={13} color="inherit" />
-                            ) : (
-                              <AvailableIcon
-                                sx={{ fontSize: "16px !important" }}
-                              />
-                            )
-                          }
-                          disabled={
-                            room.status === RoomStatus.AVAILABLE ||
-                            !!statusLoadingId
-                          }
-                          onClick={() =>
-                            handleStatusChange(room, RoomStatus.AVAILABLE)
-                          }
-                          sx={{
-                            borderRadius: 2,
-                            textTransform: "none",
-                            fontSize: "0.78rem",
-                            fontWeight: 700,
-                          }}
-                        >
-                          Available
-                        </Button>
+                    )}
+
+                    <Divider sx={{ mt: "auto", mb: 0.5, opacity: 0.5 }} />
+
+                    <Box sx={{ display: "flex", gap: 1 }}>
+                      {isHousekeeping &&
+                        (isOccupied ? (
+                          <Box
+                            sx={{
+                              width: "100%",
+                              py: 0.9,
+                              px: 1.5,
+                              borderRadius: 2,
+                              bgcolor: alpha(theme.palette.error.main, 0.06),
+                              border: `1px solid ${alpha(theme.palette.error.main, 0.16)}`,
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              gap: 0.7,
+                            }}
+                          >
+                            <LockIcon
+                              sx={{
+                                fontSize: 13,
+                                color: theme.palette.error.main,
+                              }}
+                            />
+                            <Typography
+                              variant="caption"
+                              color="error"
+                              fontWeight={600}
+                            >
+                              Occupied — no changes allowed
+                            </Typography>
+                          </Box>
+                        ) : (
+                          <>
+                            <Button
+                              variant="contained"
+                              fullWidth
+                              color="success"
+                              size="small"
+                              startIcon={
+                                statusLoadingId ===
+                                room._id + RoomStatus.AVAILABLE ? (
+                                  <CircularProgress size={13} color="inherit" />
+                                ) : (
+                                  <AvailableIcon
+                                    sx={{ fontSize: "16px !important" }}
+                                  />
+                                )
+                              }
+                              disabled={
+                                room.status === RoomStatus.AVAILABLE ||
+                                !!statusLoadingId
+                              }
+                              onClick={() =>
+                                handleStatusChange(room, RoomStatus.AVAILABLE)
+                              }
+                              sx={{
+                                borderRadius: 2,
+                                textTransform: "none",
+                                fontSize: "0.78rem",
+                                fontWeight: 700,
+                              }}
+                            >
+                              Available
+                            </Button>
+                            <Button
+                              variant="outlined"
+                              fullWidth
+                              color="warning"
+                              size="small"
+                              startIcon={
+                                statusLoadingId ===
+                                room._id + RoomStatus.DIRTY ? (
+                                  <CircularProgress size={13} color="inherit" />
+                                ) : (
+                                  <DirtyIcon
+                                    sx={{ fontSize: "16px !important" }}
+                                  />
+                                )
+                              }
+                              disabled={
+                                room.status === RoomStatus.DIRTY ||
+                                !!statusLoadingId
+                              }
+                              onClick={() =>
+                                handleStatusChange(room, RoomStatus.DIRTY)
+                              }
+                              sx={{
+                                borderRadius: 2,
+                                textTransform: "none",
+                                fontSize: "0.78rem",
+                                fontWeight: 700,
+                              }}
+                            >
+                              Dirty
+                            </Button>
+                          </>
+                        ))}
+
+                      {isReceptionist && (
                         <Button
                           variant="outlined"
                           fullWidth
-                          color="warning"
                           size="small"
                           startIcon={
-                            statusLoadingId === room._id + RoomStatus.DIRTY ? (
-                              <CircularProgress size={13} color="inherit" />
-                            ) : (
-                              <DirtyIcon sx={{ fontSize: "16px !important" }} />
-                            )
+                            <ViewIcon sx={{ fontSize: "16px !important" }} />
                           }
-                          disabled={
-                            room.status === RoomStatus.DIRTY ||
-                            !!statusLoadingId
-                          }
-                          onClick={() =>
-                            handleStatusChange(room, RoomStatus.DIRTY)
-                          }
+                          onClick={() => setViewRoom(room)}
                           sx={{
                             borderRadius: 2,
                             textTransform: "none",
-                            fontSize: "0.78rem",
                             fontWeight: 700,
+                            fontSize: "0.78rem",
                           }}
                         >
-                          Dirty
+                          View Full Info
                         </Button>
-                      </>
-                    ))}
+                      )}
 
-                  {isReceptionist && (
-                    <Button
-                      variant="outlined"
-                      fullWidth
-                      size="small"
-                      startIcon={
-                        <ViewIcon sx={{ fontSize: "16px !important" }} />
-                      }
-                      onClick={() => setViewRoom(room)}
-                      sx={{
-                        borderRadius: 2,
-                        textTransform: "none",
-                        fontWeight: 700,
-                        fontSize: "0.78rem",
-                      }}
-                    >
-                      View Full Info
-                    </Button>
-                  )}
-
-                  {isAdminOrManager && (
-                    <>
-                      <Button
-                        variant="contained"
-                        fullWidth
-                        size="small"
-                        startIcon={
-                          <EditIcon sx={{ fontSize: "16px !important" }} />
-                        }
-                        onClick={() => handleOpen(room)}
-                        sx={{
-                          borderRadius: 2,
-                          textTransform: "none",
-                          fontWeight: 700,
-                          fontSize: "0.78rem",
-                        }}
-                      >
-                        Edit
-                      </Button>
-                      <Button
-                        variant="outlined"
-                        color="error"
-                        size="small"
-                        onClick={() => handleDeleteClick(room._id)}
-                        sx={{ borderRadius: 2, minWidth: 40, px: 0 }}
-                      >
-                        <DeleteIcon sx={{ fontSize: 18 }} />
-                      </Button>
-                    </>
-                  )}
+                      {isAdminOrManager && (
+                        <>
+                          <Button
+                            variant="contained"
+                            fullWidth
+                            size="small"
+                            startIcon={
+                              <EditIcon sx={{ fontSize: "16px !important" }} />
+                            }
+                            onClick={() => handleOpen(room)}
+                            sx={{
+                              borderRadius: 2,
+                              textTransform: "none",
+                              fontWeight: 700,
+                              fontSize: "0.78rem",
+                            }}
+                          >
+                            Edit
+                          </Button>
+                          <Button
+                            variant="outlined"
+                            color="error"
+                            size="small"
+                            onClick={() => handleDeleteClick(room._id)}
+                            sx={{ borderRadius: 2, minWidth: 40, px: 0 }}
+                          >
+                            <DeleteIcon sx={{ fontSize: 18 }} />
+                          </Button>
+                        </>
+                      )}
+                    </Box>
+                  </Box>
                 </Box>
-              </Box>
+              );
+            })}
+          </Box>
+
+          {totalPages > 1 && (
+            <Box sx={{ display: "flex", justifyContent: "center", mt: 4 }}>
+              <Pagination
+                count={totalPages}
+                page={page}
+                onChange={(_, value) => {
+                  setPage(value);
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }}
+                color="primary"
+                shape="rounded"
+                size={isMobile ? "small" : "medium"}
+              />
             </Box>
-          );
-        })}
-      </Box>
+          )}
+        </>
+      )}
 
       {isReceptionist &&
         viewRoom &&
@@ -1290,7 +1622,7 @@ const RoomsPage = () => {
         open={snackbar.open}
         autoHideDuration={4000}
         onClose={() => setSnackbar({ ...snackbar, open: false })}
-        anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
       >
         <Alert
           onClose={() => setSnackbar({ ...snackbar, open: false })}

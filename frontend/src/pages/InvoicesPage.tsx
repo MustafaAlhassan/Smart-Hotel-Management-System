@@ -28,6 +28,7 @@ import {
   Skeleton,
   Card,
   CardContent,
+  Pagination,
 } from "@mui/material";
 import {
   Print as PrintIcon,
@@ -56,7 +57,8 @@ export interface IService {
 }
 
 export interface IInvoiceServiceItem {
-  service: { _id: string; name: string };
+  service: string;
+  name: string;
   quantity: number;
   price: number;
   total: number;
@@ -128,6 +130,8 @@ const PRINT_STYLES = `
   }
 `;
 
+const PAGE_SIZE = 10;
+
 const InvoicesPage = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
@@ -135,6 +139,7 @@ const InvoicesPage = () => {
   const [invoices, setInvoices] = useState<IInvoice[]>([]);
   const [availableServices, setAvailableServices] = useState<IService[]>([]);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
 
   const [invoiceGuests, setInvoiceGuests] = useState<
     Record<string, IGuest | null>
@@ -263,6 +268,9 @@ const InvoicesPage = () => {
     fetchData();
   }, [fetchData]);
 
+  const totalPages = Math.ceil(invoices.length / PAGE_SIZE);
+  const paginated = invoices.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
   const getStatusChipColor = (status: string) => {
     if (status === "Paid") return "success";
     if (status === "Partially Paid") return "info";
@@ -385,7 +393,6 @@ const InvoicesPage = () => {
     >
       <style>{PRINT_STYLES}</style>
 
-      {/* Header */}
       <Box
         sx={{
           display: "flex",
@@ -402,7 +409,9 @@ const InvoicesPage = () => {
             variant="h4"
             fontWeight={900}
             letterSpacing={-0.5}
-            sx={{ fontSize: { xs: "1.75rem", md: "2.125rem" } }}
+            sx={{
+              fontSize: { xs: "1.75rem", md: "2.125rem", textAlign: "left" },
+            }}
           >
             Invoices
           </Typography>
@@ -412,7 +421,6 @@ const InvoicesPage = () => {
         </Box>
       </Box>
 
-      {/* Mobile Card View */}
       {isMobile ? (
         <Box sx={{ "@media print": { display: "none" } }}>
           {invoices.length === 0 ? (
@@ -425,252 +433,285 @@ const InvoicesPage = () => {
               No invoices found.
             </Typography>
           ) : (
-            invoices.map((invoice) => {
-              const guest = invoiceGuests[invoice._id];
-              const isGuestLoading = guestsLoading[invoice._id];
-              return (
-                <Card
-                  key={invoice._id}
-                  sx={{ mb: 2, borderRadius: "12px", boxShadow: 2 }}
-                >
-                  <CardContent>
-                    <Box
-                      display="flex"
-                      justifyContent="space-between"
-                      alignItems="center"
-                      mb={1}
-                    >
-                      {isGuestLoading ? (
-                        <Skeleton variant="text" width={140} height={28} />
-                      ) : (
-                        <Typography variant="h6" fontWeight={700}>
-                          {guest
-                            ? `${guest.firstName} ${guest.lastName}`
-                            : "Unknown Guest"}
-                        </Typography>
-                      )}
-                      <Chip
-                        label={invoice.paymentStatus}
-                        size="small"
-                        color={getStatusChipColor(invoice.paymentStatus)}
-                        sx={{ fontWeight: 700, borderRadius: 1.5 }}
-                      />
-                    </Box>
-                    <Divider sx={{ mb: 2 }} />
-                    <Stack spacing={1.5}>
-                      <Box display="flex" alignItems="center" gap={1}>
-                        <Typography
-                          variant="caption"
-                          color="text.secondary"
-                          fontWeight={600}
-                          sx={{ minWidth: 80 }}
-                        >
-                          Invoice ID
-                        </Typography>
-                        <Typography variant="body2" fontWeight={700}>
-                          {invoice._id.slice(-8).toUpperCase()}
-                        </Typography>
-                      </Box>
-                      <Box display="flex" alignItems="center" gap={1}>
-                        <CalendarTodayIcon
-                          fontSize="small"
-                          sx={{ opacity: 0.6, fontSize: 16 }}
-                        />
-                        <Typography variant="body2" color="text.secondary">
-                          {new Date(invoice.issueDate).toLocaleDateString()}
-                        </Typography>
-                      </Box>
-                      <Box display="flex" alignItems="center" gap={1}>
-                        <AttachMoneyIcon
-                          fontSize="small"
-                          sx={{ opacity: 0.6, fontSize: 16 }}
-                        />
-                        <Typography
-                          variant="body2"
-                          fontWeight={800}
-                          color="success.main"
-                        >
-                          ${invoice.totalAmountDue.toFixed(2)}
-                        </Typography>
-                      </Box>
-                    </Stack>
-                    <Divider sx={{ my: 2 }} />
-                    <Stack
-                      direction="row"
-                      spacing={1}
-                      justifyContent="flex-end"
-                    >
-                      <IconButton
-                        size="small"
-                        color="success"
-                        onClick={() => handleOpenAddService(invoice)}
-                      >
-                        <AddCircleOutlineIcon fontSize="small" />
-                      </IconButton>
-                      <IconButton
-                        size="small"
-                        color="primary"
-                        onClick={() => handleOpenPayment(invoice)}
-                      >
-                        <PaymentIcon fontSize="small" />
-                      </IconButton>
-                      <IconButton
-                        size="small"
-                        color="secondary"
-                        onClick={() => handleOpenPrint(invoice)}
-                      >
-                        <VisibilityIcon fontSize="small" />
-                      </IconButton>
-                    </Stack>
-                  </CardContent>
-                </Card>
-              );
-            })
-          )}
-        </Box>
-      ) : (
-        /* Desktop Table View */
-        <TableContainer
-          component={Paper}
-          elevation={0}
-          sx={{
-            borderRadius: 3,
-            border: `1px solid ${theme.palette.divider}`,
-            overflowX: "auto",
-            "@media print": { display: "none" },
-          }}
-        >
-          <Table sx={{ minWidth: 900 }}>
-            <TableHead>
-              <TableRow sx={{ bgcolor: theme.palette.action.hover }}>
-                {[
-                  "Invoice ID",
-                  "Guest Name",
-                  "Issue Date",
-                  "Total Amount",
-                  "Status",
-                  "Actions",
-                ].map((h) => (
-                  <TableCell
-                    key={h}
-                    align={
-                      h === "Actions" || h === "Total Amount" ? "right" : "left"
-                    }
-                    sx={{
-                      fontWeight: 700,
-                      fontSize: "0.75rem",
-                      textTransform: "uppercase",
-                      letterSpacing: "0.06em",
-                      color: "text.secondary",
-                      py: 2,
-                    }}
+            <>
+              {paginated.map((invoice) => {
+                const guest = invoiceGuests[invoice._id];
+                const isGuestLoading = guestsLoading[invoice._id];
+                return (
+                  <Card
+                    key={invoice._id}
+                    sx={{ mb: 2, borderRadius: "12px", boxShadow: 2 }}
                   >
-                    {h}
-                  </TableCell>
-                ))}
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {invoices.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} align="center" sx={{ py: 5 }}>
-                    <Typography variant="body1" color="text.secondary">
-                      No invoices found.
-                    </Typography>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                invoices.map((invoice) => {
-                  const guest = invoiceGuests[invoice._id];
-                  const isGuestLoading = guestsLoading[invoice._id];
-                  return (
-                    <TableRow
-                      key={invoice._id}
-                      sx={{
-                        "&:last-child td": { border: 0 },
-                        "&:hover": { bgcolor: theme.palette.action.hover },
-                        transition: "background 0.15s",
-                      }}
-                    >
-                      <TableCell>
-                        <Typography variant="body2" fontWeight={700}>
-                          {invoice._id.slice(-8).toUpperCase()}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
+                    <CardContent>
+                      <Box
+                        display="flex"
+                        justifyContent="space-between"
+                        alignItems="center"
+                        mb={1}
+                      >
                         {isGuestLoading ? (
-                          <Skeleton variant="text" width={120} height={20} />
-                        ) : guest ? (
-                          <Typography variant="body2" fontWeight={600}>
-                            {guest.firstName} {guest.lastName}
-                          </Typography>
+                          <Skeleton variant="text" width={140} height={28} />
                         ) : (
-                          <Typography variant="body2" color="text.disabled">
-                            Unknown Guest
+                          <Typography variant="h6" fontWeight={700}>
+                            {guest
+                              ? `${guest.firstName} ${guest.lastName}`
+                              : "Unknown Guest"}
                           </Typography>
                         )}
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="body2">
-                          {new Date(invoice.issueDate).toLocaleDateString()}
-                        </Typography>
-                      </TableCell>
-                      <TableCell align="right">
-                        <Typography
-                          variant="body2"
-                          fontWeight={700}
-                          color="success.main"
-                        >
-                          ${invoice.totalAmountDue.toFixed(2)}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
                         <Chip
                           label={invoice.paymentStatus}
                           size="small"
                           color={getStatusChipColor(invoice.paymentStatus)}
                           sx={{ fontWeight: 700, borderRadius: 1.5 }}
                         />
-                      </TableCell>
-                      <TableCell align="right">
-                        <Stack
-                          direction="row"
-                          justifyContent="flex-end"
-                          spacing={1}
+                      </Box>
+                      <Divider sx={{ mb: 2 }} />
+                      <Stack spacing={1.5}>
+                        <Box display="flex" alignItems="center" gap={1}>
+                          <Typography
+                            variant="caption"
+                            color="text.secondary"
+                            fontWeight={600}
+                            sx={{ minWidth: 80 }}
+                          >
+                            Invoice ID
+                          </Typography>
+                          <Typography variant="body2" fontWeight={700}>
+                            {invoice._id.slice(-8).toUpperCase()}
+                          </Typography>
+                        </Box>
+                        <Box display="flex" alignItems="center" gap={1}>
+                          <CalendarTodayIcon
+                            fontSize="small"
+                            sx={{ opacity: 0.6, fontSize: 16 }}
+                          />
+                          <Typography variant="body2" color="text.secondary">
+                            {new Date(invoice.issueDate).toLocaleDateString()}
+                          </Typography>
+                        </Box>
+                        <Box display="flex" alignItems="center" gap={1}>
+                          <AttachMoneyIcon
+                            fontSize="small"
+                            sx={{ opacity: 0.6, fontSize: 16 }}
+                          />
+                          <Typography
+                            variant="body2"
+                            fontWeight={800}
+                            color="success.main"
+                          >
+                            ${invoice.totalAmountDue.toFixed(2)}
+                          </Typography>
+                        </Box>
+                      </Stack>
+                      <Divider sx={{ my: 2 }} />
+                      <Stack
+                        direction="row"
+                        spacing={1}
+                        justifyContent="flex-end"
+                      >
+                        <IconButton
+                          size="small"
+                          color="success"
+                          onClick={() => handleOpenAddService(invoice)}
                         >
-                          <IconButton
-                            size="small"
-                            color="success"
-                            onClick={() => handleOpenAddService(invoice)}
-                          >
-                            <AddCircleOutlineIcon fontSize="small" />
-                          </IconButton>
-                          <IconButton
-                            size="small"
-                            color="primary"
-                            onClick={() => handleOpenPayment(invoice)}
-                          >
-                            <PaymentIcon fontSize="small" />
-                          </IconButton>
-                          <IconButton
-                            size="small"
-                            color="secondary"
-                            onClick={() => handleOpenPrint(invoice)}
-                          >
-                            <VisibilityIcon fontSize="small" />
-                          </IconButton>
-                        </Stack>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
+                          <AddCircleOutlineIcon fontSize="small" />
+                        </IconButton>
+                        <IconButton
+                          size="small"
+                          color="primary"
+                          onClick={() => handleOpenPayment(invoice)}
+                        >
+                          <PaymentIcon fontSize="small" />
+                        </IconButton>
+                        <IconButton
+                          size="small"
+                          color="secondary"
+                          onClick={() => handleOpenPrint(invoice)}
+                        >
+                          <VisibilityIcon fontSize="small" />
+                        </IconButton>
+                      </Stack>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+              {totalPages > 1 && (
+                <Box sx={{ display: "flex", justifyContent: "center", mt: 3 }}>
+                  <Pagination
+                    count={totalPages}
+                    page={page}
+                    onChange={(_, value) => {
+                      setPage(value);
+                      window.scrollTo({ top: 0, behavior: "smooth" });
+                    }}
+                    color="primary"
+                    shape="rounded"
+                    size="small"
+                  />
+                </Box>
               )}
-            </TableBody>
-          </Table>
-        </TableContainer>
+            </>
+          )}
+        </Box>
+      ) : (
+        <>
+          <TableContainer
+            component={Paper}
+            elevation={0}
+            sx={{
+              borderRadius: 3,
+              border: `1px solid ${theme.palette.divider}`,
+              overflowX: "auto",
+              "@media print": { display: "none" },
+            }}
+          >
+            <Table sx={{ minWidth: 900 }}>
+              <TableHead>
+                <TableRow sx={{ bgcolor: theme.palette.action.hover }}>
+                  {[
+                    "Invoice ID",
+                    "Guest Name",
+                    "Issue Date",
+                    "Total Amount",
+                    "Status",
+                    "Actions",
+                  ].map((h) => (
+                    <TableCell
+                      key={h}
+                      align={
+                        h === "Actions" || h === "Total Amount"
+                          ? "right"
+                          : "left"
+                      }
+                      sx={{
+                        fontWeight: 700,
+                        fontSize: "0.75rem",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.06em",
+                        color: "text.secondary",
+                        py: 2,
+                      }}
+                    >
+                      {h}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {invoices.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} align="center" sx={{ py: 5 }}>
+                      <Typography variant="body1" color="text.secondary">
+                        No invoices found.
+                      </Typography>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  paginated.map((invoice) => {
+                    const guest = invoiceGuests[invoice._id];
+                    const isGuestLoading = guestsLoading[invoice._id];
+                    return (
+                      <TableRow
+                        key={invoice._id}
+                        sx={{
+                          "&:last-child td": { border: 0 },
+                          "&:hover": { bgcolor: theme.palette.action.hover },
+                          transition: "background 0.15s",
+                        }}
+                      >
+                        <TableCell>
+                          <Typography variant="body2" fontWeight={700}>
+                            {invoice._id.slice(-8).toUpperCase()}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>
+                          {isGuestLoading ? (
+                            <Skeleton variant="text" width={120} height={20} />
+                          ) : guest ? (
+                            <Typography variant="body2" fontWeight={600}>
+                              {guest.firstName} {guest.lastName}
+                            </Typography>
+                          ) : (
+                            <Typography variant="body2" color="text.disabled">
+                              Unknown Guest
+                            </Typography>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Typography variant="body2">
+                            {new Date(invoice.issueDate).toLocaleDateString()}
+                          </Typography>
+                        </TableCell>
+                        <TableCell align="right">
+                          <Typography
+                            variant="body2"
+                            fontWeight={700}
+                            color="success.main"
+                          >
+                            ${invoice.totalAmountDue.toFixed(2)}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>
+                          <Chip
+                            label={invoice.paymentStatus}
+                            size="small"
+                            color={getStatusChipColor(invoice.paymentStatus)}
+                            sx={{ fontWeight: 700, borderRadius: 1.5 }}
+                          />
+                        </TableCell>
+                        <TableCell align="right">
+                          <Stack
+                            direction="row"
+                            justifyContent="flex-end"
+                            spacing={1}
+                          >
+                            <IconButton
+                              size="small"
+                              color="success"
+                              onClick={() => handleOpenAddService(invoice)}
+                            >
+                              <AddCircleOutlineIcon fontSize="small" />
+                            </IconButton>
+                            <IconButton
+                              size="small"
+                              color="primary"
+                              onClick={() => handleOpenPayment(invoice)}
+                            >
+                              <PaymentIcon fontSize="small" />
+                            </IconButton>
+                            <IconButton
+                              size="small"
+                              color="secondary"
+                              onClick={() => handleOpenPrint(invoice)}
+                            >
+                              <VisibilityIcon fontSize="small" />
+                            </IconButton>
+                          </Stack>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+          {totalPages > 1 && (
+            <Box sx={{ display: "flex", justifyContent: "center", mt: 3 }}>
+              <Pagination
+                count={totalPages}
+                page={page}
+                onChange={(_, value) => {
+                  setPage(value);
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }}
+                color="primary"
+                shape="rounded"
+              />
+            </Box>
+          )}
+        </>
       )}
 
-      {/* Update Payment Dialog */}
       <Dialog
         open={openPaymentDialog}
         onClose={() => setOpenPaymentDialog(false)}
@@ -742,7 +783,6 @@ const InvoicesPage = () => {
         </DialogActions>
       </Dialog>
 
-      {/* Add Service Dialog */}
       <Dialog
         open={openAddServiceDialog}
         onClose={() => setOpenAddServiceDialog(false)}
@@ -806,7 +846,6 @@ const InvoicesPage = () => {
         </DialogActions>
       </Dialog>
 
-      {/* Print / View Invoice Dialog */}
       <Dialog
         open={openPrintDialog}
         onClose={() => setOpenPrintDialog(false)}
@@ -905,7 +944,7 @@ const InvoicesPage = () => {
                       className="p-secondary"
                       color="text.secondary"
                     >
-                      Passport/ID: {currentGuest.idNumber || "N/A"}
+                      Passport Number: {currentGuest.idNumber || "N/A"}
                     </Typography>
                   </Box>
                 ) : (
@@ -960,9 +999,7 @@ const InvoicesPage = () => {
                     </TableRow>
                     {currentInvoice.usedServices?.map((item, index) => (
                       <TableRow key={index}>
-                        <TableCell sx={{ py: 2, px: 0 }}>
-                          {item.service?.name}
-                        </TableCell>
+                        <TableCell sx={{ py: 2, px: 0 }}>{item.name}</TableCell>
                         <TableCell align="center">{item.quantity}</TableCell>
                         <TableCell align="right">
                           ${item.price.toFixed(2)}
@@ -1058,7 +1095,7 @@ const InvoicesPage = () => {
         open={snackbar.open}
         autoHideDuration={4000}
         onClose={() => setSnackbar({ ...snackbar, open: false })}
-        anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
       >
         <Alert
           onClose={() => setSnackbar({ ...snackbar, open: false })}

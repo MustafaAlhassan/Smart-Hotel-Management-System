@@ -26,6 +26,7 @@ import {
   FormControl,
   InputLabel,
   Collapse,
+  Pagination,
 } from "@mui/material";
 import {
   Add as AddIcon,
@@ -48,6 +49,8 @@ import {
 import { roomTypeService } from "../../services/roomTypeService";
 import type { IRoomType } from "../../types/types";
 
+const PAGE_SIZE = 10;
+
 const RoomTypesPage = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
@@ -61,6 +64,7 @@ const RoomTypesPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filtersOpen, setFiltersOpen] = useState(true);
+  const [page, setPage] = useState(1);
 
   const [openDialog, setOpenDialog] = useState(false);
   const [viewDialog, setViewDialog] = useState(false);
@@ -137,12 +141,16 @@ const RoomTypesPage = () => {
       return a.name.localeCompare(b.name);
     });
 
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
   const hasFilters = !!searchQuery || !!amenityFilter || sortBy !== "name";
 
   const clearFilters = () => {
     setSearchQuery("");
     setAmenityFilter("");
     setSortBy("name");
+    setPage(1);
   };
 
   const handleOpenDialog = (item?: IRoomType) => {
@@ -261,7 +269,6 @@ const RoomTypesPage = () => {
       maxWidth="xl"
       sx={{ mt: { xs: 2, md: 4 }, pb: 8, px: { xs: 2, sm: 3 } }}
     >
-      {/* Header */}
       <Box
         sx={{
           display: "flex",
@@ -274,14 +281,19 @@ const RoomTypesPage = () => {
       >
         <Box>
           <Typography
+            variant="h4"
             fontWeight={800}
             letterSpacing={-0.5}
             mb={0.5}
-            sx={{ fontSize: { xs: "1.55rem", md: "2rem" } }}
+            sx={{ fontSize: { xs: "1.55rem", md: "2rem", textAlign: "left" } }}
           >
-            Room Types
+            Rooms Types
           </Typography>
-          <Typography variant="body2" color="text.secondary">
+          <Typography
+            variant="body2"
+            color="text.secondary"
+            sx={{ textAlign: "left" }}
+          >
             {isReceptionist
               ? "Browse available room types and their details."
               : "Manage room categories, pricing, and amenities."}
@@ -315,7 +327,6 @@ const RoomTypesPage = () => {
         </Alert>
       )}
 
-      {/* Filter Panel */}
       <Box
         sx={{
           mb: { xs: 3, md: 4 },
@@ -377,7 +388,10 @@ const RoomTypesPage = () => {
             <TextField
               placeholder="Search name, description, amenity…"
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setPage(1);
+              }}
               size="small"
               fullWidth={isMobile}
               sx={{ flex: "2 1 200px" }}
@@ -389,7 +403,13 @@ const RoomTypesPage = () => {
                 ),
                 endAdornment: searchQuery ? (
                   <InputAdornment position="end">
-                    <IconButton size="small" onClick={() => setSearchQuery("")}>
+                    <IconButton
+                      size="small"
+                      onClick={() => {
+                        setSearchQuery("");
+                        setPage(1);
+                      }}
+                    >
                       <ClearIcon sx={{ fontSize: 14 }} />
                     </IconButton>
                   </InputAdornment>
@@ -407,7 +427,10 @@ const RoomTypesPage = () => {
               <Select
                 value={amenityFilter}
                 label="Amenity"
-                onChange={(e) => setAmenityFilter(e.target.value)}
+                onChange={(e) => {
+                  setAmenityFilter(e.target.value);
+                  setPage(1);
+                }}
                 sx={{ borderRadius: 2, bgcolor: surface }}
               >
                 <MenuItem value="">All Amenities</MenuItem>
@@ -428,7 +451,10 @@ const RoomTypesPage = () => {
               <Select
                 value={sortBy}
                 label="Sort By"
-                onChange={(e) => setSortBy(e.target.value as any)}
+                onChange={(e) => {
+                  setSortBy(e.target.value as any);
+                  setPage(1);
+                }}
                 sx={{ borderRadius: 2, bgcolor: surface }}
               >
                 <MenuItem value="name">Name (A–Z)</MenuItem>
@@ -462,9 +488,9 @@ const RoomTypesPage = () => {
 
       <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
         {filtered.length} {filtered.length === 1 ? "type" : "types"} found
+        {totalPages > 1 && ` — page ${page} of ${totalPages}`}
       </Typography>
 
-      {/* Empty state */}
       {filtered.length === 0 ? (
         <Box
           sx={{
@@ -500,162 +526,159 @@ const RoomTypesPage = () => {
           )}
         </Box>
       ) : (
-        /* Grid */
-        <Box
-          sx={{
-            display: "grid",
-            gridTemplateColumns: {
-              xs: "1fr",
-              sm: "repeat(2, 1fr)",
-              lg: "repeat(3, 1fr)",
-              xl: "repeat(4, 1fr)",
-            },
-            gap: { xs: 2, md: 3 },
-          }}
-        >
-          {filtered.map((type) => (
-            <Box
-              key={type._id}
-              sx={{
-                borderRadius: { xs: 3, md: 4 },
-                border: `1px solid ${border}`,
-                bgcolor: surface,
-                boxShadow: isDark
-                  ? "0 4px 24px rgba(0,0,0,0.35)"
-                  : "0 2px 16px rgba(0,0,0,0.06)",
-                display: "flex",
-                flexDirection: "column",
-                overflow: "hidden",
-                transition: "transform 0.2s ease, box-shadow 0.2s ease",
-                "&:hover": {
-                  transform: { sm: "translateY(-3px)" },
-                  boxShadow: isDark
-                    ? "0 10px 36px rgba(0,0,0,0.55)"
-                    : "0 8px 32px rgba(0,0,0,0.11)",
-                },
-              }}
-            >
-              {/* Card Header */}
+        <>
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: {
+                xs: "1fr",
+                sm: "repeat(2, 1fr)",
+                lg: "repeat(3, 1fr)",
+                xl: "repeat(4, 1fr)",
+              },
+              gap: { xs: 2, md: 3 },
+            }}
+          >
+            {paginated.map((type) => (
               <Box
+                key={type._id}
                 sx={{
-                  px: { xs: 2.5, md: 3 },
-                  pt: { xs: 2.5, md: 3 },
-                  pb: 2,
-                  background: isDark
-                    ? `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.18)} 0%, ${alpha(theme.palette.primary.dark, 0.08)} 100%)`
-                    : `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.07)} 0%, ${alpha(theme.palette.primary.light, 0.03)} 100%)`,
-                  borderBottom: `1px solid ${border}`,
+                  borderRadius: { xs: 3, md: 4 },
+                  border: `1px solid ${border}`,
+                  bgcolor: surface,
+                  boxShadow: isDark
+                    ? "0 4px 24px rgba(0,0,0,0.35)"
+                    : "0 2px 16px rgba(0,0,0,0.06)",
+                  display: "flex",
+                  flexDirection: "column",
+                  overflow: "hidden",
+                  transition: "transform 0.2s ease, box-shadow 0.2s ease",
+                  "&:hover": {
+                    transform: { sm: "translateY(-3px)" },
+                    boxShadow: isDark
+                      ? "0 10px 36px rgba(0,0,0,0.55)"
+                      : "0 8px 32px rgba(0,0,0,0.11)",
+                  },
                 }}
               >
                 <Box
-                  display="flex"
-                  justifyContent="space-between"
-                  alignItems="flex-start"
-                  gap={1}
-                  mb={1.5}
-                >
-                  <Box
-                    sx={{
-                      width: 42,
-                      height: 42,
-                      flexShrink: 0,
-                      borderRadius: 2.5,
-                      bgcolor: alpha(theme.palette.primary.main, 0.12),
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
-                    }}
-                  >
-                    <HotelIcon
-                      sx={{ color: theme.palette.primary.main, fontSize: 21 }}
-                    />
-                  </Box>
-                  <Chip
-                    icon={<MoneyIcon sx={{ fontSize: "13px !important" }} />}
-                    label={`$${type.basePrice}/night`}
-                    size="small"
-                    sx={{
-                      fontWeight: 800,
-                      fontSize: "0.7rem",
-                      flexShrink: 0,
-                      bgcolor: alpha(theme.palette.success.main, 0.1),
-                      color: theme.palette.success.main,
-                      border: `1px solid ${alpha(theme.palette.success.main, 0.25)}`,
-                      "& .MuiChip-icon": { color: theme.palette.success.main },
-                    }}
-                  />
-                </Box>
-
-                <Typography
-                  fontWeight={800}
-                  letterSpacing={-0.3}
-                  lineHeight={1.25}
-                  mb={0.5}
                   sx={{
-                    fontSize: { xs: "1rem", md: "1.05rem" },
-                    wordBreak: "break-word",
+                    px: { xs: 2.5, md: 3 },
+                    pt: { xs: 2.5, md: 3 },
+                    pb: 2,
+                    background: isDark
+                      ? `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.18)} 0%, ${alpha(theme.palette.primary.dark, 0.08)} 100%)`
+                      : `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.07)} 0%, ${alpha(theme.palette.primary.light, 0.03)} 100%)`,
+                    borderBottom: `1px solid ${border}`,
                   }}
                 >
-                  {type.name}
-                </Typography>
-
-                <Stack direction="row" alignItems="center" spacing={0.5}>
-                  <PeopleIcon sx={{ fontSize: 13, color: "text.secondary" }} />
-                  <Typography
-                    variant="caption"
-                    color="text.secondary"
-                    fontWeight={600}
+                  <Box
+                    display="flex"
+                    justifyContent="space-between"
+                    alignItems="flex-start"
+                    gap={1}
+                    mb={1.5}
                   >
-                    Up to {type.capacity}{" "}
-                    {type.capacity === 1 ? "person" : "persons"}
-                  </Typography>
-                </Stack>
-              </Box>
+                    <Box
+                      sx={{
+                        width: 42,
+                        height: 42,
+                        flexShrink: 0,
+                        borderRadius: 2.5,
+                        bgcolor: alpha(theme.palette.primary.main, 0.12),
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
+                      }}
+                    >
+                      <HotelIcon
+                        sx={{ color: theme.palette.primary.main, fontSize: 21 }}
+                      />
+                    </Box>
+                    <Stack
+                      direction="row"
+                      gap={0.7}
+                      flexWrap="wrap"
+                      justifyContent="flex-end"
+                    >
+                      <Chip
+                        icon={
+                          <MoneyIcon sx={{ fontSize: "13px !important" }} />
+                        }
+                        label={`$${type.basePrice}/night`}
+                        size="small"
+                        sx={{
+                          fontWeight: 800,
+                          fontSize: "0.7rem",
+                          flexShrink: 0,
+                          bgcolor: alpha(theme.palette.success.main, 0.1),
+                          color: theme.palette.success.main,
+                          border: `1px solid ${alpha(theme.palette.success.main, 0.25)}`,
+                          "& .MuiChip-icon": {
+                            color: theme.palette.success.main,
+                          },
+                        }}
+                      />
+                      <Chip
+                        label={`${(type as any).roomCount ?? 0} ${((type as any).roomCount ?? 0) === 1 ? "Room" : "Rooms"}`}
+                        size="small"
+                        sx={{
+                          fontWeight: 700,
+                          fontSize: "0.7rem",
+                          flexShrink: 0,
+                          bgcolor:
+                            (type as any).roomCount > 0
+                              ? alpha(theme.palette.primary.main, 0.1)
+                              : alpha("#000", 0.04),
+                          color:
+                            (type as any).roomCount > 0
+                              ? theme.palette.primary.main
+                              : "text.disabled",
+                          border: `1px solid ${(type as any).roomCount > 0 ? alpha(theme.palette.primary.main, 0.25) : border}`,
+                        }}
+                      />
+                    </Stack>
+                  </Box>
 
-              {/* Card Body */}
-              <Box
-                sx={{
-                  px: { xs: 2.5, md: 3 },
-                  py: 2.5,
-                  flex: 1,
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 2,
-                }}
-              >
-                <Box>
                   <Typography
-                    variant="caption"
-                    fontWeight={700}
-                    color="text.disabled"
+                    fontWeight={800}
+                    letterSpacing={-0.3}
+                    lineHeight={1.25}
+                    mb={0.5}
                     sx={{
-                      textTransform: "uppercase",
-                      letterSpacing: "0.07em",
-                      display: "block",
-                      mb: 0.6,
-                    }}
-                  >
-                    Description
-                  </Typography>
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                    lineHeight={1.7}
-                    sx={{
-                      display: "-webkit-box",
-                      WebkitLineClamp: 3,
-                      WebkitBoxOrient: "vertical",
-                      overflow: "hidden",
+                      fontSize: { xs: "1rem", md: "1.05rem" },
                       wordBreak: "break-word",
                     }}
                   >
-                    {type.description ||
-                      "No description provided for this room type."}
+                    {type.name}
                   </Typography>
+
+                  <Stack direction="row" alignItems="center" spacing={0.5}>
+                    <PeopleIcon
+                      sx={{ fontSize: 13, color: "text.secondary" }}
+                    />
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      fontWeight={600}
+                    >
+                      Up to {type.capacity}{" "}
+                      {type.capacity === 1 ? "person" : "persons"}
+                    </Typography>
+                  </Stack>
                 </Box>
 
-                {type.amenities && type.amenities.length > 0 && (
+                <Box
+                  sx={{
+                    px: { xs: 2.5, md: 3 },
+                    py: 2.5,
+                    flex: 1,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 2,
+                  }}
+                >
                   <Box>
                     <Typography
                       variant="caption"
@@ -668,165 +691,216 @@ const RoomTypesPage = () => {
                         mb: 0.6,
                       }}
                     >
-                      Amenities
+                      Description
                     </Typography>
-                    <Stack direction="row" flexWrap="wrap" gap={0.6}>
-                      {type.amenities.slice(0, 4).map((amenity, idx) => (
-                        <Chip
-                          key={idx}
-                          label={amenity}
-                          size="small"
-                          icon={
-                            <AmenityIcon sx={{ fontSize: "11px !important" }} />
-                          }
-                          sx={{
-                            fontSize: "0.65rem",
-                            fontWeight: 600,
-                            height: 22,
-                            borderRadius: 1.5,
-                            maxWidth: "100%",
-                            bgcolor: isDark
-                              ? alpha("#fff", 0.05)
-                              : alpha(theme.palette.primary.main, 0.05),
-                            color: "text.secondary",
-                            border: `1px solid ${isDark ? alpha("#fff", 0.1) : alpha(theme.palette.primary.main, 0.15)}`,
-                            "& .MuiChip-label": {
-                              overflow: "hidden",
-                              textOverflow: "ellipsis",
-                            },
-                            "& .MuiChip-icon": {
-                              color: theme.palette.primary.main,
-                            },
-                          }}
-                        />
-                      ))}
-                      {type.amenities.length > 4 && (
-                        <Chip
-                          label={`+${type.amenities.length - 4}`}
-                          size="small"
-                          sx={{
-                            fontSize: "0.65rem",
-                            fontWeight: 600,
-                            height: 22,
-                            borderRadius: 1.5,
-                            color: "text.disabled",
-                            border: `1px solid ${border}`,
-                          }}
-                        />
-                      )}
-                    </Stack>
-                  </Box>
-                )}
-              </Box>
-
-              <Divider sx={{ opacity: 0.5 }} />
-
-              {/* Card Actions */}
-              <Box
-                sx={{
-                  px: { xs: 2.5, md: 3 },
-                  py: 2,
-                  display: "flex",
-                  gap: 1,
-                  alignItems: "center",
-                }}
-              >
-                <Button
-                  variant="outlined"
-                  size="small"
-                  startIcon={<ViewIcon sx={{ fontSize: "15px !important" }} />}
-                  onClick={() => {
-                    setViewingItem(type);
-                    setViewDialog(true);
-                  }}
-                  sx={{
-                    borderRadius: 2,
-                    textTransform: "none",
-                    fontWeight: 700,
-                    fontSize: "0.78rem",
-                    flex: 1,
-                    minWidth: 0,
-                  }}
-                >
-                  View
-                </Button>
-
-                {canEdit && (
-                  <>
-                    <Button
-                      variant="contained"
-                      size="small"
-                      startIcon={
-                        <EditIcon sx={{ fontSize: "15px !important" }} />
-                      }
-                      onClick={() => handleOpenDialog(type)}
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      lineHeight={1.7}
                       sx={{
-                        borderRadius: 2,
-                        textTransform: "none",
-                        fontWeight: 700,
-                        fontSize: "0.78rem",
-                        flex: 1,
-                        minWidth: 0,
+                        display: "-webkit-box",
+                        WebkitLineClamp: 3,
+                        WebkitBoxOrient: "vertical",
+                        overflow: "hidden",
+                        wordBreak: "break-word",
                       }}
                     >
-                      Edit
-                    </Button>
-                    <Tooltip title="Delete">
-                      <IconButton
-                        size="small"
-                        color="error"
-                        onClick={() => {
-                          setIdToDelete(type._id);
-                          setDeleteConfirmOpen(true);
-                        }}
+                      {type.description ||
+                        "No description provided for this room type."}
+                    </Typography>
+                  </Box>
+
+                  {type.amenities && type.amenities.length > 0 && (
+                    <Box>
+                      <Typography
+                        variant="caption"
+                        fontWeight={700}
+                        color="text.disabled"
                         sx={{
-                          borderRadius: 2,
-                          flexShrink: 0,
-                          border: `1px solid ${alpha(theme.palette.error.main, 0.3)}`,
-                          bgcolor: alpha(theme.palette.error.main, 0.04),
-                          "&:hover": {
-                            bgcolor: alpha(theme.palette.error.main, 0.1),
-                          },
+                          textTransform: "uppercase",
+                          letterSpacing: "0.07em",
+                          display: "block",
+                          mb: 0.6,
                         }}
                       >
-                        <DeleteIcon sx={{ fontSize: 18 }} />
-                      </IconButton>
-                    </Tooltip>
-                  </>
-                )}
+                        Amenities
+                      </Typography>
+                      <Stack direction="row" flexWrap="wrap" gap={0.6}>
+                        {type.amenities.slice(0, 4).map((amenity, idx) => (
+                          <Chip
+                            key={idx}
+                            label={amenity}
+                            size="small"
+                            icon={
+                              <AmenityIcon
+                                sx={{ fontSize: "11px !important" }}
+                              />
+                            }
+                            sx={{
+                              fontSize: "0.65rem",
+                              fontWeight: 600,
+                              height: 22,
+                              borderRadius: 1.5,
+                              maxWidth: "100%",
+                              bgcolor: isDark
+                                ? alpha("#fff", 0.05)
+                                : alpha(theme.palette.primary.main, 0.05),
+                              color: "text.secondary",
+                              border: `1px solid ${isDark ? alpha("#fff", 0.1) : alpha(theme.palette.primary.main, 0.15)}`,
+                              "& .MuiChip-label": {
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                              },
+                              "& .MuiChip-icon": {
+                                color: theme.palette.primary.main,
+                              },
+                            }}
+                          />
+                        ))}
+                        {type.amenities.length > 4 && (
+                          <Chip
+                            label={`+${type.amenities.length - 4}`}
+                            size="small"
+                            sx={{
+                              fontSize: "0.65rem",
+                              fontWeight: 600,
+                              height: 22,
+                              borderRadius: 1.5,
+                              color: "text.disabled",
+                              border: `1px solid ${border}`,
+                            }}
+                          />
+                        )}
+                      </Stack>
+                    </Box>
+                  )}
+                </Box>
 
-                {isReceptionist && (
-                  <Stack
-                    direction="row"
-                    alignItems="center"
-                    spacing={0.5}
+                <Divider sx={{ opacity: 0.5 }} />
+
+                <Box
+                  sx={{
+                    px: { xs: 2.5, md: 3 },
+                    py: 2,
+                    display: "flex",
+                    gap: 1,
+                    alignItems: "center",
+                  }}
+                >
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    startIcon={
+                      <ViewIcon sx={{ fontSize: "15px !important" }} />
+                    }
+                    onClick={() => {
+                      setViewingItem(type);
+                      setViewDialog(true);
+                    }}
                     sx={{
-                      px: 1.2,
-                      py: 0.6,
-                      borderRadius: 1.5,
-                      flexShrink: 0,
-                      bgcolor: alpha(theme.palette.info.main, 0.06),
-                      border: `1px solid ${alpha(theme.palette.info.main, 0.15)}`,
+                      borderRadius: 2,
+                      textTransform: "none",
+                      fontWeight: 700,
+                      fontSize: "0.78rem",
+                      flex: 1,
+                      minWidth: 0,
                     }}
                   >
-                    <LockIcon sx={{ fontSize: 11, color: "info.main" }} />
-                    <Typography
-                      variant="caption"
-                      color="info.main"
-                      fontWeight={700}
-                      sx={{ fontSize: "0.62rem" }}
+                    View
+                  </Button>
+
+                  {canEdit && (
+                    <>
+                      <Button
+                        variant="contained"
+                        size="small"
+                        startIcon={
+                          <EditIcon sx={{ fontSize: "15px !important" }} />
+                        }
+                        onClick={() => handleOpenDialog(type)}
+                        sx={{
+                          borderRadius: 2,
+                          textTransform: "none",
+                          fontWeight: 700,
+                          fontSize: "0.78rem",
+                          flex: 1,
+                          minWidth: 0,
+                        }}
+                      >
+                        Edit
+                      </Button>
+                      <Tooltip title="Delete">
+                        <IconButton
+                          size="small"
+                          color="error"
+                          onClick={() => {
+                            setIdToDelete(type._id);
+                            setDeleteConfirmOpen(true);
+                          }}
+                          sx={{
+                            borderRadius: 2,
+                            flexShrink: 0,
+                            border: `1px solid ${alpha(theme.palette.error.main, 0.3)}`,
+                            bgcolor: alpha(theme.palette.error.main, 0.04),
+                            "&:hover": {
+                              bgcolor: alpha(theme.palette.error.main, 0.1),
+                            },
+                          }}
+                        >
+                          <DeleteIcon sx={{ fontSize: 18 }} />
+                        </IconButton>
+                      </Tooltip>
+                    </>
+                  )}
+
+                  {isReceptionist && (
+                    <Stack
+                      direction="row"
+                      alignItems="center"
+                      spacing={0.5}
+                      sx={{
+                        px: 1.2,
+                        py: 0.6,
+                        borderRadius: 1.5,
+                        flexShrink: 0,
+                        bgcolor: alpha(theme.palette.info.main, 0.06),
+                        border: `1px solid ${alpha(theme.palette.info.main, 0.15)}`,
+                      }}
                     >
-                      View Only
-                    </Typography>
-                  </Stack>
-                )}
+                      <LockIcon sx={{ fontSize: 11, color: "info.main" }} />
+                      <Typography
+                        variant="caption"
+                        color="info.main"
+                        fontWeight={700}
+                        sx={{ fontSize: "0.62rem" }}
+                      >
+                        View Only
+                      </Typography>
+                    </Stack>
+                  )}
+                </Box>
               </Box>
+            ))}
+          </Box>
+
+          {totalPages > 1 && (
+            <Box sx={{ display: "flex", justifyContent: "center", mt: 4 }}>
+              <Pagination
+                count={totalPages}
+                page={page}
+                onChange={(_, value) => {
+                  setPage(value);
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }}
+                color="primary"
+                shape="rounded"
+                size={isMobile ? "small" : "medium"}
+              />
             </Box>
-          ))}
-        </Box>
+          )}
+        </>
       )}
 
-      {/* View Dialog */}
       <Dialog
         open={viewDialog}
         onClose={() => setViewDialog(false)}
@@ -948,6 +1022,32 @@ const RoomTypesPage = () => {
                       </Typography>
                     </Typography>
                   </Box>
+                  <Box>
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      fontWeight={700}
+                      sx={{
+                        textTransform: "uppercase",
+                        letterSpacing: "0.08em",
+                        display: "block",
+                        mb: 0.4,
+                      }}
+                    >
+                      Rooms
+                    </Typography>
+                    <Typography
+                      variant="body1"
+                      fontWeight={700}
+                      color={
+                        (viewingItem as any).roomCount > 0
+                          ? "primary.main"
+                          : "text.disabled"
+                      }
+                    >
+                      {(viewingItem as any).roomCount ?? 0}
+                    </Typography>
+                  </Box>
                 </Stack>
 
                 <Divider />
@@ -1053,7 +1153,6 @@ const RoomTypesPage = () => {
         )}
       </Dialog>
 
-      {/* Edit / Create Dialog */}
       {canEdit && (
         <>
           <Dialog
@@ -1173,7 +1272,6 @@ const RoomTypesPage = () => {
             </DialogActions>
           </Dialog>
 
-          {/* Delete Confirm */}
           <Dialog
             open={deleteConfirmOpen}
             onClose={() => setDeleteConfirmOpen(false)}

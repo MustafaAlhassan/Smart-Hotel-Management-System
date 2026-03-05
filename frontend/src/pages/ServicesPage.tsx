@@ -216,13 +216,20 @@ const ServicesPage = () => {
         <Box>
           <Typography
             variant="h4"
-            fontWeight={900}
+            fontWeight={800}
             letterSpacing={-0.5}
-            sx={{ fontSize: { xs: "1.75rem", md: "2.125rem" } }}
+            sx={{
+              fontSize: { xs: "1.75rem", md: "2.125rem", textAlign: "left" },
+            }}
           >
             Services
           </Typography>
-          <Typography variant="body2" color="text.secondary" mt={0.5}>
+          <Typography
+            variant="body2"
+            color="text.secondary"
+            mt={0.5}
+            sx={{ textAlign: "left" }}
+          >
             Manage hotel amenities and extra services
           </Typography>
         </Box>
