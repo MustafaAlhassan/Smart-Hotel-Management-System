@@ -5,6 +5,7 @@ import { GuestModel } from "../models/guestModel";
 import { InvoiceModel } from "../models/invoiceModel";
 import { ServiceModel } from "../models/serviceModel";
 import { UserRole } from "../models/userModel";
+import { UserModel } from "../models/userModel";
 import { HotelModel } from "../models/hotelModel";
 
 const addDays = (date: Date, days: number): Date => {
@@ -133,6 +134,22 @@ const buildServicesContext = async (): Promise<string> => {
 AVAILABLE HOTEL SERVICES
 ==============================
 ${lines.join("\n") || "No services available."}
+`;
+};
+
+const buildUsersContext = async (): Promise<string> => {
+  const users = await UserModel.find().select("-password");
+
+  const lines = users.map(
+    (u) =>
+      `- ${u.firstName} ${u.lastName} | Username: ${u.username} | Role: ${u.role} | Email: ${u.email} | Status: ${u.isActive ? "Active" : "Inactive"} | Joined: ${u.createdAt.toDateString()}`
+  );
+
+  return `
+==============================
+SYSTEM USERS
+==============================
+${lines.join("\n") || "No users found."}
 `;
 };
 
@@ -425,7 +442,7 @@ OPERATIONAL INSIGHTS
 const buildContextForRole = async (role: UserRole): Promise<string> => {
   switch (role) {
     case UserRole.ADMIN: {
-      const [rooms, bookings, guests, invoices, services, predictions] =
+      const [rooms, bookings, guests, invoices, services, predictions, users] =
         await Promise.all([
           buildRoomsContext(),
           buildBookingsContext(),
@@ -433,8 +450,9 @@ const buildContextForRole = async (role: UserRole): Promise<string> => {
           buildInvoicesContext(),
           buildServicesContext(),
           buildPredictiveContext(),
+          buildUsersContext(),
         ]);
-      return [rooms, bookings, guests, invoices, services, predictions].join("\n");
+      return [rooms, bookings, guests, invoices, services, predictions, users].join("\n");
     }
 
     case UserRole.MANAGER: {
@@ -495,8 +513,10 @@ RESPONSE RULES (APPLY TO ALL ROLES):
   const roleSpecific: Record<UserRole, string> = {
     [UserRole.ADMIN]: `
 ROLE: Admin
-Full access to all hotel data: rooms, bookings, guests, invoices, services, and all forecasts.
+Full access to all hotel data: rooms, bookings, guests, invoices, services, forecasts, and system users.
 Use REVENUE INTELLIGENCE, OCCUPANCY TRENDS, and OPERATIONAL INSIGHTS for prediction questions.
+Use SYSTEM USERS to answer questions about staff accounts, roles, and activity status.
+IMPORTANT: Never reveal any user's password under any circumstances.
 Provide detailed, data-driven answers with trend analysis and actionable recommendations.
 `,
     [UserRole.MANAGER]: `
