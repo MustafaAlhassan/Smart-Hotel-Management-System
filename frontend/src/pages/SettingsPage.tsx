@@ -24,6 +24,7 @@ import {
   VisibilityOff as VisibilityOffIcon,
   Edit as EditIcon,
   Save as SaveIcon,
+  Hotel as HotelIcon,
 } from "@mui/icons-material";
 import api from "../services/api";
 
@@ -34,6 +35,16 @@ interface IUserProfile {
   username: string;
   email: string;
   role: string;
+}
+
+interface IHotelInfo {
+  _id: string;
+  name: string;
+  address: string;
+  email: string;
+  phone: string;
+  taxRate: number;
+  currency: string;
 }
 
 const getRoleColor = (
@@ -74,7 +85,6 @@ const SectionCard = ({
   children: React.ReactNode;
 }) => {
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
   return (
     <Paper
@@ -153,6 +163,18 @@ const SettingsPage = () => {
   const [showNew, setShowNew] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
+  const [hotelInfo, setHotelInfo] = useState<IHotelInfo | null>(null);
+  const [hotelForm, setHotelForm] = useState({
+    name: "",
+    address: "",
+    email: "",
+    phone: "",
+    taxRate: "" as string | number,
+    currency: "",
+  });
+  const [hotelEditing, setHotelEditing] = useState(false);
+  const [hotelLoading, setHotelLoading] = useState(false);
+
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: "",
@@ -192,6 +214,22 @@ const SettingsPage = () => {
           username: user.username,
           email: user.email,
         });
+
+        if (user.role?.toUpperCase() === "ADMIN") {
+          try {
+            const hotelRes = await api.get("/hotel");
+            const hotel: IHotelInfo = hotelRes.data;
+            setHotelInfo(hotel);
+            setHotelForm({
+              name: hotel.name,
+              address: hotel.address,
+              email: hotel.email,
+              phone: hotel.phone,
+              taxRate: hotel.taxRate,
+              currency: hotel.currency,
+            });
+          } catch {}
+        }
       } catch (err: any) {
         const message = err.response?.data?.error || "Failed to load profile";
         if (
@@ -272,6 +310,49 @@ const SettingsPage = () => {
     } finally {
       setPasswordLoading(false);
     }
+  };
+
+  const handleSaveHotel = async () => {
+    if (!hotelInfo) return;
+    setHotelLoading(true);
+    try {
+      const res = await api.put("/hotel", {
+        ...hotelForm,
+        taxRate: Number(hotelForm.taxRate),
+      });
+      const updated: IHotelInfo = res.data;
+      setHotelInfo(updated);
+      setHotelForm({
+        name: updated.name,
+        address: updated.address,
+        email: updated.email,
+        phone: updated.phone,
+        taxRate: updated.taxRate,
+        currency: updated.currency,
+      });
+      showSnackbar("Hotel information updated successfully", "success");
+      setHotelEditing(false);
+    } catch (err: any) {
+      showSnackbar(
+        err.response?.data?.error || "Failed to update hotel information",
+        "error",
+      );
+    } finally {
+      setHotelLoading(false);
+    }
+  };
+
+  const handleCancelHotelEdit = () => {
+    if (!hotelInfo) return;
+    setHotelForm({
+      name: hotelInfo.name,
+      address: hotelInfo.address,
+      email: hotelInfo.email,
+      phone: hotelInfo.phone,
+      taxRate: hotelInfo.taxRate,
+      currency: hotelInfo.currency,
+    });
+    setHotelEditing(false);
   };
 
   if (loading) {
@@ -369,6 +450,145 @@ const SettingsPage = () => {
         </Paper>
       )}
 
+      {profile?.role?.toUpperCase() === "ADMIN" && hotelInfo && (
+        <SectionCard
+          icon={<HotelIcon sx={{ fontSize: 18 }} />}
+          title="Hotel Information"
+          subtitle="Update your hotel's name, contact details and billing settings"
+        >
+          <Stack spacing={3}>
+            <TextField
+              label="Hotel Name"
+              fullWidth
+              disabled={!hotelEditing}
+              value={hotelForm.name}
+              InputLabelProps={{ shrink: true }}
+              onChange={(e) =>
+                setHotelForm({ ...hotelForm, name: e.target.value })
+              }
+            />
+
+            <TextField
+              label="Address"
+              fullWidth
+              disabled={!hotelEditing}
+              value={hotelForm.address}
+              InputLabelProps={{ shrink: true }}
+              onChange={(e) =>
+                setHotelForm({ ...hotelForm, address: e.target.value })
+              }
+            />
+
+            <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+              <TextField
+                label="Email"
+                type="email"
+                fullWidth
+                disabled={!hotelEditing}
+                value={hotelForm.email}
+                InputLabelProps={{ shrink: true }}
+                onChange={(e) =>
+                  setHotelForm({ ...hotelForm, email: e.target.value })
+                }
+              />
+              <TextField
+                label="Phone"
+                fullWidth
+                disabled={!hotelEditing}
+                value={hotelForm.phone}
+                InputLabelProps={{ shrink: true }}
+                onChange={(e) =>
+                  setHotelForm({ ...hotelForm, phone: e.target.value })
+                }
+              />
+            </Stack>
+
+            <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+              <TextField
+                label="Tax Rate"
+                type="number"
+                fullWidth
+                disabled={!hotelEditing}
+                value={hotelForm.taxRate}
+                InputLabelProps={{ shrink: true }}
+                onChange={(e) =>
+                  setHotelForm({ ...hotelForm, taxRate: e.target.value })
+                }
+                inputProps={{ step: 0.01, min: 0, max: 1 }}
+                helperText="e.g. 0.05 for 5%"
+              />
+              <TextField
+                label="Currency Symbol"
+                fullWidth
+                disabled={!hotelEditing}
+                value={hotelForm.currency}
+                InputLabelProps={{ shrink: true }}
+                onChange={(e) =>
+                  setHotelForm({ ...hotelForm, currency: e.target.value })
+                }
+                helperText="e.g. $, €, £"
+              />
+            </Stack>
+
+            <Box
+              display="flex"
+              justifyContent="flex-end"
+              gap={1.5}
+              flexDirection={{ xs: "column", sm: "row" }}
+            >
+              {!hotelEditing ? (
+                <Button
+                  variant="outlined"
+                  startIcon={<EditIcon />}
+                  onClick={() => setHotelEditing(true)}
+                  sx={{
+                    borderRadius: 2,
+                    fontWeight: 700,
+                    textTransform: "none",
+                    width: { xs: "100%", sm: "auto" },
+                  }}
+                >
+                  Edit Hotel Info
+                </Button>
+              ) : (
+                <>
+                  <Button
+                    onClick={handleCancelHotelEdit}
+                    color="inherit"
+                    sx={{
+                      fontWeight: 600,
+                      textTransform: "none",
+                      width: { xs: "100%", sm: "auto" },
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="contained"
+                    startIcon={hotelLoading ? null : <SaveIcon />}
+                    onClick={handleSaveHotel}
+                    disabled={hotelLoading}
+                    sx={{
+                      borderRadius: 2,
+                      fontWeight: 700,
+                      textTransform: "none",
+                      px: 3,
+                      width: { xs: "100%", sm: "auto" },
+                    }}
+                  >
+                    {hotelLoading ? (
+                      <CircularProgress size={18} color="inherit" />
+                    ) : (
+                      "Save Changes"
+                    )}
+                  </Button>
+                </>
+              )}
+            </Box>
+          </Stack>
+        </SectionCard>
+      )}
+
       {profile?.role?.toUpperCase() === "ADMIN" && (
         <SectionCard
           icon={<PersonIcon sx={{ fontSize: 18 }} />}
@@ -382,6 +602,7 @@ const SettingsPage = () => {
                 fullWidth
                 disabled={!profileEditing}
                 value={profileForm.firstName}
+                InputLabelProps={{ shrink: true }}
                 onChange={(e) =>
                   setProfileForm({ ...profileForm, firstName: e.target.value })
                 }
@@ -391,6 +612,7 @@ const SettingsPage = () => {
                 fullWidth
                 disabled={!profileEditing}
                 value={profileForm.lastName}
+                InputLabelProps={{ shrink: true }}
                 onChange={(e) =>
                   setProfileForm({ ...profileForm, lastName: e.target.value })
                 }
@@ -401,6 +623,7 @@ const SettingsPage = () => {
               fullWidth
               disabled={!profileEditing}
               value={profileForm.username}
+              InputLabelProps={{ shrink: true }}
               onChange={(e) =>
                 setProfileForm({ ...profileForm, username: e.target.value })
               }
@@ -411,6 +634,7 @@ const SettingsPage = () => {
               fullWidth
               disabled={!profileEditing}
               value={profileForm.email}
+              InputLabelProps={{ shrink: true }}
               onChange={(e) =>
                 setProfileForm({ ...profileForm, email: e.target.value })
               }
@@ -615,7 +839,7 @@ const SettingsPage = () => {
         open={snackbar.open}
         autoHideDuration={4000}
         onClose={() => setSnackbar({ ...snackbar, open: false })}
-        anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
       >
         <Alert
           onClose={() => setSnackbar({ ...snackbar, open: false })}
