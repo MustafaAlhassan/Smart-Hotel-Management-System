@@ -22,6 +22,8 @@ import RoomsPage from "./pages/RoomsManagement/RoomsPage";
 import RoomTypesPage from "./pages/RoomsManagement/RoomTypePage";
 import GuestsPage from "./pages/GuestsPage";
 import ServicesPage from "./pages/ServicesPage";
+import { HotelProvider } from "./context/HotelContext";
+
 const sidebarWidth = 290;
 
 function App() {
@@ -38,34 +40,36 @@ function App() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route element={<ProtectedRoute />}>
-            <Route
-              element={
-                <Layout setMyMode={setMyMode} sidebarWidth={sidebarWidth} />
-              }
-            >
-              <Route path="/dashboard" element={<DashboardPage />} />
-              <Route path="/rooms" element={<RoomsPage />} />
-              <Route path="/room-types" element={<RoomTypesPage />} />
+      <HotelProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route element={<ProtectedRoute />}>
               <Route
-                path="/all-reservations"
-                element={<AllReservationsPage />}
-              />
-              <Route path="/booking" element={<BookingPage />} />
-              <Route path="/guests" element={<GuestsPage />} />
-              <Route path="/services" element={<ServicesPage />} />
-              <Route path="/invoices" element={<InvoicesPage />} />
-              <Route path="/users" element={<UsersPage />} />
-              <Route path="/settings" element={<SettingsPage />} />
+                element={
+                  <Layout setMyMode={setMyMode} sidebarWidth={sidebarWidth} />
+                }
+              >
+                <Route path="/dashboard" element={<DashboardPage />} />
+                <Route path="/rooms" element={<RoomsPage />} />
+                <Route path="/room-types" element={<RoomTypesPage />} />
+                <Route
+                  path="/all-reservations"
+                  element={<AllReservationsPage />}
+                />
+                <Route path="/booking" element={<BookingPage />} />
+                <Route path="/guests" element={<GuestsPage />} />
+                <Route path="/services" element={<ServicesPage />} />
+                <Route path="/invoices" element={<InvoicesPage />} />
+                <Route path="/users" element={<UsersPage />} />
+                <Route path="/settings" element={<SettingsPage />} />
+              </Route>
             </Route>
-          </Route>
-          <Route path="*" element={<NotFoundPage />} />
-        </Routes>
-      </BrowserRouter>
+            <Route path="*" element={<NotFoundPage />} />
+          </Routes>
+        </BrowserRouter>
+      </HotelProvider>
     </ThemeProvider>
   );
 }

@@ -52,7 +52,6 @@ interface IUser {
   role: string;
 }
 
-// Must match backend UserRole enum exactly (Pascal case based on stored "Admin")
 const ASSIGNABLE_ROLES = ["Manager", "Receptionist", "Housekeeping"];
 
 const getRoleColor = (
@@ -86,7 +85,6 @@ const UsersPage = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
-  // Current logged-in user's role from localStorage
   const currentRole = localStorage.getItem("role") || "";
   const isAdmin = currentRole?.toUpperCase() === "ADMIN";
 
@@ -273,7 +271,6 @@ const UsersPage = () => {
 
   return (
     <Box sx={{ width: "100%", p: { xs: 2, md: 4 }, boxSizing: "border-box" }}>
-      {/* ── Header ──────────────────────────────────────────────────────── */}
       <Box
         sx={{
           display: "flex",
@@ -304,7 +301,6 @@ const UsersPage = () => {
             Manage staff accounts and access roles
           </Typography>
         </Box>
-        {/* Both ADMIN and MANAGER can create users */}
         <Button
           variant="contained"
           startIcon={<AddIcon />}
@@ -323,7 +319,6 @@ const UsersPage = () => {
         </Button>
       </Box>
 
-      {/* ── Mobile Card View ────────────────────────────────────────────── */}
       {isMobile ? (
         <Box>
           {users.length === 0 ? (
@@ -419,7 +414,6 @@ const UsersPage = () => {
           )}
         </Box>
       ) : (
-        /* ── Desktop Table View ───────────────────────────────────────── */
         <TableContainer
           component={Paper}
           elevation={0}
@@ -531,7 +525,6 @@ const UsersPage = () => {
         </TableContainer>
       )}
 
-      {/* ── Context Menu ────────────────────────────────────────────────── */}
       <Menu
         anchorEl={anchorEl}
         open={Boolean(anchorEl)}
@@ -544,7 +537,6 @@ const UsersPage = () => {
           },
         }}
       >
-        {/* ADMIN + MANAGER: edit basic details */}
         <MenuItem onClick={openEditDialog} sx={{ gap: 1.5, py: 1.2 }}>
           <EditIcon fontSize="small" color="primary" />
           <Typography variant="body2" fontWeight={600}>
@@ -552,7 +544,6 @@ const UsersPage = () => {
           </Typography>
         </MenuItem>
 
-        {/* ADMIN only: change role */}
         {isAdmin && (
           <MenuItem
             onClick={() => {
@@ -569,7 +560,6 @@ const UsersPage = () => {
           </MenuItem>
         )}
 
-        {/* ADMIN only: reset password */}
         {isAdmin && (
           <MenuItem
             onClick={() => {
@@ -586,7 +576,6 @@ const UsersPage = () => {
           </MenuItem>
         )}
 
-        {/* ADMIN only: delete */}
         {isAdmin && [
           <Divider key="div" />,
           <MenuItem
@@ -605,7 +594,6 @@ const UsersPage = () => {
         ]}
       </Menu>
 
-      {/* ── Create / Edit Dialog ────────────────────────────────────────── */}
       <Dialog
         open={openUserDialog}
         onClose={() => setOpenUserDialog(false)}
@@ -706,7 +694,6 @@ const UsersPage = () => {
         </DialogActions>
       </Dialog>
 
-      {/* ── Change Role Dialog (ADMIN only) ─────────────────────────────── */}
       <Dialog
         open={openRoleDialog}
         onClose={() => setOpenRoleDialog(false)}
@@ -758,7 +745,6 @@ const UsersPage = () => {
         </DialogActions>
       </Dialog>
 
-      {/* ── Reset Password Dialog (ADMIN only) ──────────────────────────── */}
       <Dialog
         open={openPasswordDialog}
         onClose={() => setOpenPasswordDialog(false)}
@@ -806,7 +792,6 @@ const UsersPage = () => {
         </DialogActions>
       </Dialog>
 
-      {/* ── Delete Confirmation Dialog (ADMIN only) ──────────────────────── */}
       <Dialog
         open={openDeleteDialog}
         onClose={() => setOpenDeleteDialog(false)}
