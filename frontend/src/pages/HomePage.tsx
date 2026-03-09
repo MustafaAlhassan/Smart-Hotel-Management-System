@@ -14,6 +14,8 @@ import img7 from "../assets/7.jpg";
 import img8 from "../assets/8.jpg";
 import img9 from "../assets/9.jpg";
 import img10 from "../assets/10.jpg";
+import Brightness4Icon from "@mui/icons-material/Brightness4";
+import Brightness7Icon from "@mui/icons-material/Brightness7";
 
 const DARK = {
   bg0: "#080F1C",
@@ -602,7 +604,11 @@ export default function HomePage() {
               aria-label="Toggle theme"
               title={isDark ? "Switch to light mode" : "Switch to dark mode"}
             >
-              {isDark ? "☀️" : "🌙"}
+              {isDark ? (
+                <Brightness7Icon sx={{ fontSize: 20, color: "orange" }} />
+              ) : (
+                <Brightness4Icon sx={{ fontSize: 20 }} />
+              )}
             </button>
           </li>
         </ul>
@@ -649,7 +655,11 @@ export default function HomePage() {
             onClick={toggleTheme}
             aria-label="Toggle theme"
           >
-            {isDark ? "☀️" : "🌙"}
+            {isDark ? (
+              <Brightness7Icon sx={{ fontSize: 20, color: "orange" }} />
+            ) : (
+              <Brightness4Icon sx={{ fontSize: 20 }} />
+            )}
           </button>
         </div>
       )}

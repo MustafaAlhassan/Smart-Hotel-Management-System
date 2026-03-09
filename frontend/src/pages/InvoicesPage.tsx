@@ -896,7 +896,7 @@ const InvoicesPage = () => {
                     {new Date(currentInvoice.issueDate).toLocaleDateString()}
                   </Typography>
                 </Box>
-                <Box textAlign="right">
+                <Box textAlign="left">
                   <Typography variant="h6" fontWeight={800}>
                     {hotel?.name ?? "AMI Hotel"}
                   </Typography>
@@ -919,7 +919,7 @@ const InvoicesPage = () => {
                     className="p-secondary"
                     color="text.secondary"
                   >
-                    {hotel?.address ?? ""}
+                    Address: {hotel?.address ?? ""}
                   </Typography>
                 </Box>
               </Box>

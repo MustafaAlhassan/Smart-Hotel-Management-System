@@ -170,7 +170,7 @@ const LoginPage = () => {
           <Avatar
             src={logo}
             variant="square"
-            sx={{ mb: "50px", width: "100px", height: "100px" }}
+            sx={{ mb: "30px", width: "100px", height: "100px", mt: "30px" }}
           ></Avatar>
           <Typography
             variant="h4"
@@ -234,7 +234,7 @@ const LoginPage = () => {
               color="primary"
               type="submit"
               size="large"
-              sx={{ mt: "10px" }}
+              sx={{ mt: "10px", mb: "40px" }}
             >
               Log In
             </Button>

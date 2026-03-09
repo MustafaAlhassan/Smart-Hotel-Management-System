@@ -25,6 +25,8 @@ import {
   Edit as EditIcon,
   Save as SaveIcon,
   Hotel as HotelIcon,
+  Email as EmailIcon,
+  Badge as BadgeIcon,
 } from "@mui/icons-material";
 import api from "../services/api";
 
@@ -123,10 +125,20 @@ const SectionCard = ({
           {icon}
         </Box>
         <Box>
-          <Typography variant="subtitle1" fontWeight={800} lineHeight={1.2}>
+          <Typography
+            variant="subtitle1"
+            fontWeight={800}
+            lineHeight={1.2}
+            textAlign="left"
+          >
             {title}
           </Typography>
-          <Typography variant="caption" color="text.secondary">
+          <Typography
+            variant="caption"
+            color="text.secondary"
+            textAlign="left"
+            display="block"
+          >
             {subtitle}
           </Typography>
         </Box>
@@ -395,11 +407,17 @@ const SettingsPage = () => {
             variant="h4"
             fontWeight={900}
             letterSpacing={-0.5}
+            textAlign="left"
             sx={{ fontSize: { xs: "1.75rem", md: "2.125rem" } }}
           >
             Settings
           </Typography>
-          <Typography variant="body2" color="text.secondary" mt={0.5}>
+          <Typography
+            variant="body2"
+            color="text.secondary"
+            mt={0.5}
+            textAlign="left"
+          >
             Manage your account profile and security
           </Typography>
         </Box>
@@ -411,41 +429,134 @@ const SettingsPage = () => {
           sx={{
             borderRadius: 3,
             border: `1px solid ${theme.palette.divider}`,
-            p: { xs: 2.5, md: 3 },
             mb: 3,
-            display: "flex",
-            flexDirection: { xs: "column", sm: "row" },
-            alignItems: { xs: "flex-start", sm: "center" },
-            gap: 2.5,
+            overflow: "hidden",
           }}
         >
-          <Avatar
+          <Box
             sx={{
-              bgcolor: avatarBg,
-              width: { xs: 56, md: 68 },
-              height: { xs: 56, md: 68 },
-              fontSize: { xs: "1.3rem", md: "1.6rem" },
-              fontWeight: 800,
-              flexShrink: 0,
+              height: 80,
+              background: `linear-gradient(135deg, ${theme.palette.primary.dark} 0%, ${theme.palette.primary.main} 60%, ${theme.palette.primary.light} 100%)`,
             }}
-          >
-            {initials}
-          </Avatar>
-          <Box flex={1}>
-            <Box display="flex" alignItems="center" gap={1.5} flexWrap="wrap">
-              <Typography variant="h6" fontWeight={800}>
-                {profile.firstName} {profile.lastName}
-              </Typography>
-              <Chip
-                label={profile.role}
-                size="small"
-                color={getRoleColor(profile.role)}
-                sx={{ fontWeight: 700, borderRadius: 1.5, fontSize: "0.7rem" }}
-              />
+          />
+          <Box sx={{ px: { xs: 3, md: 4 }, pb: 3 }}>
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: { xs: "column", sm: "row" },
+                alignItems: { xs: "flex-start", sm: "flex-end" },
+                gap: { xs: 1.5, sm: 2.5 },
+                mt: "-36px",
+                mb: 2.5,
+              }}
+            >
+              <Avatar
+                sx={{
+                  bgcolor: avatarBg,
+                  width: { xs: 72, md: 84 },
+                  height: { xs: 72, md: 84 },
+                  fontSize: { xs: "1.6rem", md: "1.9rem" },
+                  fontWeight: 800,
+                  flexShrink: 0,
+                  border: `4px solid ${theme.palette.background.paper}`,
+                  boxShadow: theme.shadows[4],
+                }}
+              >
+                {initials}
+              </Avatar>
+              <Box sx={{ pb: { sm: 0.5 } }}>
+                <Box
+                  display="flex"
+                  alignItems="center"
+                  gap={1.5}
+                  flexWrap="wrap"
+                >
+                  <Typography variant="h6" fontWeight={800} textAlign="left">
+                    {profile.firstName} {profile.lastName}
+                  </Typography>
+                  <Chip
+                    label={profile.role}
+                    size="small"
+                    color={getRoleColor(profile.role)}
+                    sx={{
+                      fontWeight: 700,
+                      borderRadius: 1.5,
+                      fontSize: "0.7rem",
+                    }}
+                  />
+                </Box>
+              </Box>
             </Box>
-            <Typography variant="body2" color="text.secondary" mt={0.3}>
-              @{profile.username} · {profile.email}
-            </Typography>
+
+            <Divider sx={{ mb: 2.5 }} />
+
+            <Stack
+              direction={{ xs: "column", sm: "row" }}
+              spacing={{ xs: 1.5, sm: 3 }}
+              flexWrap="wrap"
+            >
+              <Box display="flex" alignItems="center" gap={1}>
+                <Box
+                  sx={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: 1.5,
+                    bgcolor: theme.palette.action.selected,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexShrink: 0,
+                  }}
+                >
+                  <BadgeIcon sx={{ fontSize: 16, color: "text.secondary" }} />
+                </Box>
+                <Box>
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    display="block"
+                    lineHeight={1.2}
+                    textAlign="left"
+                  >
+                    Username
+                  </Typography>
+                  <Typography variant="body2" fontWeight={600} textAlign="left">
+                    @{profile.username}
+                  </Typography>
+                </Box>
+              </Box>
+
+              <Box display="flex" alignItems="center" gap={1}>
+                <Box
+                  sx={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: 1.5,
+                    bgcolor: theme.palette.action.selected,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexShrink: 0,
+                  }}
+                >
+                  <EmailIcon sx={{ fontSize: 16, color: "text.secondary" }} />
+                </Box>
+                <Box>
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    display="block"
+                    lineHeight={1.2}
+                    textAlign="left"
+                  >
+                    Email
+                  </Typography>
+                  <Typography variant="body2" fontWeight={600} textAlign="left">
+                    {profile.email}
+                  </Typography>
+                </Box>
+              </Box>
+            </Stack>
           </Box>
         </Paper>
       )}
@@ -458,6 +569,7 @@ const SettingsPage = () => {
         >
           <Stack spacing={3}>
             <TextField
+              sx={{ display: "block", textAlign: "left" }}
               label="Hotel Name"
               fullWidth
               disabled={!hotelEditing}

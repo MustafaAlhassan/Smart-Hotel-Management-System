@@ -41,6 +41,7 @@ import {
   MiscellaneousServices,
 } from "@mui/icons-material";
 import api from "../services/api";
+import { useHotel } from "../context/HotelContext";
 
 export enum ServiceCategory {
   FOOD_BEVERAGE = "Food & Beverage",
@@ -70,6 +71,9 @@ const initialFormState = {
 const ServicesPage = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+  const { hotel } = useHotel();
+
+  const currency = hotel?.currency ?? "$";
 
   const [services, setServices] = useState<IService[]>([]);
   const [loading, setLoading] = useState(true);
@@ -201,7 +205,6 @@ const ServicesPage = () => {
 
   return (
     <Box sx={{ width: "100%", p: { xs: 2, md: 4 }, boxSizing: "border-box" }}>
-      {/* Header */}
       <Box
         sx={{
           display: "flex",
@@ -251,7 +254,6 @@ const ServicesPage = () => {
         </Button>
       </Box>
 
-      {/* Mobile Card View */}
       {isMobile ? (
         <Box>
           {services.length === 0 ? (
@@ -316,7 +318,8 @@ const ServicesPage = () => {
                         fontWeight={800}
                         color="success.main"
                       >
-                        ${service.price.toFixed(2)}
+                        {currency}
+                        {service.price.toFixed(2)}
                       </Typography>
                     </Box>
                     <Box display="flex" alignItems="center" gap={1}>
@@ -348,7 +351,6 @@ const ServicesPage = () => {
           )}
         </Box>
       ) : (
-        /* Desktop Table View */
         <TableContainer
           component={Paper}
           elevation={0}
@@ -426,7 +428,8 @@ const ServicesPage = () => {
                         fontWeight={700}
                         color="success.main"
                       >
-                        ${service.price.toFixed(2)}
+                        {currency}
+                        {service.price.toFixed(2)}
                       </Typography>
                     </TableCell>
                     <TableCell>
@@ -485,7 +488,6 @@ const ServicesPage = () => {
         </TableContainer>
       )}
 
-      {/* Add / Edit Dialog */}
       <Dialog
         open={openForm}
         onClose={() => setOpenForm(false)}
@@ -509,7 +511,7 @@ const ServicesPage = () => {
             />
             <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
               <TextField
-                label="Price ($)"
+                label={`Price (${currency})`}
                 type="number"
                 fullWidth
                 required
@@ -582,7 +584,6 @@ const ServicesPage = () => {
         </DialogActions>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
       <Dialog
         open={openDelete}
         onClose={() => setOpenDelete(false)}
