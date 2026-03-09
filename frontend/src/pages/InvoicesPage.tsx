@@ -36,7 +36,6 @@ import {
   Visibility as VisibilityIcon,
   AddCircleOutline as AddCircleOutlineIcon,
   CalendarToday as CalendarTodayIcon,
-  AttachMoney as AttachMoneyIcon,
 } from "@mui/icons-material";
 import api from "../services/api";
 import { useHotel } from "../context/HotelContext";
@@ -419,7 +418,12 @@ const InvoicesPage = () => {
           >
             Invoices
           </Typography>
-          <Typography variant="body2" color="text.secondary" mt={0.5}>
+          <Typography
+            variant="body2"
+            color="text.secondary"
+            mt={0.5}
+            textAlign={"left"}
+          >
             Manage guest billing and payments
           </Typography>
         </Box>
@@ -444,80 +448,129 @@ const InvoicesPage = () => {
                 return (
                   <Card
                     key={invoice._id}
-                    sx={{ mb: 2, borderRadius: "12px", boxShadow: 2 }}
+                    sx={{
+                      mb: 2,
+                      borderRadius: "16px",
+                      boxShadow: "0 2px 12px rgba(0,0,0,0.18)",
+                      overflow: "hidden",
+                      border: `1px solid ${theme.palette.divider}`,
+                    }}
                   >
-                    <CardContent>
-                      <Box
-                        display="flex"
-                        justifyContent="space-between"
-                        alignItems="center"
-                        mb={1}
-                      >
-                        {isGuestLoading ? (
-                          <Skeleton variant="text" width={140} height={28} />
-                        ) : (
-                          <Typography variant="h6" fontWeight={700}>
-                            {guest
-                              ? `${guest.firstName} ${guest.lastName}`
-                              : "Unknown Guest"}
-                          </Typography>
-                        )}
-                        <Chip
-                          label={invoice.paymentStatus}
-                          size="small"
-                          color={getStatusChipColor(invoice.paymentStatus)}
-                          sx={{ fontWeight: 700, borderRadius: 1.5 }}
+                    <Box
+                      sx={{
+                        px: 2.5,
+                        py: 1.5,
+                        background: `linear-gradient(135deg, ${theme.palette.primary.dark} 0%, ${theme.palette.primary.main} 100%)`,
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                      }}
+                    >
+                      {isGuestLoading ? (
+                        <Skeleton
+                          variant="text"
+                          width={140}
+                          height={24}
+                          sx={{ bgcolor: "rgba(255,255,255,0.2)" }}
                         />
-                      </Box>
-                      <Divider sx={{ mb: 2 }} />
-                      <Stack spacing={1.5}>
-                        <Box display="flex" alignItems="center" gap={1}>
+                      ) : (
+                        <Typography
+                          variant="subtitle1"
+                          fontWeight={700}
+                          color="#fff"
+                        >
+                          {guest
+                            ? `${guest.firstName} ${guest.lastName}`
+                            : "Unknown Guest"}
+                        </Typography>
+                      )}
+                      <Chip
+                        label={invoice.paymentStatus}
+                        size="small"
+                        color={getStatusChipColor(invoice.paymentStatus)}
+                        sx={{ fontWeight: 700, borderRadius: 1.5 }}
+                      />
+                    </Box>
+
+                    <CardContent sx={{ pt: 2, pb: "12px !important" }}>
+                      <Stack spacing={1.2}>
+                        <Box
+                          display="flex"
+                          justifyContent="space-between"
+                          alignItems="center"
+                        >
                           <Typography
                             variant="caption"
                             color="text.secondary"
                             fontWeight={600}
-                            sx={{ minWidth: 80 }}
                           >
-                            Invoice ID
+                            INVOICE ID
                           </Typography>
-                          <Typography variant="body2" fontWeight={700}>
+                          <Typography
+                            variant="body2"
+                            fontWeight={700}
+                            letterSpacing={0.5}
+                          >
                             {invoice._id.slice(-8).toUpperCase()}
                           </Typography>
                         </Box>
-                        <Box display="flex" alignItems="center" gap={1}>
-                          <CalendarTodayIcon
-                            fontSize="small"
-                            sx={{ opacity: 0.6, fontSize: 16 }}
-                          />
+                        <Box
+                          display="flex"
+                          justifyContent="space-between"
+                          alignItems="center"
+                        >
+                          <Box display="flex" alignItems="center" gap={0.8}>
+                            <CalendarTodayIcon
+                              sx={{ fontSize: 14, opacity: 0.55 }}
+                            />
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                              fontWeight={600}
+                            >
+                              DATE
+                            </Typography>
+                          </Box>
                           <Typography variant="body2" color="text.secondary">
                             {new Date(invoice.issueDate).toLocaleDateString()}
                           </Typography>
                         </Box>
-                        <Box display="flex" alignItems="center" gap={1}>
-                          <AttachMoneyIcon
-                            fontSize="small"
-                            sx={{ opacity: 0.6, fontSize: 16 }}
-                          />
+                        <Divider />
+                        <Box
+                          display="flex"
+                          justifyContent="space-between"
+                          alignItems="center"
+                        >
                           <Typography
-                            variant="body2"
-                            fontWeight={800}
+                            variant="caption"
+                            color="text.secondary"
+                            fontWeight={600}
+                          >
+                            TOTAL
+                          </Typography>
+                          <Typography
+                            variant="h6"
+                            fontWeight={900}
                             color="success.main"
+                            lineHeight={1}
                           >
                             {currency}
                             {invoice.totalAmountDue.toFixed(2)}
                           </Typography>
                         </Box>
                       </Stack>
-                      <Divider sx={{ my: 2 }} />
+
                       <Stack
                         direction="row"
                         spacing={1}
                         justifyContent="flex-end"
+                        mt={1.5}
                       >
                         <IconButton
                           size="small"
                           color="success"
                           onClick={() => handleOpenAddService(invoice)}
+                          sx={{ bgcolor: "action.hover", borderRadius: "8px" }}
                         >
                           <AddCircleOutlineIcon fontSize="small" />
                         </IconButton>
@@ -525,6 +578,7 @@ const InvoicesPage = () => {
                           size="small"
                           color="primary"
                           onClick={() => handleOpenPayment(invoice)}
+                          sx={{ bgcolor: "action.hover", borderRadius: "8px" }}
                         >
                           <PaymentIcon fontSize="small" />
                         </IconButton>
@@ -532,6 +586,7 @@ const InvoicesPage = () => {
                           size="small"
                           color="secondary"
                           onClick={() => handleOpenPrint(invoice)}
+                          sx={{ bgcolor: "action.hover", borderRadius: "8px" }}
                         >
                           <VisibilityIcon fontSize="small" />
                         </IconButton>
@@ -858,6 +913,7 @@ const InvoicesPage = () => {
         onClose={() => setOpenPrintDialog(false)}
         maxWidth="md"
         fullWidth
+        fullScreen={isMobile}
         PaperProps={{
           sx: {
             borderRadius: 3,
@@ -871,24 +927,36 @@ const InvoicesPage = () => {
           },
         }}
       >
-        <DialogContent sx={{ p: { xs: 3, md: 6 } }}>
+        <DialogContent sx={{ p: { xs: 2, sm: 3, md: 6 } }}>
           {currentInvoice && (
             <Box id="invoice-print-area">
-              <Box display="flex" justifyContent="space-between" mb={6}>
+              <Box
+                display="flex"
+                flexDirection={{ xs: "column", sm: "row" }}
+                justifyContent="space-between"
+                alignItems={{ xs: "flex-start", sm: "flex-start" }}
+                gap={2}
+                mb={{ xs: 3, md: 6 }}
+              >
                 <Box>
-                  <Typography variant="h3" fontWeight={900} letterSpacing={-1}>
+                  <Typography
+                    fontWeight={900}
+                    letterSpacing={-1}
+                    sx={{ fontSize: { xs: "1.75rem", md: "3rem" } }}
+                  >
                     INVOICE
                   </Typography>
                   <Typography
-                    variant="body1"
+                    variant="body2"
                     className="p-secondary"
                     color="text.secondary"
-                    mt={1}
+                    mt={0.5}
+                    sx={{ wordBreak: "break-all" }}
                   >
-                    ID: {currentInvoice._id.toUpperCase()}
+                    ID: {currentInvoice._id.slice(-12).toUpperCase()}
                   </Typography>
                   <Typography
-                    variant="body1"
+                    variant="body2"
                     className="p-secondary"
                     color="text.secondary"
                   >
@@ -896,7 +964,7 @@ const InvoicesPage = () => {
                     {new Date(currentInvoice.issueDate).toLocaleDateString()}
                   </Typography>
                 </Box>
-                <Box textAlign="left">
+                <Box textAlign={{ xs: "left", sm: "right" }}>
                   <Typography variant="h6" fontWeight={800}>
                     {hotel?.name ?? "AMI Hotel"}
                   </Typography>
@@ -919,7 +987,7 @@ const InvoicesPage = () => {
                     className="p-secondary"
                     color="text.secondary"
                   >
-                    Address: {hotel?.address ?? ""}
+                    {hotel?.address ?? ""}
                   </Typography>
                 </Box>
               </Box>
@@ -975,8 +1043,8 @@ const InvoicesPage = () => {
                 )}
               </Box>
 
-              <TableContainer sx={{ mb: 4 }}>
-                <Table size="small">
+              <TableContainer sx={{ mb: 4, overflowX: "auto" }}>
+                <Table size="small" sx={{ minWidth: 380 }}>
                   <TableHead>
                     <TableRow
                       className="p-thead"
