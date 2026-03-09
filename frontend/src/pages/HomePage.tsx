@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useHotel } from "../context/HotelContext";
 
 import logoSrc from "../assets/Logo.png";
 import hotelSrc from "../assets/Hotel.jpg";
@@ -121,7 +122,7 @@ const rooms = [
     name: "Superior Classic",
     img: img8,
     price: "180",
-    desc: "45 sqm sanctuaries balancing comfort and sophistication with signature AMI touches.",
+    desc: "45 sqm sanctuaries balancing comfort and sophistication with signature touches.",
     amenities: ["☕ Nespresso", "🛁 Deep Bath", "🎵 Sound"],
   },
 ];
@@ -202,6 +203,8 @@ const navLinks: [string, string][] = [
 ];
 
 export default function HomePage() {
+  const { hotel } = useHotel();
+
   const [isDark, setIsDark] = useState<boolean>(() => {
     const saved = localStorage.getItem("currentMode");
     if (saved) return saved === "dark";
@@ -569,12 +572,14 @@ export default function HomePage() {
           <img
             className="nav-logo-img"
             src={logoSrc}
-            alt="AMI Hotel"
+            alt={hotel?.name ?? "AMI Hotel"}
             onError={(e) => {
               (e.currentTarget as HTMLImageElement).style.display = "none";
             }}
           />
-          <span className="nav-name">AMI HOTEL</span>
+          <span className="nav-name">
+            {(hotel?.name ?? "AMI Hotel").toUpperCase()}
+          </span>
         </a>
         <ul className="nav-links">
           {navLinks.map(([label, id]) => (
@@ -665,7 +670,8 @@ export default function HomePage() {
             Elegance
           </h1>
           <p className="hero-sub">
-            Experience the pinnacle of hospitality at AMI Hotel
+            Experience the pinnacle of hospitality at{" "}
+            {hotel?.name ?? "AMI Hotel"}
           </p>
           <div className="hero-btns">
             <button className="btn-pri" onClick={() => scrollTo("rooms")}>
@@ -699,7 +705,11 @@ export default function HomePage() {
       <section className="sec" id="about" style={{ background: C.bg1 }}>
         <div className="about-grid">
           <div className="about-img-wrap">
-            <img className="about-img" src={img9} alt="AMI Hotel Interior" />
+            <img
+              className="about-img"
+              src={img9}
+              alt={`${hotel?.name ?? "AMI Hotel"} Interior`}
+            />
             <div className="about-badge">
               <span className="about-badge-n">12</span>
               <span className="about-badge-t">Years of Excellence</span>
@@ -714,9 +724,10 @@ export default function HomePage() {
             </h2>
             <div className="divider" />
             <p className="sec-p">
-              Nestled in the heart of Sulaymaniyah, AMI Hotel has been the
-              definitive address for discerning travelers since 2026. We blend
-              Kurdish hospitality with international luxury standards.
+              Nestled in the heart of Sulaymaniyah, {hotel?.name ?? "AMI Hotel"}{" "}
+              has been the definitive address for discerning travelers since
+              2026. We blend Kurdish hospitality with international luxury
+              standards.
             </p>
             <p className="sec-p" style={{ marginTop: 12 }}>
               Our philosophy: every guest deserves to feel like the only guest.
@@ -808,7 +819,8 @@ export default function HomePage() {
                 </div>
                 <div className="room-footer">
                   <div className="room-price">
-                    ${r.price}
+                    {hotel?.currency ?? "$"}
+                    {r.price}
                     <span>/night</span>
                   </div>
                   <button
@@ -827,7 +839,11 @@ export default function HomePage() {
       <div className="gallery">
         {[img1, img2, img3, img4, img5, img6, img7, img8, img9, img10].map(
           (src, i) => (
-            <img key={i} src={src} alt={`AMI Hotel ${i + 1}`} />
+            <img
+              key={i}
+              src={src}
+              alt={`${hotel?.name ?? "AMI Hotel"} ${i + 1}`}
+            />
           ),
         )}
       </div>
@@ -900,7 +916,9 @@ export default function HomePage() {
               {
                 ico: "📍",
                 title: "Address",
-                text: "Salim Street, Sulaymaniyah\nKurdistan Region, Iraq",
+                text:
+                  hotel?.address ??
+                  "Salim Street, Sulaymaniyah\nKurdistan Region, Iraq",
               },
               {
                 ico: "🕐",
@@ -915,7 +933,7 @@ export default function HomePage() {
               {
                 ico: "📞",
                 title: "Reservations",
-                text: "+964 770 000 0000\nreservations@amihotel.com",
+                text: `${hotel?.phone ?? "+964 770 000 0000"}\n${hotel?.email ?? "reservations@amihotel.com"}`,
               },
             ].map((item) => (
               <div key={item.title} className="loc-item">
@@ -932,13 +950,17 @@ export default function HomePage() {
           <div className="map-wrap">
             <iframe
               src="https://www.openstreetmap.org/export/embed.html?bbox=45.3500%2C35.5000%2C45.4500%2C35.5700&layer=mapnik&marker=35.5368%2C45.3803"
-              title="AMI Hotel"
+              title={hotel?.name ?? "AMI Hotel"}
               loading="lazy"
               allowFullScreen
             />
             <div className="map-badge">
-              <div className="map-badge-title">AMI Hotel</div>
-              <div className="map-badge-text">Salim Street, Sulaymaniyah</div>
+              <div className="map-badge-title">
+                {hotel?.name ?? "AMI Hotel"}
+              </div>
+              <div className="map-badge-text">
+                {hotel?.address ?? "Salim Street, Sulaymaniyah"}
+              </div>
             </div>
           </div>
         </div>
@@ -1034,17 +1056,19 @@ export default function HomePage() {
               {
                 ico: "📞",
                 title: "Phone",
-                text: "+964 770 000 0000\n+964 750 000 0000",
+                text: hotel?.phone ?? "+964 770 000 0000",
               },
               {
                 ico: "✉️",
                 title: "Email",
-                text: "reservations@amihotel.com\ninfo@amihotel.com",
+                text: hotel?.email ?? "reservations@amihotel.com",
               },
               {
                 ico: "📍",
                 title: "Address",
-                text: "Salim Street, Sulaymaniyah\nKurdistan Region, Iraq",
+                text:
+                  hotel?.address ??
+                  "Salim Street, Sulaymaniyah\nKurdistan Region, Iraq",
               },
               {
                 ico: "🕐",
@@ -1095,7 +1119,7 @@ export default function HomePage() {
             <img
               className="footer-logo"
               src={logoSrc}
-              alt="AMI Hotel"
+              alt={hotel?.name ?? "AMI Hotel"}
               onError={(e) => {
                 (e.currentTarget as HTMLImageElement).style.display = "none";
               }}
@@ -1177,10 +1201,11 @@ export default function HomePage() {
         </div>
         <div className="footer-bot">
           <span className="footer-copy">
-            © {new Date().getFullYear()} AMI Hotel. All rights reserved.
+            © {new Date().getFullYear()} {hotel?.name ?? "AMI Hotel"}. All
+            rights reserved.
           </span>
           <span className="footer-copy">
-            Sulaymaniyah, Kurdistan Region, Iraq
+            {hotel?.address ?? "Sulaymaniyah, Kurdistan Region, Iraq"}
           </span>
         </div>
       </footer>

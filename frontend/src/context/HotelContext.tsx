@@ -48,6 +48,8 @@ export const HotelProvider = ({ children }: { children: React.ReactNode }) => {
     fetchHotel();
   }, [fetchHotel]);
 
+  if (loading) return null;
+
   return (
     <HotelContext.Provider value={{ hotel, loading, refreshHotel: fetchHotel }}>
       {children}

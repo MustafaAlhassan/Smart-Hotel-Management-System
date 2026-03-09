@@ -39,6 +39,7 @@ import {
   AttachMoney as AttachMoneyIcon,
 } from "@mui/icons-material";
 import api from "../services/api";
+import { useHotel } from "../context/HotelContext";
 
 export interface IGuest {
   _id: string;
@@ -135,6 +136,9 @@ const PAGE_SIZE = 10;
 const InvoicesPage = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+  const { hotel } = useHotel();
+
+  const currency = hotel?.currency ?? "$";
 
   const [invoices, setInvoices] = useState<IInvoice[]>([]);
   const [availableServices, setAvailableServices] = useState<IService[]>([]);
@@ -499,7 +503,8 @@ const InvoicesPage = () => {
                             fontWeight={800}
                             color="success.main"
                           >
-                            ${invoice.totalAmountDue.toFixed(2)}
+                            {currency}
+                            {invoice.totalAmountDue.toFixed(2)}
                           </Typography>
                         </Box>
                       </Stack>
@@ -648,7 +653,8 @@ const InvoicesPage = () => {
                             fontWeight={700}
                             color="success.main"
                           >
-                            ${invoice.totalAmountDue.toFixed(2)}
+                            {currency}
+                            {invoice.totalAmountDue.toFixed(2)}
                           </Typography>
                         </TableCell>
                         <TableCell>
@@ -804,7 +810,8 @@ const InvoicesPage = () => {
             >
               {availableServices.map((s) => (
                 <MenuItem key={s._id} value={s._id}>
-                  {s.name} — ${s.price}
+                  {s.name} — {currency}
+                  {s.price}
                 </MenuItem>
               ))}
             </TextField>
@@ -891,14 +898,28 @@ const InvoicesPage = () => {
                 </Box>
                 <Box textAlign="right">
                   <Typography variant="h6" fontWeight={800}>
-                    AMI Hotel
+                    {hotel?.name ?? "AMI Hotel"}
                   </Typography>
                   <Typography
                     variant="body2"
                     className="p-secondary"
                     color="text.secondary"
                   >
-                    E-mail: ami@hotel.com
+                    E-mail: {hotel?.email ?? "ami@hotel.com"}
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    className="p-secondary"
+                    color="text.secondary"
+                  >
+                    Phone: {hotel?.phone ?? ""}
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    className="p-secondary"
+                    color="text.secondary"
+                  >
+                    {hotel?.address ?? ""}
                   </Typography>
                 </Box>
               </Box>
@@ -991,10 +1012,12 @@ const InvoicesPage = () => {
                       <TableCell sx={{ py: 2, px: 0 }}>Room Charge</TableCell>
                       <TableCell align="center">1</TableCell>
                       <TableCell align="right">
-                        ${currentInvoice.totalRoomCharge.toFixed(2)}
+                        {currency}
+                        {currentInvoice.totalRoomCharge.toFixed(2)}
                       </TableCell>
                       <TableCell align="right">
-                        ${currentInvoice.totalRoomCharge.toFixed(2)}
+                        {currency}
+                        {currentInvoice.totalRoomCharge.toFixed(2)}
                       </TableCell>
                     </TableRow>
                     {currentInvoice.usedServices?.map((item, index) => (
@@ -1002,10 +1025,12 @@ const InvoicesPage = () => {
                         <TableCell sx={{ py: 2, px: 0 }}>{item.name}</TableCell>
                         <TableCell align="center">{item.quantity}</TableCell>
                         <TableCell align="right">
-                          ${item.price.toFixed(2)}
+                          {currency}
+                          {item.price.toFixed(2)}
                         </TableCell>
                         <TableCell align="right">
-                          ${item.total.toFixed(2)}
+                          {currency}
+                          {item.total.toFixed(2)}
                         </TableCell>
                       </TableRow>
                     ))}
@@ -1018,7 +1043,8 @@ const InvoicesPage = () => {
                         Taxes
                       </TableCell>
                       <TableCell align="right">
-                        ${currentInvoice.taxAmount.toFixed(2)}
+                        {currency}
+                        {currentInvoice.taxAmount.toFixed(2)}
                       </TableCell>
                     </TableRow>
                     <TableRow
@@ -1039,7 +1065,8 @@ const InvoicesPage = () => {
                         align="right"
                         sx={{ fontWeight: 900, fontSize: "1.1rem", px: 0 }}
                       >
-                        ${currentInvoice.totalAmountDue.toFixed(2)}
+                        {currency}
+                        {currentInvoice.totalAmountDue.toFixed(2)}
                       </TableCell>
                     </TableRow>
                   </TableBody>

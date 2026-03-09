@@ -48,6 +48,7 @@ import {
 } from "@mui/icons-material";
 import { roomTypeService } from "../../services/roomTypeService";
 import type { IRoomType } from "../../types/types";
+import { useHotel } from "../../context/HotelContext";
 
 const PAGE_SIZE = 10;
 
@@ -55,6 +56,7 @@ const RoomTypesPage = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const isDark = theme.palette.mode === "dark";
+  const { hotel } = useHotel();
 
   const role = (localStorage.getItem("role") || "").toUpperCase();
   const isReceptionist = role === "RECEPTIONIST";
@@ -606,7 +608,7 @@ const RoomTypesPage = () => {
                         icon={
                           <MoneyIcon sx={{ fontSize: "13px !important" }} />
                         }
-                        label={`$${type.basePrice}/night`}
+                        label={`${hotel?.currency}${type.basePrice}/night`}
                         size="small"
                         sx={{
                           fontWeight: 800,
@@ -951,7 +953,7 @@ const RoomTypesPage = () => {
                 </Stack>
                 <Chip
                   icon={<MoneyIcon sx={{ fontSize: "13px !important" }} />}
-                  label={`$${viewingItem.basePrice}/night`}
+                  label={`${hotel?.currency}${viewingItem.basePrice}/night`}
                   size="small"
                   sx={{
                     fontWeight: 800,
@@ -1011,7 +1013,8 @@ const RoomTypesPage = () => {
                       fontWeight={700}
                       color="success.main"
                     >
-                      ${viewingItem.basePrice}
+                      {hotel?.currency}
+                      {viewingItem.basePrice}
                       <Typography
                         component="span"
                         variant="caption"
@@ -1181,7 +1184,7 @@ const RoomTypesPage = () => {
                 />
                 <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
                   <TextField
-                    label="Base Price ($)"
+                    label={`Base Price (${hotel?.currency})`}
                     type="number"
                     placeholder="0.00"
                     value={formData.basePrice}
@@ -1192,7 +1195,9 @@ const RoomTypesPage = () => {
                     }
                     InputProps={{
                       startAdornment: (
-                        <InputAdornment position="start">$</InputAdornment>
+                        <InputAdornment position="start">
+                          {hotel?.currency}
+                        </InputAdornment>
                       ),
                     }}
                   />

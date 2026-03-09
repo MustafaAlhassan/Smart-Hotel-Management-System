@@ -50,6 +50,7 @@ import {
 import api from "../services/api";
 import type { DashboardData } from "../types/types";
 import { useNavigate } from "react-router-dom";
+import { useHotel } from "../context/HotelContext";
 
 const CARD_SIZE = 170;
 const CHART_HEIGHT = 380;
@@ -60,6 +61,7 @@ const DashboardPage = () => {
   const [error, setError] = useState<string | null>(null);
   const theme = useTheme();
   const navigate = useNavigate();
+  const { hotel } = useHotel();
   const role = (localStorage.getItem("role") || "").toUpperCase();
   const isHousekeeping = role === "HOUSEKEEPING";
   const isReceptionist = role === "RECEPTIONIST";
@@ -392,7 +394,7 @@ const DashboardPage = () => {
           sx={{ color: theme.palette.success.main }}
         />
       ),
-      value: `$${data.financials.monthlyRevenue.toLocaleString()}`,
+      value: `${hotel?.currency}${data.financials.monthlyRevenue.toLocaleString()}`,
       detail: "MTD Performance",
       housekeepingVisible: false,
       receptionistVisible: false,
@@ -539,7 +541,7 @@ const DashboardPage = () => {
                     />
                     <Bar
                       dataKey="value"
-                      name="Revenue ($)"
+                      name={`Revenue (${hotel?.currency})`}
                       fill={theme.palette.success.main}
                       radius={[6, 6, 0, 0]}
                     />
