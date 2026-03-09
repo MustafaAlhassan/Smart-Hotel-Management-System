@@ -241,7 +241,7 @@ const Navbar = ({
               sx={{
                 flex: 1,
                 maxWidth: 550,
-                minWidth: 200,
+                minWidth: 150,
                 position: "relative",
               }}
             >

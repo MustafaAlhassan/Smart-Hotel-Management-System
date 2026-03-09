@@ -9,6 +9,7 @@ import {
   Avatar,
   Slide,
   useTheme,
+  useMediaQuery,
 } from "@mui/material";
 import {
   Chat as ChatIcon,
@@ -31,6 +32,7 @@ export const Chatbot = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const theme = useTheme();
   const isDark = theme.palette.mode === "dark";
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -171,15 +173,16 @@ export const Chatbot = () => {
           elevation={0}
           sx={{
             position: "fixed",
-            bottom: 96,
-            right: 24,
-            width: 400,
-            height: 580,
-            zIndex: 9999,
+            bottom: isMobile ? 0 : 96,
+            right: isMobile ? 0 : 24,
+            left: isMobile ? 0 : "auto",
+            width: isMobile ? "100%" : 400,
+            height: isMobile ? "85dvh" : 580,
+            zIndex: 1250,
             display: "flex",
             flexDirection: "column",
             overflow: "hidden",
-            borderRadius: "20px",
+            borderRadius: isMobile ? "20px 20px 0 0" : "20px",
             bgcolor: colors.paperBg,
             boxShadow: drawerShadow,
             border: `1px solid ${colors.paperBorder}`,
@@ -613,7 +616,8 @@ export const Chatbot = () => {
           position: "fixed",
           bottom: 24,
           right: 24,
-          zIndex: 9999,
+          zIndex: 1250,
+          display: isMobile && isOpen ? "none" : "block",
         }}
       >
         {fabPulse && !isOpen && (

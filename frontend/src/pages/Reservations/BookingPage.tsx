@@ -25,7 +25,7 @@ import { useHotel } from "../../context/HotelContext";
 
 const steps = ["Verification", "Guest Information", "Booking Details"];
 
-const ReservationPage = () => {
+const BookingPage = () => {
   const { hotel } = useHotel();
 
   const [activeStep, setActiveStep] = useState(0);
@@ -41,6 +41,7 @@ const ReservationPage = () => {
     email: "",
     phoneNumber: "",
     idNumber: "",
+    address: "",
   });
 
   const [bookingData, setBookingData] = useState({
@@ -139,6 +140,7 @@ const ReservationPage = () => {
           email: foundGuest.email || "",
           phoneNumber: foundGuest.phoneNumber || "",
           idNumber: foundGuest.idNumber || "",
+          address: foundGuest.address || "",
         });
         setActiveStep(2);
       } else {
@@ -151,6 +153,21 @@ const ReservationPage = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleStep1Next = () => {
+    const missing =
+      !guestData.firstName ||
+      !guestData.lastName ||
+      !guestData.email ||
+      !guestData.phoneNumber ||
+      !guestData.idNumber;
+    if (missing) {
+      setError("Please fill in all required fields.");
+      return;
+    }
+    setError(null);
+    setActiveStep(2);
   };
 
   const handleFinalSubmit = async () => {
@@ -169,7 +186,6 @@ const ReservationPage = () => {
             guestErr.response?.data?.message?.includes("exists");
 
           if (isDuplicate) {
-            console.log("Guest exists. Fetching list to recover ID...");
             try {
               const allGuestsRes = await api.get("/guests");
               const allGuests = Array.isArray(allGuestsRes.data)
@@ -215,8 +231,6 @@ const ReservationPage = () => {
 
       setActiveStep(3);
     } catch (err: any) {
-      console.error("Booking Error:", err);
-
       const responseData = err.response?.data;
       let errorMsg = "Booking failed.";
 
@@ -237,20 +251,28 @@ const ReservationPage = () => {
   };
 
   return (
-    <Box sx={{ width: "100%", px: { xs: 3, md: 8 }, py: 6 }}>
+    <Box
+      sx={{ width: "100%", px: { xs: 2, sm: 4, md: 8 }, py: { xs: 3, md: 6 } }}
+    >
       <Typography
         variant="h4"
         fontWeight="bold"
         textAlign="center"
-        mb={6}
+        mb={{ xs: 3, md: 6 }}
         color="primary"
+        sx={{ fontSize: { xs: "1.5rem", md: "2.125rem" } }}
       >
         Create Reservation
       </Typography>
 
       {activeStep === 3 ? (
         <Paper
-          sx={{ p: 8, borderRadius: 4, textAlign: "center", boxShadow: 3 }}
+          sx={{
+            p: { xs: 4, md: 8 },
+            borderRadius: 4,
+            textAlign: "center",
+            boxShadow: 3,
+          }}
         >
           <CheckCircleOutline color="success" sx={{ fontSize: 100, mb: 2 }} />
           <Typography variant="h5" fontWeight="bold">
@@ -267,9 +289,18 @@ const ReservationPage = () => {
       ) : (
         <>
           <Paper
-            sx={{ p: { xs: 4, md: 6 }, borderRadius: 4, mb: 4, boxShadow: 2 }}
+            sx={{
+              p: { xs: 2.5, sm: 4, md: 6 },
+              borderRadius: 4,
+              mb: 4,
+              boxShadow: 2,
+            }}
           >
-            <Stepper activeStep={activeStep} sx={{ mb: 6 }}>
+            <Stepper
+              activeStep={activeStep}
+              sx={{ mb: { xs: 4, md: 6 } }}
+              alternativeLabel
+            >
               {steps.map((label) => (
                 <Step key={label}>
                   <StepLabel>{label}</StepLabel>
@@ -313,49 +344,63 @@ const ReservationPage = () => {
             )}
 
             {activeStep === 1 && (
-              <Grid container spacing={3}>
-                <Grid item xs={12} md={6}>
+              <Grid container spacing={3} sx={{ width: "100%", m: 0 }}>
+                <Grid item xs={12} md={6} width={"100%"}>
                   <TextField
-                    sx={{ width: "250px" }}
+                    fullWidth
                     label="First Name"
+                    required
                     name="firstName"
                     value={guestData.firstName}
                     onChange={handleInputChange}
                   />
                 </Grid>
-                <Grid item xs={12} md={6}>
+                <Grid item xs={12} md={6} width={"100%"}>
                   <TextField
-                    sx={{ width: "250px" }}
+                    fullWidth
                     label="Last Name"
+                    required
                     name="lastName"
                     value={guestData.lastName}
                     onChange={handleInputChange}
                   />
                 </Grid>
-                <Grid item xs={12} md={6}>
+                <Grid item xs={12} md={6} width={"100%"}>
                   <TextField
-                    sx={{ width: "250px" }}
+                    fullWidth
                     label="Email"
+                    required
                     name="email"
                     value={guestData.email}
                     onChange={handleInputChange}
                   />
                 </Grid>
-                <Grid item xs={12} md={6}>
+                <Grid item xs={12} md={6} width={"100%"}>
                   <TextField
-                    sx={{ width: "250px" }}
+                    fullWidth
                     label="Phone"
+                    required
                     name="phoneNumber"
                     value={guestData.phoneNumber}
                     onChange={handleInputChange}
                   />
                 </Grid>
-                <Grid item xs={12}>
+                <Grid item xs={12} md={6} width={"100%"}>
                   <TextField
-                    sx={{ width: "250px" }}
+                    fullWidth
                     label="Passport Number"
+                    required
                     name="idNumber"
                     value={guestData.idNumber}
+                    onChange={handleInputChange}
+                  />
+                </Grid>
+                <Grid item xs={12} md={6} width={"100%"}>
+                  <TextField
+                    fullWidth
+                    label="Address"
+                    name="address"
+                    value={guestData.address}
                     onChange={handleInputChange}
                   />
                 </Grid>
@@ -363,11 +408,11 @@ const ReservationPage = () => {
             )}
 
             {activeStep === 2 && (
-              <Grid container spacing={3}>
-                <Grid item xs={12}>
+              <Grid container spacing={3} sx={{ width: "100%", m: 0 }}>
+                <Grid item xs={12} width={"100%"}>
                   <TextField
                     select
-                    sx={{ width: "250px" }}
+                    fullWidth
                     label="Select Room"
                     name="room"
                     value={bookingData.room}
@@ -381,9 +426,10 @@ const ReservationPage = () => {
                     ))}
                   </TextField>
                 </Grid>
-                <Grid item xs={12} md={6}>
+                <Grid item xs={12} md={6} width={"100%"}>
                   <TextField
-                    sx={{ width: "250px" }}
+                    fullWidth
+                    required
                     type="date"
                     label="Check In"
                     name="checkInDate"
@@ -392,9 +438,10 @@ const ReservationPage = () => {
                     onChange={handleInputChange}
                   />
                 </Grid>
-                <Grid item xs={12} md={6}>
+                <Grid item xs={12} md={6} width={"100%"}>
                   <TextField
-                    sx={{ width: "250px" }}
+                    fullWidth
+                    required
                     type="date"
                     label="Check Out"
                     name="checkOutDate"
@@ -403,9 +450,9 @@ const ReservationPage = () => {
                     onChange={handleInputChange}
                   />
                 </Grid>
-                <Grid item xs={12} md={6}>
+                <Grid item xs={12} md={6} width={"100%"}>
                   <TextField
-                    sx={{ width: "250px" }}
+                    fullWidth
                     type="number"
                     label="Adults"
                     name="adults"
@@ -413,9 +460,9 @@ const ReservationPage = () => {
                     onChange={handleInputChange}
                   />
                 </Grid>
-                <Grid item xs={12} md={6}>
+                <Grid item xs={12} md={6} width={"100%"}>
                   <TextField
-                    sx={{ width: "250px" }}
+                    fullWidth
                     type="number"
                     label="Children"
                     name="children"
@@ -427,7 +474,11 @@ const ReservationPage = () => {
             )}
 
             <Box
-              sx={{ display: "flex", justifyContent: "space-between", mt: 6 }}
+              sx={{
+                display: "flex",
+                justifyContent: "space-between",
+                mt: { xs: 4, md: 6 },
+              }}
             >
               <Button
                 disabled={activeStep === 0}
@@ -444,14 +495,19 @@ const ReservationPage = () => {
                   {loading ? <CircularProgress size={24} /> : "Search"}
                 </Button>
               ) : activeStep === 1 ? (
-                <Button variant="contained" onClick={() => setActiveStep(2)}>
+                <Button variant="contained" onClick={handleStep1Next}>
                   Next
                 </Button>
               ) : (
                 <Button
                   variant="contained"
                   onClick={handleFinalSubmit}
-                  disabled={loading || !bookingData.room}
+                  disabled={
+                    loading ||
+                    !bookingData.room ||
+                    !bookingData.checkInDate ||
+                    !bookingData.checkOutDate
+                  }
                 >
                   {loading ? <CircularProgress size={24} /> : "Confirm & Pay"}
                 </Button>
@@ -459,14 +515,8 @@ const ReservationPage = () => {
             </Box>
           </Paper>
 
-          <Paper
-            sx={{
-              p: 4,
-              borderRadius: 4,
-              boxShadow: 2,
-            }}
-          >
-            <Box display="flex" justifyContent="center" mb={4}>
+          <Paper sx={{ p: { xs: 2.5, sm: 4 }, borderRadius: 4, boxShadow: 2 }}>
+            <Box display="flex" justifyContent="center" mb={3}>
               <Typography
                 variant="h6"
                 fontWeight="bold"
@@ -482,10 +532,10 @@ const ReservationPage = () => {
               display="flex"
               flexDirection={{ xs: "column", md: "row" }}
               justifyContent="space-between"
-              alignItems={{ xs: "flex-start", md: "center" }}
+              alignItems={{ xs: "stretch", md: "center" }}
               gap={3}
             >
-              <Stack spacing={0.5} sx={{ minWidth: "200px" }}>
+              <Stack spacing={0.5} flex={1}>
                 <Typography
                   variant="caption"
                   color="text.secondary"
@@ -503,9 +553,17 @@ const ReservationPage = () => {
                 </Typography>
               </Stack>
 
+              <Divider
+                orientation="vertical"
+                flexItem
+                sx={{ display: { xs: "none", md: "block" } }}
+              />
+              <Divider sx={{ display: { xs: "block", md: "none" } }} />
+
               <Stack
                 spacing={0.5}
-                sx={{ minWidth: "200px", textAlign: { md: "center" } }}
+                flex={1}
+                sx={{ textAlign: { md: "center" } }}
               >
                 <Typography
                   variant="caption"
@@ -524,10 +582,14 @@ const ReservationPage = () => {
                 </Typography>
               </Stack>
 
-              <Stack
-                spacing={0.5}
-                sx={{ minWidth: "200px", textAlign: { md: "right" } }}
-              >
+              <Divider
+                orientation="vertical"
+                flexItem
+                sx={{ display: { xs: "none", md: "block" } }}
+              />
+              <Divider sx={{ display: { xs: "block", md: "none" } }} />
+
+              <Stack spacing={0.5} flex={1} sx={{ textAlign: { md: "right" } }}>
                 <Typography
                   variant="caption"
                   color="text.secondary"
@@ -535,7 +597,12 @@ const ReservationPage = () => {
                 >
                   TOTAL AMOUNT
                 </Typography>
-                <Typography variant="h3" fontWeight="900" color="primary">
+                <Typography
+                  variant="h3"
+                  fontWeight="900"
+                  color="primary"
+                  sx={{ fontSize: { xs: "2rem", md: "3rem" } }}
+                >
                   {hotel?.currency}
                   {basePrice}
                 </Typography>
@@ -548,4 +615,4 @@ const ReservationPage = () => {
   );
 };
 
-export default ReservationPage;
+export default BookingPage;
