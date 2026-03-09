@@ -43,11 +43,13 @@ import ReceiptIcon from "@mui/icons-material/Receipt";
 import WarningAmberRoundedIcon from "@mui/icons-material/WarningAmberRounded";
 import { useNavigate } from "react-router-dom";
 import api from "../../services/api";
+import { useHotel } from "../../context/HotelContext";
 
 const AllReservationsPage = () => {
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+  const { hotel } = useHotel();
 
   const [bookings, setBookings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -389,7 +391,7 @@ const AllReservationsPage = () => {
                           color="primary.main"
                           fontWeight="bold"
                         >
-                          ${totalPrice}
+                          {hotel?.currency} {totalPrice}
                         </Typography>
                       </Box>
                     </Stack>
@@ -509,7 +511,7 @@ const AllReservationsPage = () => {
                           color="primary.main"
                           sx={{ fontWeight: "bold" }}
                         >
-                          ${totalPrice}
+                          {hotel?.currency} {totalPrice}
                         </Typography>
                       </TableCell>
                       <TableCell>{getStatusChip(booking.status)}</TableCell>

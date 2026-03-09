@@ -400,9 +400,9 @@ const Navbar = ({
               }}
             >
               {isDark ? (
-                <Brightness7Icon sx={{ fontSize: 18, color: "orange" }} />
+                <Brightness7Icon sx={{ fontSize: 24, color: "orange" }} />
               ) : (
-                <Brightness4Icon sx={{ fontSize: 18 }} />
+                <Brightness4Icon sx={{ fontSize: 24 }} />
               )}
             </IconButton>
           </Tooltip>

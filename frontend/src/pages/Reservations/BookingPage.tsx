@@ -21,10 +21,13 @@ import {
   ErrorOutline,
 } from "@mui/icons-material";
 import api from "../../services/api";
+import { useHotel } from "../../context/HotelContext";
 
 const steps = ["Verification", "Guest Information", "Booking Details"];
 
 const ReservationPage = () => {
+  const { hotel } = useHotel();
+
   const [activeStep, setActiveStep] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -372,7 +375,7 @@ const ReservationPage = () => {
                   >
                     {availableRooms.map((room) => (
                       <MenuItem key={room._id} value={room._id}>
-                        Room {room.roomNumber} ($
+                        Room {room.roomNumber} ({hotel?.currency}
                         {room.basePrice || room.roomType?.basePrice}/night)
                       </MenuItem>
                     ))}
@@ -533,7 +536,8 @@ const ReservationPage = () => {
                   TOTAL AMOUNT
                 </Typography>
                 <Typography variant="h3" fontWeight="900" color="primary">
-                  ${basePrice}
+                  {hotel?.currency}
+                  {basePrice}
                 </Typography>
               </Stack>
             </Box>

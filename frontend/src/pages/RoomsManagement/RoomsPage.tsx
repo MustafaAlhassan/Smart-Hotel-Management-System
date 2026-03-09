@@ -52,6 +52,7 @@ import {
 } from "@mui/icons-material";
 import { roomService } from "../../services/roomService";
 import { roomTypeService } from "../../services/roomTypeService";
+import { useHotel } from "../../context/HotelContext";
 
 const API_BASE_URL = "http://localhost:5000";
 const PAGE_SIZE = 10;
@@ -110,12 +111,12 @@ const statusConfig: Record<
     chipColor: "warning",
   },
 };
-
 const RoomsPage = () => {
   const theme = useTheme();
   const isDark = theme.palette.mode === "dark";
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const role = (localStorage.getItem("role") || "").toUpperCase();
+  const { hotel } = useHotel();
 
   const isHousekeeping = role === "HOUSEKEEPING";
   const isReceptionist = role === "RECEPTIONIST";
@@ -870,7 +871,8 @@ const RoomsPage = () => {
                               fontWeight={800}
                               color="primary.main"
                             >
-                              ${typeData?.basePrice ?? typeData?.price ?? 0}
+                              {hotel?.currency}
+                              {typeData?.basePrice ?? typeData?.price ?? 0}
                             </Typography>
                             <Typography variant="caption" color="text.disabled">
                               / night
@@ -1300,7 +1302,8 @@ const RoomsPage = () => {
                         Price
                       </Typography>
                       <Typography variant="body1" fontWeight={700}>
-                        ${typeData?.basePrice ?? typeData?.price ?? 0}
+                        {hotel?.currency}
+                        {typeData?.basePrice ?? typeData?.price ?? 0}
                         <Typography
                           component="span"
                           variant="caption"

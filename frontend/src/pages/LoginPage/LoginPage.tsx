@@ -20,27 +20,27 @@ import RoomPic from "../../assets/Room.jpg";
 import Visibility from "@mui/icons-material/Visibility";
 import VisibilityOff from "@mui/icons-material/VisibilityOff";
 import "./LoginPage.css";
+import { useHotel } from "../../context/HotelContext";
 
 const LoginPage = () => {
-  // These Hooks For Password Text Field For Handling Show And Hide Password.
+  const { hotel } = useHotel();
+
   const [showPassword, setShowPassword] = React.useState(false);
 
   const handleClickShowPassword = () => setShowPassword((show) => !show);
 
   const handleMouseDownPassword = (
-    event: React.MouseEvent<HTMLButtonElement>
+    event: React.MouseEvent<HTMLButtonElement>,
   ) => {
     event.preventDefault();
   };
 
   const handleMouseUpPassword = (
-    event: React.MouseEvent<HTMLButtonElement>
+    event: React.MouseEvent<HTMLButtonElement>,
   ) => {
     event.preventDefault();
   };
-  // End Password Field Codes.
 
-  // Start Mustafa Back-End Work.
   const apiUrl = import.meta.env.VITE_API_URL;
   const [error, setError] = useState("");
 
@@ -84,9 +84,6 @@ const LoginPage = () => {
       setError("Server error, please try again later");
     }
   };
-  // End Mustafa Back-End Work.
-
-  // Start Ibrahim Front-End
 
   const [open, setOpen] = useState(false);
 
@@ -95,8 +92,6 @@ const LoginPage = () => {
       setOpen(true);
     }
   }, [error]);
-
-  // End Ibrahim Front-End
 
   return (
     <Container
@@ -143,7 +138,7 @@ const LoginPage = () => {
           }}
         >
           <Typography variant="h4" component="h1" gutterBottom>
-            AMI The Best Choise For Better Comfort
+            {hotel?.name} The Best Choise For Better Comfort
           </Typography>
           <Typography variant="h6" gutterBottom>
             ✨ More Than 100 Global Certificates
@@ -175,7 +170,7 @@ const LoginPage = () => {
           <Avatar
             src={logo}
             variant="square"
-            sx={{ mb: "50px", width: "100px", height: "100px" }}
+            sx={{ mb: "30px", width: "100px", height: "100px", mt: "30px" }}
           ></Avatar>
           <Typography
             variant="h4"
@@ -183,7 +178,7 @@ const LoginPage = () => {
             gutterBottom
             sx={{ textAlign: "center" }}
           >
-            Welcome To AMI
+            Welcome To {hotel?.name}
           </Typography>
           <form onSubmit={onSubmit} autoComplete="off">
             <TextField
@@ -239,7 +234,7 @@ const LoginPage = () => {
               color="primary"
               type="submit"
               size="large"
-              sx={{ mt: "10px" }}
+              sx={{ mt: "10px", mb: "40px" }}
             >
               Log In
             </Button>
