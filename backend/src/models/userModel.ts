@@ -16,6 +16,7 @@ export interface IUser extends Document {
   email: string;
   password: string;
   isActive: boolean;
+  invoicesCreated: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -47,8 +48,9 @@ const userSchema = new Schema<IUser>(
     },
     password: { type: String, required: true },
     isActive: { type: Boolean, required: true, default: true },
+    invoicesCreated: { type: Number, default: 0, min: 0 },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 export const UserModel = mongoose.model<IUser>("User", userSchema);

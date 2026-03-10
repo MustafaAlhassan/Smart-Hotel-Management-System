@@ -16,6 +16,7 @@ export const requireAuth = async (
   if (!authorization) {
     return res.status(401).json({ error: "You Should Login First" });
   }
+
   const token = authorization.split(" ")[1];
 
   if (!token) {
@@ -27,15 +28,20 @@ export const requireAuth = async (
     const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as {
       id: string;
     };
+
     const user = await UserModel.findOne({ _id: decoded.id }).select(
-      "_id role"
+      "_id role isActive"
     );
 
     if (!user) {
       throw new Error("User not found");
     }
-    req.user = user;
 
+    if (!user.isActive) {
+      return res.status(403).json({ error: "Your account has been deactivated. Please contact an administrator." });
+    }
+
+    req.user = user;
     next();
   } catch (error) {
     console.log(error);
