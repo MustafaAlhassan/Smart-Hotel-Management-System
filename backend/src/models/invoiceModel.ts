@@ -10,6 +10,7 @@ export interface IInvoiceServiceItem {
 
 export interface IInvoice extends Document {
   booking: Types.ObjectId;
+  createdBy: Types.ObjectId;
   usedServices: IInvoiceServiceItem[];
   totalRoomCharge: number;
   totalServiceCharge: number;
@@ -29,6 +30,11 @@ const InvoiceSchema = new Schema<IInvoice>(
       ref: "Booking",
       required: true,
       unique: true,
+    },
+    createdBy: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
     },
     usedServices: [
       {

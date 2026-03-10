@@ -30,6 +30,8 @@ import {
   useTheme,
   useMediaQuery,
   Tooltip,
+  Switch,
+  FormControlLabel,
 } from "@mui/material";
 import {
   MoreVert,
@@ -40,6 +42,9 @@ import {
   Delete as DeleteIcon,
   LockReset as LockResetIcon,
   ManageAccounts as ManageAccountsIcon,
+  Receipt as ReceiptIcon,
+  CheckCircle as ActiveIcon,
+  Cancel as InactiveIcon,
 } from "@mui/icons-material";
 import api from "../services/api";
 
@@ -50,6 +55,8 @@ interface IUser {
   username: string;
   email: string;
   role: string;
+  isActive: boolean;
+  invoicesCreated: number;
 }
 
 const ASSIGNABLE_ROLES = ["Manager", "Receptionist", "Housekeeping"];
@@ -106,6 +113,7 @@ const UsersPage = () => {
     email: "",
     password: "",
     role: "Manager",
+    isActive: true,
   });
   const [newRole, setNewRole] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -158,6 +166,7 @@ const UsersPage = () => {
           lastName: formData.lastName,
           username: formData.username,
           email: formData.email,
+          isActive: formData.isActive,
         });
         showSnackbar("User updated successfully", "success");
       } else {
@@ -240,13 +249,22 @@ const UsersPage = () => {
       email: "",
       password: "",
       role: "Manager",
+      isActive: true,
     });
     setOpenUserDialog(true);
   };
 
   const openEditDialog = () => {
     if (selectedUser) {
-      setFormData({ ...selectedUser, password: "" });
+      setFormData({
+        firstName: selectedUser.firstName,
+        lastName: selectedUser.lastName,
+        username: selectedUser.username,
+        email: selectedUser.email,
+        password: "",
+        role: selectedUser.role,
+        isActive: selectedUser.isActive,
+      });
       setOpenUserDialog(true);
     }
     handleMenuClose();
@@ -337,7 +355,13 @@ const UsersPage = () => {
               return (
                 <Card
                   key={user._id}
-                  sx={{ mb: 2, borderRadius: "12px", boxShadow: 2 }}
+                  sx={{
+                    mb: 2,
+                    borderRadius: "12px",
+                    boxShadow: 2,
+                    opacity: user.isActive ? 1 : 0.65,
+                    borderLeft: `4px solid ${user.isActive ? theme.palette.success.main : theme.palette.error.main}`,
+                  }}
                 >
                   <CardContent>
                     <Box
@@ -406,6 +430,30 @@ const UsersPage = () => {
                           }}
                         />
                       </Box>
+                      <Box display="flex" alignItems="center" gap={1}>
+                        {user.isActive ? (
+                          <ActiveIcon sx={{ fontSize: 16, color: "success.main" }} />
+                        ) : (
+                          <InactiveIcon sx={{ fontSize: 16, color: "error.main" }} />
+                        )}
+                        <Typography
+                          variant="body2"
+                          color={user.isActive ? "success.main" : "error.main"}
+                          fontWeight={600}
+                        >
+                          {user.isActive ? "Active" : "Inactive"}
+                        </Typography>
+                      </Box>
+                      <Box display="flex" alignItems="center" gap={1}>
+                        <ReceiptIcon
+                          fontSize="small"
+                          sx={{ opacity: 0.55, fontSize: 16 }}
+                        />
+                        <Typography variant="body2" color="text.secondary">
+                          {user.invoicesCreated ?? 0} invoice
+                          {(user.invoicesCreated ?? 0) !== 1 ? "s" : ""} created
+                        </Typography>
+                      </Box>
                     </Stack>
                   </CardContent>
                 </Card>
@@ -426,7 +474,7 @@ const UsersPage = () => {
           <Table sx={{ minWidth: 700 }}>
             <TableHead>
               <TableRow sx={{ bgcolor: theme.palette.action.hover }}>
-                {["Staff Member", "Username", "Email", "Role", "Actions"].map(
+                {["Staff Member", "Username", "Email", "Role", "Status", "Invoices", "Actions"].map(
                   (h) => (
                     <TableCell
                       key={h}
@@ -449,7 +497,7 @@ const UsersPage = () => {
             <TableBody>
               {users.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} align="center" sx={{ py: 5 }}>
+                  <TableCell colSpan={7} align="center" sx={{ py: 5 }}>
                     <Typography variant="body1" color="text.secondary">
                       No users found. Click "Add User" to create one.
                     </Typography>
@@ -466,6 +514,7 @@ const UsersPage = () => {
                         "&:last-child td": { border: 0 },
                         "&:hover": { bgcolor: theme.palette.action.hover },
                         transition: "background 0.15s",
+                        opacity: user.isActive ? 1 : 0.65,
                       }}
                     >
                       <TableCell>
@@ -505,6 +554,34 @@ const UsersPage = () => {
                             fontSize: "0.7rem",
                           }}
                         />
+                      </TableCell>
+                      <TableCell>
+                        <Chip
+                          icon={
+                            user.isActive ? (
+                              <ActiveIcon sx={{ fontSize: "14px !important" }} />
+                            ) : (
+                              <InactiveIcon sx={{ fontSize: "14px !important" }} />
+                            )
+                          }
+                          label={user.isActive ? "Active" : "Inactive"}
+                          size="small"
+                          color={user.isActive ? "success" : "error"}
+                          variant="outlined"
+                          sx={{
+                            fontWeight: 700,
+                            borderRadius: 1.5,
+                            fontSize: "0.7rem",
+                          }}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Box display="flex" alignItems="center" gap={0.75}>
+                          <ReceiptIcon sx={{ fontSize: 15, color: "text.disabled" }} />
+                          <Typography variant="body2" fontWeight={600}>
+                            {user.invoicesCreated ?? 0}
+                          </Typography>
+                        </Box>
                       </TableCell>
                       <TableCell align="right">
                         <Tooltip title="More actions">
@@ -668,6 +745,51 @@ const UsersPage = () => {
                   ))}
                 </TextField>
               </>
+            )}
+
+            {selectedUser && selectedUser.role !== "Admin" && (
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  px: 2,
+                  py: 1.5,
+                  borderRadius: 2,
+                  border: `1px solid ${formData.isActive ? theme.palette.success.light : theme.palette.error.light}`,
+                  bgcolor: formData.isActive
+                    ? "rgba(46,125,50,0.06)"
+                    : "rgba(211,47,47,0.06)",
+                }}
+              >
+                <Box>
+                  <Typography variant="body2" fontWeight={700}>
+                    Account Status
+                  </Typography>
+                  <Typography
+                    variant="caption"
+                    color={formData.isActive ? "success.main" : "error.main"}
+                    fontWeight={600}
+                  >
+                    {formData.isActive
+                      ? "Active — user can log in"
+                      : "Inactive — user is blocked"}
+                  </Typography>
+                </Box>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={formData.isActive}
+                      onChange={(e) =>
+                        setFormData({ ...formData, isActive: e.target.checked })
+                      }
+                      color="success"
+                    />
+                  }
+                  label=""
+                  sx={{ mr: 0 }}
+                />
+              </Box>
             )}
           </Box>
         </DialogContent>

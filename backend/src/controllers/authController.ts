@@ -183,13 +183,18 @@ export const deleteUser = async (req: Request, res: Response) => {
 
 export const updateUser = async (req: Request, res: Response) => {
   const { id } = req.params;
-  const { firstName, lastName, email, username } = req.body;
+  const { firstName, lastName, email, username, isActive } = req.body;
 
   try {
     const user = await UserModel.findById(id);
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
+
+    if (user.role === UserRole.ADMIN && isActive === false) {
+      return res.status(400).json({ error: "Cannot deactivate the Admin account." });
+    }
+
     const existingUser = await UserModel.findOne({
       $and: [{ _id: { $ne: id } }, { $or: [{ email }, { username }] }],
     });
@@ -207,6 +212,7 @@ export const updateUser = async (req: Request, res: Response) => {
         lastName,
         email,
         username,
+        ...(isActive !== undefined && { isActive }),
       },
       { new: true, runValidators: true },
     ).select("-password");

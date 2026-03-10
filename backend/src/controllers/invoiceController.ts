@@ -1,4 +1,5 @@
-import { Request, Response } from "express";
+import { Response } from "express";
+import { AuthRequest } from "../middlewares/requireAuth";
 import {
   createInvoice,
   getInvoiceByBookingId,
@@ -7,7 +8,6 @@ import {
   findAllInvoices,
 } from "../services/invoiceServices";
 import { ServiceModel } from "../models/serviceModel";
-
 import { InvoiceModel } from "../models/invoiceModel";
 
 const handleError = (error: any, res: Response) => {
@@ -15,7 +15,7 @@ const handleError = (error: any, res: Response) => {
   res.status(500).json({ message: error.message || "Server Error" });
 };
 
-export const generateInvoice = async (req: Request, res: Response) => {
+export const generateInvoice = async (req: AuthRequest, res: Response) => {
   try {
     const { bookingId, services } = req.body;
 
@@ -23,7 +23,11 @@ export const generateInvoice = async (req: Request, res: Response) => {
       return res.status(400).json({ message: "Booking ID is required" });
     }
 
-    const invoice = await createInvoice(bookingId, services);
+    const invoice = await createInvoice(
+      bookingId,
+      req.user._id.toString(),
+      services,
+    );
     res.status(201).json(invoice);
   } catch (error: any) {
     if (error.message === "Invoice already exists for this booking") {
@@ -33,7 +37,7 @@ export const generateInvoice = async (req: Request, res: Response) => {
   }
 };
 
-export const getAllInvoices = async (req: Request, res: Response) => {
+export const getAllInvoices = async (req: AuthRequest, res: Response) => {
   try {
     const invoices = await findAllInvoices();
     res.status(200).json(invoices);
@@ -42,7 +46,7 @@ export const getAllInvoices = async (req: Request, res: Response) => {
   }
 };
 
-export const getInvoice = async (req: Request, res: Response) => {
+export const getInvoice = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
     const invoice = await getInvoiceById(id);
@@ -55,7 +59,7 @@ export const getInvoice = async (req: Request, res: Response) => {
   }
 };
 
-export const addServiceToInvoice = async (req: Request, res: Response) => {
+export const addServiceToInvoice = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
     const { serviceId, quantity } = req.body;
@@ -72,7 +76,6 @@ export const addServiceToInvoice = async (req: Request, res: Response) => {
     }
 
     const serviceDetails = await ServiceModel.findById(serviceId);
-
     if (!serviceDetails) {
       return res.status(404).json({ message: "Service not found in database" });
     }
@@ -83,8 +86,8 @@ export const addServiceToInvoice = async (req: Request, res: Response) => {
     invoice.usedServices.push({
       service: serviceId,
       name: serviceDetails.name,
-      quantity: quantity,
-      price: price,
+      quantity,
+      price,
       total: itemTotal,
     });
 
@@ -99,15 +102,16 @@ export const addServiceToInvoice = async (req: Request, res: Response) => {
   }
 };
 
-export const getBookingInvoice = async (req: Request, res: Response) => {
+export const getBookingInvoice = async (req: AuthRequest, res: Response) => {
   try {
     const { bookingId } = req.params;
     const invoice = await getInvoiceByBookingId(bookingId);
 
-    if (!invoice)
+    if (!invoice) {
       return res
         .status(404)
         .json({ message: "Invoice not found for this booking" });
+    }
 
     res.status(200).json(invoice);
   } catch (error) {
@@ -115,7 +119,7 @@ export const getBookingInvoice = async (req: Request, res: Response) => {
   }
 };
 
-export const updatePayment = async (req: Request, res: Response) => {
+export const updatePayment = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
     const { paymentStatus, paymentMethod } = req.body;
@@ -126,8 +130,9 @@ export const updatePayment = async (req: Request, res: Response) => {
       paymentMethod,
     );
 
-    if (!updatedInvoice)
+    if (!updatedInvoice) {
       return res.status(404).json({ message: "Invoice not found" });
+    }
 
     res.status(200).json(updatedInvoice);
   } catch (error) {
