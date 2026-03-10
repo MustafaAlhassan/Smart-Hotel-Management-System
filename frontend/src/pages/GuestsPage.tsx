@@ -515,6 +515,7 @@ const GuestsPage = () => {
       <Snackbar
         open={snackbar.open}
         autoHideDuration={4000}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
         onClose={() => setSnackbar({ ...snackbar, open: false })}
       >
         <Alert severity={snackbar.severity} sx={{ borderRadius: "8px" }}>
