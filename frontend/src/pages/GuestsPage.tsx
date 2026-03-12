@@ -439,7 +439,7 @@ const GuestsPage = () => {
         </DialogTitle>
         <DialogContent dividers>
           <Grid container spacing={2} sx={{ mt: 1 }}>
-            <Grid item xs={12} sx={{ width: "268px" }}>
+            <Grid item xs={12} sx={{ width: "100%" }}>
               <TextField
                 fullWidth
                 label="ID / Passport Number"
@@ -449,7 +449,7 @@ const GuestsPage = () => {
                 }
               />
             </Grid>
-            <Grid item xs={12} sm={6} sx={{ width: "268px" }}>
+            <Grid item xs={12} sm={6} sx={{ width: "100%" }}>
               <TextField
                 fullWidth
                 label="First Name"
@@ -459,7 +459,7 @@ const GuestsPage = () => {
                 }
               />
             </Grid>
-            <Grid item xs={12} sm={6} sx={{ width: "268px" }}>
+            <Grid item xs={12} sm={6} sx={{ width: "100%" }}>
               <TextField
                 fullWidth
                 label="Last Name"
@@ -469,7 +469,7 @@ const GuestsPage = () => {
                 }
               />
             </Grid>
-            <Grid item xs={12} sx={{ width: "268px" }}>
+            <Grid item xs={12} sx={{ width: "100%" }}>
               <TextField
                 fullWidth
                 label="Email Address"
@@ -479,7 +479,7 @@ const GuestsPage = () => {
                 }
               />
             </Grid>
-            <Grid item xs={12} sx={{ width: "268px" }}>
+            <Grid item xs={12} sx={{ width: "100%" }}>
               <TextField
                 fullWidth
                 label="Phone Number"
@@ -489,7 +489,7 @@ const GuestsPage = () => {
                 }
               />
             </Grid>
-            <Grid item xs={12} sx={{ width: "268px" }}>
+            <Grid item xs={12} sx={{ width: "100%" }}>
               <TextField
                 fullWidth
                 multiline

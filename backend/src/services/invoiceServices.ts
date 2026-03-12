@@ -137,3 +137,39 @@ export const updateInvoiceStatus = async (
 
   return invoice;
 };
+
+export const addServiceToInvoice = async (
+  invoiceId: string,
+  serviceId: string,
+  quantity: number,
+) => {
+  const [invoice, serviceDoc, TAX_RATE] = await Promise.all([
+    InvoiceModel.findById(invoiceId),
+    ServiceModel.findById(serviceId) as Promise<IService | null>,
+    getHotelTaxRate(),
+  ]);
+
+  if (!invoice) throw new Error("Invoice not found");
+  if (!serviceDoc) throw new Error("Service not found");
+
+  const itemTotal = serviceDoc.price * quantity;
+  const taxOnItem = serviceDoc.isTaxable ? itemTotal * TAX_RATE : 0;
+
+  invoice.usedServices.push({
+    service: serviceDoc._id,
+    name: serviceDoc.name,
+    quantity,
+    price: serviceDoc.price,
+    total: itemTotal,
+  });
+
+  invoice.totalServiceCharge = invoice.usedServices.reduce(
+    (sum, item) => sum + item.total,
+    0,
+  );
+  invoice.taxAmount += taxOnItem;
+  invoice.totalAmountDue =
+    invoice.totalRoomCharge + invoice.totalServiceCharge + invoice.taxAmount;
+
+  return await invoice.save();
+};

@@ -29,6 +29,7 @@ import {
   Card,
   CardContent,
   Pagination,
+  Avatar,
 } from "@mui/material";
 import {
   Print as PrintIcon,
@@ -36,6 +37,7 @@ import {
   Visibility as VisibilityIcon,
   AddCircleOutline as AddCircleOutlineIcon,
   CalendarToday as CalendarTodayIcon,
+  Badge as BadgeIcon,
 } from "@mui/icons-material";
 import api from "../services/api";
 import { useHotel } from "../context/HotelContext";
@@ -54,6 +56,7 @@ export interface IService {
   _id: string;
   name: string;
   price: number;
+  isTaxable: boolean;
 }
 
 export interface IInvoiceServiceItem {
@@ -65,9 +68,18 @@ export interface IInvoiceServiceItem {
   _id?: string;
 }
 
+export interface ICreatedBy {
+  _id: string;
+  firstName: string;
+  lastName: string;
+  username: string;
+  role: string;
+}
+
 export interface IInvoice {
   _id: string;
   booking: any;
+  createdBy?: ICreatedBy;
   usedServices: IInvoiceServiceItem[];
   totalRoomCharge: number;
   totalServiceCharge: number;
@@ -132,6 +144,43 @@ const PRINT_STYLES = `
 
 const PAGE_SIZE = 10;
 
+const getRoleColor = (role: string): string => {
+  const r = role?.toLowerCase();
+  if (r === "admin") return "#4caf50";
+  if (r === "manager") return "#2196f3";
+  if (r === "receptionist") return "#9c27b0";
+  if (r === "housekeeping") return "#ff9800";
+  return "#757575";
+};
+
+const CreatedByBadge = ({ user }: { user?: ICreatedBy }) => {
+  if (!user) return <Typography variant="caption" color="text.disabled">—</Typography>;
+  const initials = `${user.firstName?.[0] ?? ""}${user.lastName?.[0] ?? ""}`.toUpperCase();
+  return (
+    <Box display="flex" alignItems="center" gap={1}>
+      <Avatar
+        sx={{
+          width: 26,
+          height: 26,
+          fontSize: "0.65rem",
+          fontWeight: 700,
+          bgcolor: getRoleColor(user.role),
+        }}
+      >
+        {initials}
+      </Avatar>
+      <Box>
+        <Typography variant="body2" fontWeight={600} lineHeight={1.2}>
+          {user.firstName} {user.lastName}
+        </Typography>
+        <Typography variant="caption" color="text.secondary" lineHeight={1}>
+          {user.role}
+        </Typography>
+      </Box>
+    </Box>
+  );
+};
+
 const InvoicesPage = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
@@ -169,6 +218,7 @@ const InvoicesPage = () => {
     serviceId: "",
     quantity: 1,
   });
+  const [selectedService, setSelectedService] = useState<IService | null>(null);
 
   const [snackbar, setSnackbar] = useState({
     open: false,
@@ -324,6 +374,7 @@ const InvoicesPage = () => {
   const handleOpenAddService = (invoice: IInvoice) => {
     setCurrentInvoice(invoice);
     setServiceData({ serviceId: "", quantity: 1 });
+    setSelectedService(null);
     setOpenAddServiceDialog(true);
   };
 
@@ -349,12 +400,22 @@ const InvoicesPage = () => {
     if (!currentInvoice || !serviceData.serviceId) return;
     setAddServiceLoading(true);
     try {
-      await api.patch(`/invoices/${currentInvoice._id}/services`, {
-        serviceId: serviceData.serviceId,
-        quantity: serviceData.quantity,
-      });
+      const response = await api.patch(
+        `/invoices/${currentInvoice._id}/services`,
+        {
+          serviceId: serviceData.serviceId,
+          quantity: serviceData.quantity,
+        },
+      );
+      // Sync currentInvoice with the updated data returned from the server
+      const updated: IInvoice = response.data.data || response.data;
+      setCurrentInvoice(updated);
+      setInvoices((prev) =>
+        prev.map((inv) => (inv._id === updated._id ? updated : inv)),
+      );
       showSnackbar("Service added successfully", "success");
       setOpenAddServiceDialog(false);
+      setSelectedService(null);
       fetchData();
     } catch (error: any) {
       showSnackbar(
@@ -535,6 +596,23 @@ const InvoicesPage = () => {
                             {new Date(invoice.issueDate).toLocaleDateString()}
                           </Typography>
                         </Box>
+                        <Box
+                          display="flex"
+                          justifyContent="space-between"
+                          alignItems="center"
+                        >
+                          <Box display="flex" alignItems="center" gap={0.8}>
+                            <BadgeIcon sx={{ fontSize: 14, opacity: 0.55 }} />
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                              fontWeight={600}
+                            >
+                              CREATED BY
+                            </Typography>
+                          </Box>
+                          <CreatedByBadge user={invoice.createdBy} />
+                        </Box>
                         <Divider />
                         <Box
                           display="flex"
@@ -632,6 +710,7 @@ const InvoicesPage = () => {
                     "Invoice ID",
                     "Guest Name",
                     "Issue Date",
+                    "Created By",
                     "Total Amount",
                     "Status",
                     "Actions",
@@ -660,7 +739,7 @@ const InvoicesPage = () => {
               <TableBody>
                 {invoices.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} align="center" sx={{ py: 5 }}>
+                    <TableCell colSpan={7} align="center" sx={{ py: 5 }}>
                       <Typography variant="body1" color="text.secondary">
                         No invoices found.
                       </Typography>
@@ -701,6 +780,9 @@ const InvoicesPage = () => {
                           <Typography variant="body2">
                             {new Date(invoice.issueDate).toLocaleDateString()}
                           </Typography>
+                        </TableCell>
+                        <TableCell>
+                          <CreatedByBadge user={invoice.createdBy} />
                         </TableCell>
                         <TableCell align="right">
                           <Typography
@@ -846,7 +928,7 @@ const InvoicesPage = () => {
 
       <Dialog
         open={openAddServiceDialog}
-        onClose={() => setOpenAddServiceDialog(false)}
+        onClose={() => { setOpenAddServiceDialog(false); setSelectedService(null); }}
         maxWidth="xs"
         fullWidth
         PaperProps={{ sx: { borderRadius: 3 } }}
@@ -859,17 +941,48 @@ const InvoicesPage = () => {
               label="Select Service"
               fullWidth
               value={serviceData.serviceId}
-              onChange={(e) =>
-                setServiceData({ ...serviceData, serviceId: e.target.value })
-              }
+              onChange={(e) => {
+                const svc = availableServices.find(
+                  (s) => s._id === e.target.value,
+                );
+                setServiceData({ ...serviceData, serviceId: e.target.value });
+                setSelectedService(svc || null);
+              }}
             >
               {availableServices.map((s) => (
                 <MenuItem key={s._id} value={s._id}>
-                  {s.name} — {currency}
-                  {s.price}
+                  <Box
+                    display="flex"
+                    justifyContent="space-between"
+                    width="100%"
+                    alignItems="center"
+                    gap={1}
+                  >
+                    <span>{s.name}</span>
+                    <Box display="flex" alignItems="center" gap={0.75}>
+                      <Typography variant="body2" fontWeight={700}>
+                        {currency}
+                        {s.price.toFixed(2)}
+                      </Typography>
+                      {s.isTaxable && (
+                        <Chip
+                          label="Tax"
+                          size="small"
+                          color="warning"
+                          sx={{
+                            height: 18,
+                            fontSize: "0.6rem",
+                            fontWeight: 700,
+                            borderRadius: 1,
+                          }}
+                        />
+                      )}
+                    </Box>
+                  </Box>
                 </MenuItem>
               ))}
             </TextField>
+
             <TextField
               label="Quantity"
               type="number"
@@ -879,15 +992,77 @@ const InvoicesPage = () => {
               onChange={(e) =>
                 setServiceData({
                   ...serviceData,
-                  quantity: parseInt(e.target.value) || 1,
+                  quantity: Math.max(1, parseInt(e.target.value) || 1),
                 })
               }
             />
+
+            {selectedService && (
+              <Box
+                sx={{
+                  p: 2,
+                  borderRadius: 2,
+                  bgcolor: "action.hover",
+                  border: `1px solid ${theme.palette.divider}`,
+                }}
+              >
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  fontWeight={700}
+                  textTransform="uppercase"
+                  display="block"
+                  mb={1}
+                >
+                  Cost Preview
+                </Typography>
+                <Stack spacing={0.75}>
+                  <Box display="flex" justifyContent="space-between">
+                    <Typography variant="body2" color="text.secondary">
+                      Unit price
+                    </Typography>
+                    <Typography variant="body2" fontWeight={600}>
+                      {currency}
+                      {selectedService.price.toFixed(2)}
+                    </Typography>
+                  </Box>
+                  <Box display="flex" justifyContent="space-between">
+                    <Typography variant="body2" color="text.secondary">
+                      Quantity
+                    </Typography>
+                    <Typography variant="body2" fontWeight={600}>
+                      × {serviceData.quantity}
+                    </Typography>
+                  </Box>
+                  <Box display="flex" justifyContent="space-between">
+                    <Typography variant="body2" color="text.secondary">
+                      Subtotal
+                    </Typography>
+                    <Typography variant="body2" fontWeight={600}>
+                      {currency}
+                      {(selectedService.price * serviceData.quantity).toFixed(2)}
+                    </Typography>
+                  </Box>
+                  <Box display="flex" justifyContent="space-between" alignItems="center">
+                    <Typography variant="body2" color="text.secondary">
+                      Taxable
+                    </Typography>
+                    <Chip
+                      label={selectedService.isTaxable ? "Yes" : "No"}
+                      size="small"
+                      color={selectedService.isTaxable ? "warning" : "default"}
+                      variant="outlined"
+                      sx={{ height: 20, fontSize: "0.65rem", fontWeight: 700, borderRadius: 1 }}
+                    />
+                  </Box>
+                </Stack>
+              </Box>
+            )}
           </Box>
         </DialogContent>
         <DialogActions sx={{ p: 2, px: 3 }}>
           <Button
-            onClick={() => setOpenAddServiceDialog(false)}
+            onClick={() => { setOpenAddServiceDialog(false); setSelectedService(null); }}
             color="inherit"
             sx={{ fontWeight: 600 }}
           >
@@ -963,6 +1138,17 @@ const InvoicesPage = () => {
                     Date:{" "}
                     {new Date(currentInvoice.issueDate).toLocaleDateString()}
                   </Typography>
+                  {currentInvoice.createdBy && (
+                    <Typography
+                      variant="body2"
+                      className="p-secondary"
+                      color="text.secondary"
+                    >
+                      Issued by: {currentInvoice.createdBy.firstName}{" "}
+                      {currentInvoice.createdBy.lastName} (
+                      {currentInvoice.createdBy.role})
+                    </Typography>
+                  )}
                 </Box>
                 <Box textAlign={{ xs: "left", sm: "right" }}>
                   <Typography variant="h6" fontWeight={800}>

@@ -1222,7 +1222,7 @@ const RoomTypesPage = () => {
                 </Stack>
                 <TextField
                   label="Amenities (comma-separated)"
-                  placeholder="WiFi, TV, Mini Bar, Air Conditioning"
+                  placeholder="WiFi, TV, Air Conditioning"
                   value={formData.featuresInput}
                   fullWidth
                   onChange={(e) =>
