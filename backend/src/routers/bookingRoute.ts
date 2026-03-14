@@ -3,6 +3,7 @@ import {
   createBooking,
   deleteBooking,
   getAllBooking,
+  getAvailableRoomsController,
   getSingleBooking,
   updateBooking,
 } from "../controllers/bookingController";
@@ -11,6 +12,11 @@ import { UserRole } from "../models/userModel";
 
 const bookingRouter = express.Router();
 
+bookingRouter.get(
+  "/available-rooms",
+  requireRole([UserRole.ADMIN, UserRole.MANAGER, UserRole.RECEPTIONIST]),
+  getAvailableRoomsController,
+);
 bookingRouter.post(
   "/",
   requireRole([UserRole.ADMIN, UserRole.MANAGER, UserRole.RECEPTIONIST]),

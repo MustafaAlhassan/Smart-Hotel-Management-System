@@ -16,7 +16,7 @@ export interface IInvoice extends Document {
   totalServiceCharge: number;
   taxAmount: number;
   totalAmountDue: number;
-  paymentStatus: "Paid" | "Pending" | "Partially Paid";
+  paymentStatus: "Paid" | "Pending";
   paymentMethod?: "Cash" | "Credit Card" | "Online" | "Bank Transfer";
   issueDate: Date;
   createdAt: Date;
@@ -80,7 +80,7 @@ const InvoiceSchema = new Schema<IInvoice>(
     },
     paymentStatus: {
       type: String,
-      enum: ["Paid", "Pending", "Partially Paid"],
+      enum: ["Paid", "Pending"],
       default: "Pending",
     },
     paymentMethod: {

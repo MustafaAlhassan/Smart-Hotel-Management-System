@@ -328,7 +328,7 @@ const buildPredictiveContext = async (): Promise<string> => {
 
   const pendingInvoices = allInvoices.filter(
     (inv) =>
-      inv.paymentStatus === "Pending" || inv.paymentStatus === "Partially Paid"
+      inv.paymentStatus === "Pending"
   );
   const totalPending = pendingInvoices
     .reduce((sum, inv) => sum + inv.totalAmountDue, 0)

@@ -3,7 +3,6 @@ import { BookingModel, BookingStatus } from "../models/bookingModel";
 import { ServiceModel, IService } from "../models/serviceModel";
 import { HotelModel } from "../models/hotelModel";
 import { UserModel } from "../models/userModel";
-import { markRoomAsDirty } from "./rooms/roomService";
 
 const calculateNights = (checkIn: Date, checkOut: Date): number => {
   const diffTime = Math.abs(
@@ -119,7 +118,7 @@ export const getInvoiceByBookingId = async (bookingId: string) => {
 
 export const updateInvoiceStatus = async (
   id: string,
-  paymentStatus: "Paid" | "Pending" | "Partially Paid",
+  paymentStatus: "Paid" | "Pending",
   paymentMethod?: string,
 ) => {
   const invoice = await InvoiceModel.findByIdAndUpdate(
@@ -132,7 +131,6 @@ export const updateInvoiceStatus = async (
 
   if (paymentStatus === "Paid" && invoice.booking) {
     const booking: any = invoice.booking;
-    await markRoomAsDirty(booking.room);
   }
 
   return invoice;

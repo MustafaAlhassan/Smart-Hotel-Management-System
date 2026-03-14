@@ -85,7 +85,7 @@ export interface IInvoice {
   totalServiceCharge: number;
   taxAmount: number;
   totalAmountDue: number;
-  paymentStatus: "Paid" | "Pending" | "Partially Paid";
+  paymentStatus: "Paid" | "Pending";
   paymentMethod?: "Cash" | "Credit Card" | "Online" | "Bank Transfer";
   issueDate: string;
 }
@@ -326,19 +326,16 @@ const InvoicesPage = () => {
 
   const getStatusChipColor = (status: string) => {
     if (status === "Paid") return "success";
-    if (status === "Partially Paid") return "info";
     return "warning";
   };
 
   const getStatusPrintClass = (status: string) => {
     if (status === "Paid") return "p-status-paid";
-    if (status === "Partially Paid") return "p-status-partial";
     return "p-status-pending";
   };
 
   const getStatusHexColor = (status: string) => {
     if (status === "Paid") return "#16a34a";
-    if (status === "Partially Paid") return "#0284c7";
     return "#d97706";
   };
 
@@ -877,7 +874,7 @@ const InvoicesPage = () => {
                 })
               }
             >
-              {["Paid", "Pending", "Partially Paid"].map((s) => (
+              {["Paid", "Pending"].map((s) => (
                 <MenuItem key={s} value={s}>
                   {s}
                 </MenuItem>

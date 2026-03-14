@@ -6,6 +6,7 @@ import {
   markRoomAsClean,
 } from "./rooms/roomService";
 import { GuestModel } from "../models/guestModel";
+import { RoomModel, RoomStatus } from "../models/rooms/roomModel";
 
 export const checkRoomAvailability = async (
   roomId: string | Types.ObjectId,
@@ -30,6 +31,34 @@ export const checkRoomAvailability = async (
   const existingBooking = await BookingModel.findOne(query);
 
   return !existingBooking;
+};
+
+export const getAvailableRooms = async (
+  checkIn: Date | string,
+  checkOut: Date | string,
+) => {
+  const checkInDate = new Date(checkIn);
+  const checkOutDate = new Date(checkOut);
+
+  if (checkInDate >= checkOutDate) {
+    throw new Error("Check-out date must be after check-in date");
+  }
+
+  const overlappingBookings = await BookingModel.find({
+    status: { $nin: ["Cancelled", "Checked-Out"] },
+    checkInDate: { $lt: checkOutDate },
+    checkOutDate: { $gt: checkInDate },
+  }).select("room");
+
+  const occupiedRoomIds = overlappingBookings.map((b) => b.room);
+
+  return await RoomModel.find({
+    status: { $ne: RoomStatus.MAINTENANCE },
+    _id: { $nin: occupiedRoomIds },
+  }).populate({
+    path: "roomType",
+    select: "name basePrice capacity",
+  });
 };
 
 export const addBooking = async (

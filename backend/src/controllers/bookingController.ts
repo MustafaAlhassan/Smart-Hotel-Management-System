@@ -4,6 +4,7 @@ import {
   addBooking,
   cancelBookingService,
   findAllBooking,
+  getAvailableRooms,
   getBookingById,
   updateBookingInfo,
 } from "../services/bookingService";
@@ -64,6 +65,30 @@ const isIdInvalid = (id: string, res: Response) => {
     return true;
   }
   return false;
+};
+
+export const getAvailableRoomsController = async (
+  req: Request,
+  res: Response,
+) => {
+  try {
+    const { checkIn, checkOut } = req.query;
+
+    if (!checkIn || !checkOut) {
+      return res
+        .status(400)
+        .json({ message: "checkIn and checkOut query params are required" });
+    }
+
+    const rooms = await getAvailableRooms(
+      checkIn as string,
+      checkOut as string,
+    );
+
+    res.status(200).json({ data: rooms, message: "Available rooms fetched successfully" });
+  } catch (error: any) {
+    handleError(error, res);
+  }
 };
 
 export const createBooking = async (req: Request, res: Response) => {

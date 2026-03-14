@@ -16,7 +16,6 @@ guestRouter.post("/", requireRole(writeAccess), createGuest);
 guestRouter.get("/", requireRole(writeAccess), getAllGuests);
 guestRouter.get("/:id", requireRole(writeAccess), getSingleGuest);
 guestRouter.put("/:id", requireRole(writeAccess), updateGuest);
-
 guestRouter.delete(
   "/:id",
   requireRole([UserRole.ADMIN, UserRole.MANAGER]),
