@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import {
   Box,
   Typography,
@@ -30,6 +30,10 @@ import {
   CardContent,
   Pagination,
   Avatar,
+  FormControl,
+  InputLabel,
+  Select,
+  InputAdornment,
 } from "@mui/material";
 import {
   Print as PrintIcon,
@@ -38,6 +42,8 @@ import {
   AddCircleOutline as AddCircleOutlineIcon,
   CalendarToday as CalendarTodayIcon,
   Badge as BadgeIcon,
+  FilterList as FilterListIcon,
+  Clear as ClearIcon,
 } from "@mui/icons-material";
 import api from "../services/api";
 import { useHotel } from "../context/HotelContext";
@@ -154,8 +160,14 @@ const getRoleColor = (role: string): string => {
 };
 
 const CreatedByBadge = ({ user }: { user?: ICreatedBy }) => {
-  if (!user) return <Typography variant="caption" color="text.disabled">—</Typography>;
-  const initials = `${user.firstName?.[0] ?? ""}${user.lastName?.[0] ?? ""}`.toUpperCase();
+  if (!user)
+    return (
+      <Typography variant="caption" color="text.disabled">
+        —
+      </Typography>
+    );
+  const initials =
+    `${user.firstName?.[0] ?? ""}${user.lastName?.[0] ?? ""}`.toUpperCase();
   return (
     <Box display="flex" alignItems="center" gap={1}>
       <Avatar
@@ -193,12 +205,11 @@ const InvoicesPage = () => {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
 
-  const [invoiceGuests, setInvoiceGuests] = useState<
-    Record<string, IGuest | null>
-  >({});
-  const [guestsLoading, setGuestsLoading] = useState<Record<string, boolean>>(
-    {},
-  );
+  const [filterStatus, setFilterStatus] = useState("");
+  const [filterCreatedBy, setFilterCreatedBy] = useState("");
+
+  const [invoiceGuests, setInvoiceGuests] = useState<Record<string, IGuest | null>>({});
+  const [guestsLoading, setGuestsLoading] = useState<Record<string, boolean>>({});
 
   const [openPaymentDialog, setOpenPaymentDialog] = useState(false);
   const [openPrintDialog, setOpenPrintDialog] = useState(false);
@@ -229,62 +240,55 @@ const InvoicesPage = () => {
   const showSnackbar = (message: string, severity: "success" | "error") =>
     setSnackbar({ open: true, message, severity });
 
-  const resolveGuest = useCallback(
-    async (booking: any): Promise<IGuest | null> => {
-      if (!booking) return null;
-      if (typeof booking === "string") {
-        if (!bookingCache[booking]) {
-          try {
-            const res = await api.get(`/bookings/${booking}`);
-            bookingCache[booking] = res.data.data || res.data;
-          } catch {
-            return null;
-          }
+  const resolveGuest = useCallback(async (booking: any): Promise<IGuest | null> => {
+    if (!booking) return null;
+    if (typeof booking === "string") {
+      if (!bookingCache[booking]) {
+        try {
+          const res = await api.get(`/bookings/${booking}`);
+          bookingCache[booking] = res.data.data || res.data;
+        } catch {
+          return null;
         }
-        booking = bookingCache[booking];
       }
-      if (!booking?.guest) return null;
-      if (typeof booking.guest === "object" && booking.guest.firstName) {
-        const guest = booking.guest as IGuest;
-        guestCache[guest._id] = guest;
-        return guest;
-      }
-      const guestId =
-        typeof booking.guest === "string" ? booking.guest : booking.guest._id;
-      if (!guestId) return null;
-      if (guestCache[guestId]) return guestCache[guestId];
-      try {
-        const res = await api.get(`/guests/${guestId}`);
-        const guest: IGuest = res.data.data || res.data;
-        guestCache[guestId] = guest;
-        return guest;
-      } catch {
-        return null;
-      }
-    },
-    [],
-  );
+      booking = bookingCache[booking];
+    }
+    if (!booking?.guest) return null;
+    if (typeof booking.guest === "object" && booking.guest.firstName) {
+      const guest = booking.guest as IGuest;
+      guestCache[guest._id] = guest;
+      return guest;
+    }
+    const guestId = typeof booking.guest === "string" ? booking.guest : booking.guest._id;
+    if (!guestId) return null;
+    if (guestCache[guestId]) return guestCache[guestId];
+    try {
+      const res = await api.get(`/guests/${guestId}`);
+      const guest: IGuest = res.data.data || res.data;
+      guestCache[guestId] = guest;
+      return guest;
+    } catch {
+      return null;
+    }
+  }, []);
 
-  const resolveGuestsForInvoices = useCallback(
-    async (invoiceList: IInvoice[]) => {
-      const loadingMap: Record<string, boolean> = {};
-      invoiceList.forEach((inv) => (loadingMap[inv._id] = true));
-      setGuestsLoading(loadingMap);
-      const results = await Promise.allSettled(
-        invoiceList.map((inv) => resolveGuest(inv.booking)),
-      );
-      const guestMap: Record<string, IGuest | null> = {};
-      const doneMap: Record<string, boolean> = {};
-      results.forEach((result, idx) => {
-        const id = invoiceList[idx]._id;
-        guestMap[id] = result.status === "fulfilled" ? result.value : null;
-        doneMap[id] = false;
-      });
-      setInvoiceGuests(guestMap);
-      setGuestsLoading(doneMap);
-    },
-    [resolveGuest],
-  );
+  const resolveGuestsForInvoices = useCallback(async (invoiceList: IInvoice[]) => {
+    const loadingMap: Record<string, boolean> = {};
+    invoiceList.forEach((inv) => (loadingMap[inv._id] = true));
+    setGuestsLoading(loadingMap);
+    const results = await Promise.allSettled(
+      invoiceList.map((inv) => resolveGuest(inv.booking))
+    );
+    const guestMap: Record<string, IGuest | null> = {};
+    const doneMap: Record<string, boolean> = {};
+    results.forEach((result, idx) => {
+      const id = invoiceList[idx]._id;
+      guestMap[id] = result.status === "fulfilled" ? result.value : null;
+      doneMap[id] = false;
+    });
+    setInvoiceGuests(guestMap);
+    setGuestsLoading(doneMap);
+  }, [resolveGuest]);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -296,10 +300,8 @@ const InvoicesPage = () => {
       if (invoicesResult.status === "rejected") {
         const err = invoicesResult.reason;
         showSnackbar(
-          err?.response?.data?.message ||
-            err?.message ||
-            "Failed to fetch invoices",
-          "error",
+          err?.response?.data?.message || err?.message || "Failed to fetch invoices",
+          "error"
         );
         return;
       }
@@ -321,8 +323,47 @@ const InvoicesPage = () => {
     fetchData();
   }, [fetchData]);
 
-  const totalPages = Math.ceil(invoices.length / PAGE_SIZE);
-  const paginated = invoices.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const creatorOptions = useMemo(() => {
+    const seen = new Set<string>();
+    const options: { id: string; label: string }[] = [];
+    invoices.forEach((inv) => {
+      if (inv.createdBy && !seen.has(inv.createdBy._id)) {
+        seen.add(inv.createdBy._id);
+        options.push({
+          id: inv.createdBy._id,
+          label: `${inv.createdBy.firstName} ${inv.createdBy.lastName}`,
+        });
+      }
+    });
+    return options;
+  }, [invoices]);
+
+  const hasActiveFilters = filterStatus || filterCreatedBy;
+
+  const handleClearFilters = () => {
+    setFilterStatus("");
+    setFilterCreatedBy("");
+    setPage(1);
+  };
+
+  const filteredInvoices = useMemo(() => {
+    return invoices.filter((inv) => {
+      const matchesStatus = filterStatus
+        ? inv.paymentStatus.toLowerCase() === filterStatus.toLowerCase()
+        : true;
+      const matchesCreatedBy = filterCreatedBy
+        ? inv.createdBy?._id === filterCreatedBy
+        : true;
+      return matchesStatus && matchesCreatedBy;
+    });
+  }, [invoices, filterStatus, filterCreatedBy]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [filterStatus, filterCreatedBy]);
+
+  const totalPages = Math.ceil(filteredInvoices.length / PAGE_SIZE);
+  const paginated = filteredInvoices.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const getStatusChipColor = (status: string) => {
     if (status === "Paid") return "success";
@@ -384,10 +425,7 @@ const InvoicesPage = () => {
       setOpenPaymentDialog(false);
       fetchData();
     } catch (error: any) {
-      showSnackbar(
-        error.response?.data?.message || "Failed to update payment",
-        "error",
-      );
+      showSnackbar(error.response?.data?.message || "Failed to update payment", "error");
     } finally {
       setUpdatePaymentLoading(false);
     }
@@ -397,28 +435,19 @@ const InvoicesPage = () => {
     if (!currentInvoice || !serviceData.serviceId) return;
     setAddServiceLoading(true);
     try {
-      const response = await api.patch(
-        `/invoices/${currentInvoice._id}/services`,
-        {
-          serviceId: serviceData.serviceId,
-          quantity: serviceData.quantity,
-        },
-      );
-      // Sync currentInvoice with the updated data returned from the server
+      const response = await api.patch(`/invoices/${currentInvoice._id}/services`, {
+        serviceId: serviceData.serviceId,
+        quantity: serviceData.quantity,
+      });
       const updated: IInvoice = response.data.data || response.data;
       setCurrentInvoice(updated);
-      setInvoices((prev) =>
-        prev.map((inv) => (inv._id === updated._id ? updated : inv)),
-      );
+      setInvoices((prev) => prev.map((inv) => (inv._id === updated._id ? updated : inv)));
       showSnackbar("Service added successfully", "success");
       setOpenAddServiceDialog(false);
       setSelectedService(null);
       fetchData();
     } catch (error: any) {
-      showSnackbar(
-        error.response?.data?.message || "Failed to add service",
-        "error",
-      );
+      showSnackbar(error.response?.data?.message || "Failed to add service", "error");
     } finally {
       setAddServiceLoading(false);
     }
@@ -428,17 +457,8 @@ const InvoicesPage = () => {
 
   if (loading) {
     return (
-      <Box
-        display="flex"
-        justifyContent="center"
-        alignItems="center"
-        height="80vh"
-      >
-        <CircularProgress
-          sx={{ color: theme.palette.primary.main }}
-          size={52}
-          thickness={4}
-        />
+      <Box display="flex" justifyContent="center" alignItems="center" height="80vh">
+        <CircularProgress sx={{ color: theme.palette.primary.main }} size={52} thickness={4} />
       </Box>
     );
   }
@@ -470,32 +490,154 @@ const InvoicesPage = () => {
             variant="h4"
             fontWeight={900}
             letterSpacing={-0.5}
-            sx={{
-              fontSize: { xs: "1.75rem", md: "2.125rem", textAlign: "left" },
-            }}
+            sx={{ fontSize: { xs: "1.75rem", md: "2.125rem", textAlign: "left" } }}
           >
             Invoices
           </Typography>
-          <Typography
-            variant="body2"
-            color="text.secondary"
-            mt={0.5}
-            textAlign={"left"}
-          >
+          <Typography variant="body2" color="text.secondary" mt={0.5} textAlign="left">
             Manage guest billing and payments
           </Typography>
         </Box>
       </Box>
 
+      <Paper
+        elevation={0}
+        sx={{
+          p: 2,
+          mb: 3,
+          borderRadius: "12px",
+          width: "100%",
+          boxSizing: "border-box",
+          border: `1px solid ${theme.palette.divider}`,
+          "@media print": { display: "none" },
+        }}
+      >
+        <Box display="flex" alignItems="center" gap={1} mb={1.5}>
+          <FilterListIcon fontSize="small" color="action" />
+          <Typography variant="body2" fontWeight={600} color="text.secondary">
+            Filters
+          </Typography>
+          {hasActiveFilters && (
+            <Button
+              size="small"
+              startIcon={<ClearIcon fontSize="small" />}
+              onClick={handleClearFilters}
+              sx={{ ml: "auto", textTransform: "none", fontSize: "0.75rem", color: "text.secondary" }}
+            >
+              Clear all
+            </Button>
+          )}
+        </Box>
+
+        <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+          <FormControl
+            size="small"
+            sx={{ minWidth: 180, "& .MuiOutlinedInput-root": { borderRadius: "10px" } }}
+          >
+            <InputLabel>Payment Status</InputLabel>
+            <Select
+              label="Payment Status"
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              endAdornment={
+                filterStatus ? (
+                  <InputAdornment position="end" sx={{ mr: 2 }}>
+                    <IconButton size="small" onClick={() => setFilterStatus("")} edge="end">
+                      <ClearIcon fontSize="small" />
+                    </IconButton>
+                  </InputAdornment>
+                ) : null
+              }
+            >
+              <MenuItem value="">All Statuses</MenuItem>
+              <MenuItem value="Paid">
+                <Box display="flex" alignItems="center" gap={1}>
+                  <Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: "#16a34a" }} />
+                  Paid
+                </Box>
+              </MenuItem>
+              <MenuItem value="Pending">
+                <Box display="flex" alignItems="center" gap={1}>
+                  <Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: "#d97706" }} />
+                  Pending
+                </Box>
+              </MenuItem>
+            </Select>
+          </FormControl>
+
+          <FormControl
+            size="small"
+            sx={{ minWidth: 220, "& .MuiOutlinedInput-root": { borderRadius: "10px" } }}
+          >
+            <InputLabel>Created By</InputLabel>
+            <Select
+              label="Created By"
+              value={filterCreatedBy}
+              onChange={(e) => setFilterCreatedBy(e.target.value)}
+              endAdornment={
+                filterCreatedBy ? (
+                  <InputAdornment position="end" sx={{ mr: 2 }}>
+                    <IconButton size="small" onClick={() => setFilterCreatedBy("")} edge="end">
+                      <ClearIcon fontSize="small" />
+                    </IconButton>
+                  </InputAdornment>
+                ) : null
+              }
+            >
+              <MenuItem value="">All Staff</MenuItem>
+              {creatorOptions.map((opt) => {
+                const creator = invoices.find((inv) => inv.createdBy?._id === opt.id)?.createdBy;
+                return (
+                  <MenuItem key={opt.id} value={opt.id}>
+                    <Box display="flex" alignItems="center" gap={1}>
+                      <Avatar
+                        sx={{
+                          width: 22,
+                          height: 22,
+                          fontSize: "0.6rem",
+                          fontWeight: 700,
+                          bgcolor: creator ? getRoleColor(creator.role) : "#757575",
+                        }}
+                      >
+                        {opt.label.split(" ").map((n) => n[0]).join("").toUpperCase()}
+                      </Avatar>
+                      {opt.label}
+                    </Box>
+                  </MenuItem>
+                );
+              })}
+            </Select>
+          </FormControl>
+        </Stack>
+
+        {hasActiveFilters && (
+          <Box display="flex" gap={1} flexWrap="wrap" mt={1.5}>
+            {filterStatus && (
+              <Chip
+                label={`Status: ${filterStatus}`}
+                size="small"
+                onDelete={() => setFilterStatus("")}
+                color="primary"
+                variant="outlined"
+              />
+            )}
+            {filterCreatedBy && (
+              <Chip
+                label={`Created by: ${creatorOptions.find((o) => o.id === filterCreatedBy)?.label ?? "Unknown"}`}
+                size="small"
+                onDelete={() => setFilterCreatedBy("")}
+                color="primary"
+                variant="outlined"
+              />
+            )}
+          </Box>
+        )}
+      </Paper>
+
       {isMobile ? (
         <Box sx={{ "@media print": { display: "none" } }}>
-          {invoices.length === 0 ? (
-            <Typography
-              variant="body1"
-              color="text.secondary"
-              textAlign="center"
-              py={5}
-            >
+          {filteredInvoices.length === 0 ? (
+            <Typography variant="body1" color="text.secondary" textAlign="center" py={5}>
               No invoices found.
             </Typography>
           ) : (
@@ -525,21 +667,10 @@ const InvoicesPage = () => {
                       }}
                     >
                       {isGuestLoading ? (
-                        <Skeleton
-                          variant="text"
-                          width={140}
-                          height={24}
-                          sx={{ bgcolor: "rgba(255,255,255,0.2)" }}
-                        />
+                        <Skeleton variant="text" width={140} height={24} sx={{ bgcolor: "rgba(255,255,255,0.2)" }} />
                       ) : (
-                        <Typography
-                          variant="subtitle1"
-                          fontWeight={700}
-                          color="#fff"
-                        >
-                          {guest
-                            ? `${guest.firstName} ${guest.lastName}`
-                            : "Unknown Guest"}
+                        <Typography variant="subtitle1" fontWeight={700} color="#fff">
+                          {guest ? `${guest.firstName} ${guest.lastName}` : "Unknown Guest"}
                         </Typography>
                       )}
                       <Chip
@@ -549,43 +680,20 @@ const InvoicesPage = () => {
                         sx={{ fontWeight: 700, borderRadius: 1.5 }}
                       />
                     </Box>
-
                     <CardContent sx={{ pt: 2, pb: "12px !important" }}>
                       <Stack spacing={1.2}>
-                        <Box
-                          display="flex"
-                          justifyContent="space-between"
-                          alignItems="center"
-                        >
-                          <Typography
-                            variant="caption"
-                            color="text.secondary"
-                            fontWeight={600}
-                          >
+                        <Box display="flex" justifyContent="space-between" alignItems="center">
+                          <Typography variant="caption" color="text.secondary" fontWeight={600}>
                             INVOICE ID
                           </Typography>
-                          <Typography
-                            variant="body2"
-                            fontWeight={700}
-                            letterSpacing={0.5}
-                          >
+                          <Typography variant="body2" fontWeight={700} letterSpacing={0.5}>
                             {invoice._id.slice(-8).toUpperCase()}
                           </Typography>
                         </Box>
-                        <Box
-                          display="flex"
-                          justifyContent="space-between"
-                          alignItems="center"
-                        >
+                        <Box display="flex" justifyContent="space-between" alignItems="center">
                           <Box display="flex" alignItems="center" gap={0.8}>
-                            <CalendarTodayIcon
-                              sx={{ fontSize: 14, opacity: 0.55 }}
-                            />
-                            <Typography
-                              variant="caption"
-                              color="text.secondary"
-                              fontWeight={600}
-                            >
+                            <CalendarTodayIcon sx={{ fontSize: 14, opacity: 0.55 }} />
+                            <Typography variant="caption" color="text.secondary" fontWeight={600}>
                               DATE
                             </Typography>
                           </Box>
@@ -593,54 +701,26 @@ const InvoicesPage = () => {
                             {new Date(invoice.issueDate).toLocaleDateString()}
                           </Typography>
                         </Box>
-                        <Box
-                          display="flex"
-                          justifyContent="space-between"
-                          alignItems="center"
-                        >
+                        <Box display="flex" justifyContent="space-between" alignItems="center">
                           <Box display="flex" alignItems="center" gap={0.8}>
                             <BadgeIcon sx={{ fontSize: 14, opacity: 0.55 }} />
-                            <Typography
-                              variant="caption"
-                              color="text.secondary"
-                              fontWeight={600}
-                            >
+                            <Typography variant="caption" color="text.secondary" fontWeight={600}>
                               CREATED BY
                             </Typography>
                           </Box>
                           <CreatedByBadge user={invoice.createdBy} />
                         </Box>
                         <Divider />
-                        <Box
-                          display="flex"
-                          justifyContent="space-between"
-                          alignItems="center"
-                        >
-                          <Typography
-                            variant="caption"
-                            color="text.secondary"
-                            fontWeight={600}
-                          >
+                        <Box display="flex" justifyContent="space-between" alignItems="center">
+                          <Typography variant="caption" color="text.secondary" fontWeight={600}>
                             TOTAL
                           </Typography>
-                          <Typography
-                            variant="h6"
-                            fontWeight={900}
-                            color="success.main"
-                            lineHeight={1}
-                          >
-                            {currency}
-                            {invoice.totalAmountDue.toFixed(2)}
+                          <Typography variant="h6" fontWeight={900} color="success.main" lineHeight={1}>
+                            {currency}{invoice.totalAmountDue.toFixed(2)}
                           </Typography>
                         </Box>
                       </Stack>
-
-                      <Stack
-                        direction="row"
-                        spacing={1}
-                        justifyContent="flex-end"
-                        mt={1.5}
-                      >
+                      <Stack direction="row" spacing={1} justifyContent="flex-end" mt={1.5}>
                         <IconButton
                           size="small"
                           color="success"
@@ -675,10 +755,7 @@ const InvoicesPage = () => {
                   <Pagination
                     count={totalPages}
                     page={page}
-                    onChange={(_, value) => {
-                      setPage(value);
-                      window.scrollTo({ top: 0, behavior: "smooth" });
-                    }}
+                    onChange={(_, value) => { setPage(value); window.scrollTo({ top: 0, behavior: "smooth" }); }}
                     color="primary"
                     shape="rounded"
                     size="small"
@@ -703,22 +780,10 @@ const InvoicesPage = () => {
             <Table sx={{ minWidth: 900 }}>
               <TableHead>
                 <TableRow sx={{ bgcolor: theme.palette.action.hover }}>
-                  {[
-                    "Invoice ID",
-                    "Guest Name",
-                    "Issue Date",
-                    "Created By",
-                    "Total Amount",
-                    "Status",
-                    "Actions",
-                  ].map((h) => (
+                  {["Invoice ID", "Guest Name", "Issue Date", "Created By", "Total Amount", "Status", "Actions"].map((h) => (
                     <TableCell
                       key={h}
-                      align={
-                        h === "Actions" || h === "Total Amount"
-                          ? "right"
-                          : "left"
-                      }
+                      align={h === "Actions" || h === "Total Amount" ? "right" : "left"}
                       sx={{
                         fontWeight: 700,
                         fontSize: "0.75rem",
@@ -734,7 +799,7 @@ const InvoicesPage = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {invoices.length === 0 ? (
+                {filteredInvoices.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={7} align="center" sx={{ py: 5 }}>
                       <Typography variant="body1" color="text.secondary">
@@ -782,13 +847,8 @@ const InvoicesPage = () => {
                           <CreatedByBadge user={invoice.createdBy} />
                         </TableCell>
                         <TableCell align="right">
-                          <Typography
-                            variant="body2"
-                            fontWeight={700}
-                            color="success.main"
-                          >
-                            {currency}
-                            {invoice.totalAmountDue.toFixed(2)}
+                          <Typography variant="body2" fontWeight={700} color="success.main">
+                            {currency}{invoice.totalAmountDue.toFixed(2)}
                           </Typography>
                         </TableCell>
                         <TableCell>
@@ -800,30 +860,14 @@ const InvoicesPage = () => {
                           />
                         </TableCell>
                         <TableCell align="right">
-                          <Stack
-                            direction="row"
-                            justifyContent="flex-end"
-                            spacing={1}
-                          >
-                            <IconButton
-                              size="small"
-                              color="success"
-                              onClick={() => handleOpenAddService(invoice)}
-                            >
+                          <Stack direction="row" justifyContent="flex-end" spacing={1}>
+                            <IconButton size="small" color="success" onClick={() => handleOpenAddService(invoice)}>
                               <AddCircleOutlineIcon fontSize="small" />
                             </IconButton>
-                            <IconButton
-                              size="small"
-                              color="primary"
-                              onClick={() => handleOpenPayment(invoice)}
-                            >
+                            <IconButton size="small" color="primary" onClick={() => handleOpenPayment(invoice)}>
                               <PaymentIcon fontSize="small" />
                             </IconButton>
-                            <IconButton
-                              size="small"
-                              color="secondary"
-                              onClick={() => handleOpenPrint(invoice)}
-                            >
+                            <IconButton size="small" color="secondary" onClick={() => handleOpenPrint(invoice)}>
                               <VisibilityIcon fontSize="small" />
                             </IconButton>
                           </Stack>
@@ -840,10 +884,7 @@ const InvoicesPage = () => {
               <Pagination
                 count={totalPages}
                 page={page}
-                onChange={(_, value) => {
-                  setPage(value);
-                  window.scrollTo({ top: 0, behavior: "smooth" });
-                }}
+                onChange={(_, value) => { setPage(value); window.scrollTo({ top: 0, behavior: "smooth" }); }}
                 color="primary"
                 shape="rounded"
               />
@@ -867,17 +908,10 @@ const InvoicesPage = () => {
               label="Payment Status"
               fullWidth
               value={paymentData.paymentStatus}
-              onChange={(e) =>
-                setPaymentData({
-                  ...paymentData,
-                  paymentStatus: e.target.value,
-                })
-              }
+              onChange={(e) => setPaymentData({ ...paymentData, paymentStatus: e.target.value })}
             >
               {["Paid", "Pending"].map((s) => (
-                <MenuItem key={s} value={s}>
-                  {s}
-                </MenuItem>
+                <MenuItem key={s} value={s}>{s}</MenuItem>
               ))}
             </TextField>
             <TextField
@@ -885,27 +919,16 @@ const InvoicesPage = () => {
               label="Payment Method"
               fullWidth
               value={paymentData.paymentMethod}
-              onChange={(e) =>
-                setPaymentData({
-                  ...paymentData,
-                  paymentMethod: e.target.value,
-                })
-              }
+              onChange={(e) => setPaymentData({ ...paymentData, paymentMethod: e.target.value })}
             >
               {["Cash", "Credit Card", "Online", "Bank Transfer"].map((m) => (
-                <MenuItem key={m} value={m}>
-                  {m}
-                </MenuItem>
+                <MenuItem key={m} value={m}>{m}</MenuItem>
               ))}
             </TextField>
           </Box>
         </DialogContent>
         <DialogActions sx={{ p: 2, px: 3 }}>
-          <Button
-            onClick={() => setOpenPaymentDialog(false)}
-            color="inherit"
-            sx={{ fontWeight: 600 }}
-          >
+          <Button onClick={() => setOpenPaymentDialog(false)} color="inherit" sx={{ fontWeight: 600 }}>
             Cancel
           </Button>
           <Button
@@ -914,11 +937,7 @@ const InvoicesPage = () => {
             disabled={updatePaymentLoading}
             sx={{ borderRadius: 2, fontWeight: 700, minWidth: 90 }}
           >
-            {updatePaymentLoading ? (
-              <CircularProgress size={18} color="inherit" />
-            ) : (
-              "Update"
-            )}
+            {updatePaymentLoading ? <CircularProgress size={18} color="inherit" /> : "Update"}
           </Button>
         </DialogActions>
       </Dialog>
@@ -939,39 +958,25 @@ const InvoicesPage = () => {
               fullWidth
               value={serviceData.serviceId}
               onChange={(e) => {
-                const svc = availableServices.find(
-                  (s) => s._id === e.target.value,
-                );
+                const svc = availableServices.find((s) => s._id === e.target.value);
                 setServiceData({ ...serviceData, serviceId: e.target.value });
                 setSelectedService(svc || null);
               }}
             >
               {availableServices.map((s) => (
                 <MenuItem key={s._id} value={s._id}>
-                  <Box
-                    display="flex"
-                    justifyContent="space-between"
-                    width="100%"
-                    alignItems="center"
-                    gap={1}
-                  >
+                  <Box display="flex" justifyContent="space-between" width="100%" alignItems="center" gap={1}>
                     <span>{s.name}</span>
                     <Box display="flex" alignItems="center" gap={0.75}>
                       <Typography variant="body2" fontWeight={700}>
-                        {currency}
-                        {s.price.toFixed(2)}
+                        {currency}{s.price.toFixed(2)}
                       </Typography>
                       {s.isTaxable && (
                         <Chip
                           label="Tax"
                           size="small"
                           color="warning"
-                          sx={{
-                            height: 18,
-                            fontSize: "0.6rem",
-                            fontWeight: 700,
-                            borderRadius: 1,
-                          }}
+                          sx={{ height: 18, fontSize: "0.6rem", fontWeight: 700, borderRadius: 1 }}
                         />
                       )}
                     </Box>
@@ -979,7 +984,6 @@ const InvoicesPage = () => {
                 </MenuItem>
               ))}
             </TextField>
-
             <TextField
               label="Quantity"
               type="number"
@@ -987,22 +991,11 @@ const InvoicesPage = () => {
               inputProps={{ min: 1 }}
               value={serviceData.quantity}
               onChange={(e) =>
-                setServiceData({
-                  ...serviceData,
-                  quantity: Math.max(1, parseInt(e.target.value) || 1),
-                })
+                setServiceData({ ...serviceData, quantity: Math.max(1, parseInt(e.target.value) || 1) })
               }
             />
-
             {selectedService && (
-              <Box
-                sx={{
-                  p: 2,
-                  borderRadius: 2,
-                  bgcolor: "action.hover",
-                  border: `1px solid ${theme.palette.divider}`,
-                }}
-              >
+              <Box sx={{ p: 2, borderRadius: 2, bgcolor: "action.hover", border: `1px solid ${theme.palette.divider}` }}>
                 <Typography
                   variant="caption"
                   color="text.secondary"
@@ -1015,35 +1008,21 @@ const InvoicesPage = () => {
                 </Typography>
                 <Stack spacing={0.75}>
                   <Box display="flex" justifyContent="space-between">
-                    <Typography variant="body2" color="text.secondary">
-                      Unit price
-                    </Typography>
-                    <Typography variant="body2" fontWeight={600}>
-                      {currency}
-                      {selectedService.price.toFixed(2)}
-                    </Typography>
+                    <Typography variant="body2" color="text.secondary">Unit price</Typography>
+                    <Typography variant="body2" fontWeight={600}>{currency}{selectedService.price.toFixed(2)}</Typography>
                   </Box>
                   <Box display="flex" justifyContent="space-between">
-                    <Typography variant="body2" color="text.secondary">
-                      Quantity
-                    </Typography>
-                    <Typography variant="body2" fontWeight={600}>
-                      × {serviceData.quantity}
-                    </Typography>
+                    <Typography variant="body2" color="text.secondary">Quantity</Typography>
+                    <Typography variant="body2" fontWeight={600}>× {serviceData.quantity}</Typography>
                   </Box>
                   <Box display="flex" justifyContent="space-between">
-                    <Typography variant="body2" color="text.secondary">
-                      Subtotal
-                    </Typography>
+                    <Typography variant="body2" color="text.secondary">Subtotal</Typography>
                     <Typography variant="body2" fontWeight={600}>
-                      {currency}
-                      {(selectedService.price * serviceData.quantity).toFixed(2)}
+                      {currency}{(selectedService.price * serviceData.quantity).toFixed(2)}
                     </Typography>
                   </Box>
                   <Box display="flex" justifyContent="space-between" alignItems="center">
-                    <Typography variant="body2" color="text.secondary">
-                      Taxable
-                    </Typography>
+                    <Typography variant="body2" color="text.secondary">Taxable</Typography>
                     <Chip
                       label={selectedService.isTaxable ? "Yes" : "No"}
                       size="small"
@@ -1071,11 +1050,7 @@ const InvoicesPage = () => {
             disabled={!serviceData.serviceId || addServiceLoading}
             sx={{ borderRadius: 2, fontWeight: 700, minWidth: 80 }}
           >
-            {addServiceLoading ? (
-              <CircularProgress size={18} color="inherit" />
-            ) : (
-              "Add"
-            )}
+            {addServiceLoading ? <CircularProgress size={18} color="inherit" /> : "Add"}
           </Button>
         </DialogActions>
       </Dialog>
@@ -1089,13 +1064,7 @@ const InvoicesPage = () => {
         PaperProps={{
           sx: {
             borderRadius: 3,
-            "@media print": {
-              boxShadow: "none",
-              margin: 0,
-              width: "100%",
-              maxWidth: "100% !important",
-              borderRadius: 0,
-            },
+            "@media print": { boxShadow: "none", margin: 0, width: "100%", maxWidth: "100% !important", borderRadius: 0 },
           },
         }}
       >
@@ -1111,78 +1080,37 @@ const InvoicesPage = () => {
                 mb={{ xs: 3, md: 6 }}
               >
                 <Box>
-                  <Typography
-                    fontWeight={900}
-                    letterSpacing={-1}
-                    sx={{ fontSize: { xs: "1.75rem", md: "3rem" } }}
-                  >
+                  <Typography fontWeight={900} letterSpacing={-1} sx={{ fontSize: { xs: "1.75rem", md: "3rem" } }}>
                     INVOICE
                   </Typography>
-                  <Typography
-                    variant="body2"
-                    className="p-secondary"
-                    color="text.secondary"
-                    mt={0.5}
-                    sx={{ wordBreak: "break-all" }}
-                  >
+                  <Typography variant="body2" className="p-secondary" color="text.secondary" mt={0.5} sx={{ wordBreak: "break-all" }}>
                     ID: {currentInvoice._id.slice(-12).toUpperCase()}
                   </Typography>
-                  <Typography
-                    variant="body2"
-                    className="p-secondary"
-                    color="text.secondary"
-                  >
-                    Date:{" "}
-                    {new Date(currentInvoice.issueDate).toLocaleDateString()}
+                  <Typography variant="body2" className="p-secondary" color="text.secondary">
+                    Date: {new Date(currentInvoice.issueDate).toLocaleDateString()}
                   </Typography>
                   {currentInvoice.createdBy && (
-                    <Typography
-                      variant="body2"
-                      className="p-secondary"
-                      color="text.secondary"
-                    >
-                      Issued by: {currentInvoice.createdBy.firstName}{" "}
-                      {currentInvoice.createdBy.lastName} (
-                      {currentInvoice.createdBy.role})
+                    <Typography variant="body2" className="p-secondary" color="text.secondary">
+                      Issued by: {currentInvoice.createdBy.firstName} {currentInvoice.createdBy.lastName} ({currentInvoice.createdBy.role})
                     </Typography>
                   )}
                 </Box>
                 <Box textAlign={{ xs: "left", sm: "right" }}>
-                  <Typography variant="h6" fontWeight={800}>
-                    {hotel?.name ?? "AMI Hotel"}
-                  </Typography>
-                  <Typography
-                    variant="body2"
-                    className="p-secondary"
-                    color="text.secondary"
-                  >
+                  <Typography variant="h6" fontWeight={800}>{hotel?.name ?? "AMI Hotel"}</Typography>
+                  <Typography variant="body2" className="p-secondary" color="text.secondary">
                     E-mail: {hotel?.email ?? "ami@hotel.com"}
                   </Typography>
-                  <Typography
-                    variant="body2"
-                    className="p-secondary"
-                    color="text.secondary"
-                  >
+                  <Typography variant="body2" className="p-secondary" color="text.secondary">
                     Phone: {hotel?.phone ?? ""}
                   </Typography>
-                  <Typography
-                    variant="body2"
-                    className="p-secondary"
-                    color="text.secondary"
-                  >
+                  <Typography variant="body2" className="p-secondary" color="text.secondary">
                     {hotel?.address ?? ""}
                   </Typography>
                 </Box>
               </Box>
 
               <Box mb={4}>
-                <Typography
-                  variant="subtitle2"
-                  fontWeight={700}
-                  className="p-secondary"
-                  color="text.secondary"
-                  textTransform="uppercase"
-                >
+                <Typography variant="subtitle2" fontWeight={700} className="p-secondary" color="text.secondary" textTransform="uppercase">
                   Bill To
                 </Typography>
                 {printLoading ? (
@@ -1197,25 +1125,13 @@ const InvoicesPage = () => {
                     <Typography variant="h6" fontWeight={800}>
                       {currentGuest.firstName} {currentGuest.lastName}
                     </Typography>
-                    <Typography
-                      variant="body2"
-                      className="p-secondary"
-                      color="text.secondary"
-                    >
+                    <Typography variant="body2" className="p-secondary" color="text.secondary">
                       Email: {currentGuest.email}
                     </Typography>
-                    <Typography
-                      variant="body2"
-                      className="p-secondary"
-                      color="text.secondary"
-                    >
+                    <Typography variant="body2" className="p-secondary" color="text.secondary">
                       Phone: {currentGuest.phoneNumber || "N/A"}
                     </Typography>
-                    <Typography
-                      variant="body2"
-                      className="p-secondary"
-                      color="text.secondary"
-                    >
+                    <Typography variant="body2" className="p-secondary" color="text.secondary">
                       Passport Number: {currentGuest.idNumber || "N/A"}
                     </Typography>
                   </Box>
@@ -1229,95 +1145,43 @@ const InvoicesPage = () => {
               <TableContainer sx={{ mb: 4, overflowX: "auto" }}>
                 <Table size="small" sx={{ minWidth: 380 }}>
                   <TableHead>
-                    <TableRow
-                      className="p-thead"
-                      sx={{
-                        borderBottom: `2px solid ${theme.palette.divider}`,
-                      }}
-                    >
-                      <TableCell sx={{ fontWeight: 700, pb: 2, px: 0 }}>
-                        Description
-                      </TableCell>
-                      <TableCell
-                        align="center"
-                        sx={{ fontWeight: 700, pb: 2, px: 0 }}
-                      >
-                        Qty
-                      </TableCell>
-                      <TableCell
-                        align="right"
-                        sx={{ fontWeight: 700, pb: 2, px: 0 }}
-                      >
-                        Unit Price
-                      </TableCell>
-                      <TableCell
-                        align="right"
-                        sx={{ fontWeight: 700, pb: 2, px: 0 }}
-                      >
-                        Amount
-                      </TableCell>
+                    <TableRow className="p-thead" sx={{ borderBottom: `2px solid ${theme.palette.divider}` }}>
+                      <TableCell sx={{ fontWeight: 700, pb: 2, px: 0 }}>Description</TableCell>
+                      <TableCell align="center" sx={{ fontWeight: 700, pb: 2, px: 0 }}>Qty</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 700, pb: 2, px: 0 }}>Unit Price</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 700, pb: 2, px: 0 }}>Amount</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
                     <TableRow>
                       <TableCell sx={{ py: 2, px: 0 }}>Room Charge</TableCell>
                       <TableCell align="center">1</TableCell>
-                      <TableCell align="right">
-                        {currency}
-                        {currentInvoice.totalRoomCharge.toFixed(2)}
-                      </TableCell>
-                      <TableCell align="right">
-                        {currency}
-                        {currentInvoice.totalRoomCharge.toFixed(2)}
-                      </TableCell>
+                      <TableCell align="right">{currency}{currentInvoice.totalRoomCharge.toFixed(2)}</TableCell>
+                      <TableCell align="right">{currency}{currentInvoice.totalRoomCharge.toFixed(2)}</TableCell>
                     </TableRow>
                     {currentInvoice.usedServices?.map((item, index) => (
                       <TableRow key={index}>
                         <TableCell sx={{ py: 2, px: 0 }}>{item.name}</TableCell>
                         <TableCell align="center">{item.quantity}</TableCell>
-                        <TableCell align="right">
-                          {currency}
-                          {item.price.toFixed(2)}
-                        </TableCell>
-                        <TableCell align="right">
-                          {currency}
-                          {item.total.toFixed(2)}
-                        </TableCell>
+                        <TableCell align="right">{currency}{item.price.toFixed(2)}</TableCell>
+                        <TableCell align="right">{currency}{item.total.toFixed(2)}</TableCell>
                       </TableRow>
                     ))}
                     <TableRow>
-                      <TableCell
-                        colSpan={3}
-                        align="right"
-                        sx={{ py: 2, px: 0, fontWeight: 600 }}
-                      >
+                      <TableCell colSpan={3} align="right" sx={{ py: 2, px: 0, fontWeight: 600 }}>
                         Taxes
                       </TableCell>
-                      <TableCell align="right">
-                        {currency}
-                        {currentInvoice.taxAmount.toFixed(2)}
-                      </TableCell>
+                      <TableCell align="right">{currency}{currentInvoice.taxAmount.toFixed(2)}</TableCell>
                     </TableRow>
                     <TableRow
                       className="p-total-row"
-                      sx={{
-                        background: theme.palette.primary.main,
-                        "& td": { border: 0 },
-                      }}
+                      sx={{ background: theme.palette.primary.main, "& td": { border: 0 } }}
                     >
-                      <TableCell
-                        colSpan={3}
-                        align="right"
-                        sx={{ py: 2, px: 1, fontWeight: 800, fontSize: "1rem" }}
-                      >
+                      <TableCell colSpan={3} align="right" sx={{ py: 2, px: 1, fontWeight: 800, fontSize: "1rem" }}>
                         TOTAL DUE
                       </TableCell>
-                      <TableCell
-                        align="right"
-                        sx={{ fontWeight: 900, fontSize: "1.1rem", px: 0 }}
-                      >
-                        {currency}
-                        {currentInvoice.totalAmountDue.toFixed(2)}
+                      <TableCell align="right" sx={{ fontWeight: 900, fontSize: "1.1rem", px: 0 }}>
+                        {currency}{currentInvoice.totalAmountDue.toFixed(2)}
                       </TableCell>
                     </TableRow>
                   </TableBody>
@@ -1331,30 +1195,19 @@ const InvoicesPage = () => {
                     variant="body2"
                     textAlign="right"
                     fontWeight={800}
-                    className={getStatusPrintClass(
-                      currentInvoice.paymentStatus,
-                    )}
-                    sx={{
-                      color: getStatusHexColor(currentInvoice.paymentStatus),
-                    }}
+                    className={getStatusPrintClass(currentInvoice.paymentStatus)}
+                    sx={{ color: getStatusHexColor(currentInvoice.paymentStatus) }}
                   >
                     {currentInvoice.paymentStatus.toUpperCase()}
-                    {currentInvoice.paymentMethod
-                      ? ` · ${currentInvoice.paymentMethod}`
-                      : ""}
+                    {currentInvoice.paymentMethod ? ` · ${currentInvoice.paymentMethod}` : ""}
                   </Typography>
                 </Box>
               </Box>
             </Box>
           )}
         </DialogContent>
-
         <DialogActions className="no-print" sx={{ p: 2, px: 3 }}>
-          <Button
-            onClick={() => setOpenPrintDialog(false)}
-            color="inherit"
-            sx={{ fontWeight: 600 }}
-          >
+          <Button onClick={() => setOpenPrintDialog(false)} color="inherit" sx={{ fontWeight: 600 }}>
             Close
           </Button>
           <Button
