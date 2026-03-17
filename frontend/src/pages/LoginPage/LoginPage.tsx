@@ -183,9 +183,8 @@ const LoginPage = () => {
           <form onSubmit={onSubmit} autoComplete="off">
             <TextField
               fullWidth
-              label="Email"
+              label="Email Or Username"
               name="email"
-              type="email"
               inputRef={identifierRef}
               required
               sx={{

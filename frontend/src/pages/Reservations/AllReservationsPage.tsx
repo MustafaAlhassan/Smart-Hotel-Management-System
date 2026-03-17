@@ -880,7 +880,8 @@ const AllReservationsPage = () => {
         <Alert
           onClose={handleCloseSnackbar}
           severity={snackbar.severity}
-          sx={{ width: "100%", borderRadius: "8px" }}
+          variant="filled"
+          sx={{ borderRadius: 2 }}
         >
           {snackbar.message}
         </Alert>
