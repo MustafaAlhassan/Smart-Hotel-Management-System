@@ -46,6 +46,7 @@ import ReceiptIcon from "@mui/icons-material/Receipt";
 import WarningAmberRoundedIcon from "@mui/icons-material/WarningAmberRounded";
 import FilterListIcon from "@mui/icons-material/FilterList";
 import ClearIcon from "@mui/icons-material/Clear";
+import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import { useNavigate } from "react-router-dom";
 import api from "../../services/api";
 import { useHotel } from "../../context/HotelContext";
@@ -78,6 +79,19 @@ const AllReservationsPage = () => {
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [bookingToCancel, setBookingToCancel] = useState<any>(null);
   const [cancelLoading, setCancelLoading] = useState(false);
+
+  const [moreInfoDialogOpen, setMoreInfoDialogOpen] = useState(false);
+  const [moreInfoBooking, setMoreInfoBooking] = useState<any>(null);
+
+  const handleOpenMoreInfo = (booking: any) => {
+    setMoreInfoBooking(booking);
+    setMoreInfoDialogOpen(true);
+  };
+
+  const handleCloseMoreInfo = () => {
+    setMoreInfoDialogOpen(false);
+    setMoreInfoBooking(null);
+  };
 
   const [availableRooms, setAvailableRooms] = useState<any[]>([]);
 
@@ -530,6 +544,16 @@ const AllReservationsPage = () => {
                     <Box display="flex" justifyContent="flex-end" mt={2} gap={1} flexWrap="wrap">
                       <Button
                         variant="outlined"
+                        color="info"
+                        size="small"
+                        startIcon={<InfoOutlinedIcon />}
+                        onClick={() => handleOpenMoreInfo(booking)}
+                        sx={{ borderRadius: "8px" }}
+                      >
+                        More Info
+                      </Button>
+                      <Button
+                        variant="outlined"
                         color="success"
                         size="small"
                         startIcon={<ReceiptIcon />}
@@ -623,6 +647,16 @@ const AllReservationsPage = () => {
                       </TableCell>
                       <TableCell>{getStatusChip(booking.status)}</TableCell>
                       <TableCell align="center">
+                        <Tooltip title="More Information">
+                          <IconButton
+                            color="info"
+                            size="small"
+                            sx={{ mr: 1 }}
+                            onClick={() => handleOpenMoreInfo(booking)}
+                          >
+                            <InfoOutlinedIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
                         <Tooltip title="Create Invoice">
                           <IconButton
                             color="success"
@@ -670,6 +704,91 @@ const AllReservationsPage = () => {
         </TableContainer>
       )}
 
+      {/* More Information Dialog */}
+      <Dialog
+        open={moreInfoDialogOpen}
+        onClose={handleCloseMoreInfo}
+        maxWidth="xs"
+        fullWidth
+        PaperProps={{ sx: { borderRadius: 3, p: 1 } }}
+      >
+        <DialogTitle sx={{ pb: 1 }}>
+          <Box display="flex" alignItems="center" gap={1.5}>
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: 40,
+                height: 40,
+                borderRadius: "50%",
+                bgcolor: "info.lighter",
+                color: "info.main",
+                flexShrink: 0,
+              }}
+            >
+              <InfoOutlinedIcon />
+            </Box>
+            <Typography fontWeight={800} fontSize="1.1rem">
+              Booking Details
+            </Typography>
+          </Box>
+        </DialogTitle>
+        <DialogContent sx={{ pb: 1 }}>
+          {moreInfoBooking && (
+            <Paper
+              elevation={0}
+              sx={{
+                p: 2,
+                borderRadius: 2,
+                bgcolor: theme.palette.action.hover,
+                border: `1px solid ${theme.palette.divider}`,
+              }}
+            >
+              <Stack spacing={1.5}>
+                <Box display="flex" justifyContent="space-between" alignItems="center">
+                  <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                    Adults
+                  </Typography>
+                  <Typography variant="body2" fontWeight={700}>
+                    {moreInfoBooking.adults ?? "—"}
+                  </Typography>
+                </Box>
+                <Divider />
+                <Box display="flex" justifyContent="space-between" alignItems="center">
+                  <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                    Children
+                  </Typography>
+                  <Typography variant="body2" fontWeight={700}>
+                    {moreInfoBooking.children ?? "—"}
+                  </Typography>
+                </Box>
+                <Divider />
+                <Box>
+                  <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                    Notes
+                  </Typography>
+                  <Typography variant="body2" mt={0.5} sx={{ whiteSpace: "pre-wrap" }}>
+                    {moreInfoBooking.notes || "No notes provided."}
+                  </Typography>
+                </Box>
+              </Stack>
+            </Paper>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ p: 2.5, pt: 1.5 }}>
+          <Button
+            onClick={handleCloseMoreInfo}
+            variant="contained"
+            color="primary"
+            sx={{ borderRadius: "8px", textTransform: "none", fontWeight: 600 }}
+          >
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Cancel Dialog */}
       <Dialog
         open={cancelDialogOpen}
         onClose={handleCloseCancelDialog}
@@ -770,6 +889,7 @@ const AllReservationsPage = () => {
         </DialogActions>
       </Dialog>
 
+      {/* Edit Dialog */}
       <Dialog
         open={editDialogOpen}
         onClose={handleEditClose}

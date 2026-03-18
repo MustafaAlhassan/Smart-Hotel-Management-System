@@ -44,6 +44,7 @@ import {
   Badge as BadgeIcon,
   FilterList as FilterListIcon,
   Clear as ClearIcon,
+  Search as SearchIcon,
 } from "@mui/icons-material";
 import api from "../services/api";
 import { useHotel } from "../context/HotelContext";
@@ -207,6 +208,7 @@ const InvoicesPage = () => {
 
   const [filterStatus, setFilterStatus] = useState("");
   const [filterCreatedBy, setFilterCreatedBy] = useState("");
+  const [filterInvoiceId, setFilterInvoiceId] = useState("");
 
   const [invoiceGuests, setInvoiceGuests] = useState<Record<string, IGuest | null>>({});
   const [guestsLoading, setGuestsLoading] = useState<Record<string, boolean>>({});
@@ -338,11 +340,12 @@ const InvoicesPage = () => {
     return options;
   }, [invoices]);
 
-  const hasActiveFilters = filterStatus || filterCreatedBy;
+  const hasActiveFilters = filterStatus || filterCreatedBy || filterInvoiceId;
 
   const handleClearFilters = () => {
     setFilterStatus("");
     setFilterCreatedBy("");
+    setFilterInvoiceId("");
     setPage(1);
   };
 
@@ -354,13 +357,16 @@ const InvoicesPage = () => {
       const matchesCreatedBy = filterCreatedBy
         ? inv.createdBy?._id === filterCreatedBy
         : true;
-      return matchesStatus && matchesCreatedBy;
+      const matchesInvoiceId = filterInvoiceId
+        ? inv._id.slice(-8).toUpperCase().includes(filterInvoiceId.toUpperCase().trim())
+        : true;
+      return matchesStatus && matchesCreatedBy && matchesInvoiceId;
     });
-  }, [invoices, filterStatus, filterCreatedBy]);
+  }, [invoices, filterStatus, filterCreatedBy, filterInvoiceId]);
 
   useEffect(() => {
     setPage(1);
-  }, [filterStatus, filterCreatedBy]);
+  }, [filterStatus, filterCreatedBy, filterInvoiceId]);
 
   const totalPages = Math.ceil(filteredInvoices.length / PAGE_SIZE);
   const paginated = filteredInvoices.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -500,6 +506,7 @@ const InvoicesPage = () => {
         </Box>
       </Box>
 
+      {/* ── Filters Panel ── */}
       <Paper
         elevation={0}
         sx={{
@@ -529,7 +536,32 @@ const InvoicesPage = () => {
           )}
         </Box>
 
-        <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+        <Stack direction={{ xs: "column", sm: "row" }} spacing={2} flexWrap="wrap">
+          {/* Invoice ID Search */}
+          <TextField
+            size="small"
+            label="Search Invoice ID"
+            placeholder="e.g. DB6D9144"
+            value={filterInvoiceId}
+            onChange={(e) => setFilterInvoiceId(e.target.value)}
+            sx={{ minWidth: 200, "& .MuiOutlinedInput-root": { borderRadius: "10px" } }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon fontSize="small" color="action" />
+                </InputAdornment>
+              ),
+              endAdornment: filterInvoiceId ? (
+                <InputAdornment position="end">
+                  <IconButton size="small" onClick={() => setFilterInvoiceId("")} edge="end">
+                    <ClearIcon fontSize="small" />
+                  </IconButton>
+                </InputAdornment>
+              ) : null,
+            }}
+          />
+
+          {/* Payment Status */}
           <FormControl
             size="small"
             sx={{ minWidth: 180, "& .MuiOutlinedInput-root": { borderRadius: "10px" } }}
@@ -565,6 +597,7 @@ const InvoicesPage = () => {
             </Select>
           </FormControl>
 
+          {/* Created By */}
           <FormControl
             size="small"
             sx={{ minWidth: 220, "& .MuiOutlinedInput-root": { borderRadius: "10px" } }}
@@ -610,8 +643,18 @@ const InvoicesPage = () => {
           </FormControl>
         </Stack>
 
+        {/* Active filter chips */}
         {hasActiveFilters && (
           <Box display="flex" gap={1} flexWrap="wrap" mt={1.5}>
+            {filterInvoiceId && (
+              <Chip
+                label={`Invoice ID: ${filterInvoiceId.toUpperCase()}`}
+                size="small"
+                onDelete={() => setFilterInvoiceId("")}
+                color="primary"
+                variant="outlined"
+              />
+            )}
             {filterStatus && (
               <Chip
                 label={`Status: ${filterStatus}`}
@@ -893,6 +936,7 @@ const InvoicesPage = () => {
         </>
       )}
 
+      {/* Payment Dialog */}
       <Dialog
         open={openPaymentDialog}
         onClose={() => setOpenPaymentDialog(false)}
@@ -942,6 +986,7 @@ const InvoicesPage = () => {
         </DialogActions>
       </Dialog>
 
+      {/* Add Service Dialog */}
       <Dialog
         open={openAddServiceDialog}
         onClose={() => { setOpenAddServiceDialog(false); setSelectedService(null); }}
@@ -1055,6 +1100,7 @@ const InvoicesPage = () => {
         </DialogActions>
       </Dialog>
 
+      {/* Print / View Dialog */}
       <Dialog
         open={openPrintDialog}
         onClose={() => setOpenPrintDialog(false)}
