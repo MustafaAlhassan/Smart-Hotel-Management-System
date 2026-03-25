@@ -249,9 +249,10 @@ const RoomsPage = () => {
       });
       fetchData();
     } catch (error: any) {
+      const message = error.response?.data?.message;
       setSnackbar({
         open: true,
-        message: error.response?.data?.error || "Failed to update status",
+        message: message || "Failed to update room status",
         severity: "error",
       });
     } finally {
@@ -301,7 +302,8 @@ const RoomsPage = () => {
     if (!formData.roomNumber || !formData.roomType || formData.floor === "") {
       setSnackbar({
         open: true,
-        message: "Please fill required fields",
+        message:
+          "Please fill all required fields (Room Number, Room Type, Floor)",
         severity: "error",
       });
       return;
@@ -321,20 +323,32 @@ const RoomsPage = () => {
       }
       setSnackbar({
         open: true,
-        message: editingRoom ? "Room updated!" : "Room created!",
+        message: editingRoom
+          ? "Room updated successfully!"
+          : "Room created successfully!",
         severity: "success",
       });
       setOpen(false);
       fetchData();
     } catch (error: any) {
-      setSnackbar({
-        open: true,
-        message:
-          error.response?.status === 413
-            ? "Image too large"
-            : "Failed to save room",
-        severity: "error",
-      });
+      const status = error.response?.status;
+      const message = error.response?.data?.message;
+
+      if (status === 413) {
+        setSnackbar({
+          open: true,
+          message: "Image is too large. Please upload an image under 10MB.",
+          severity: "error",
+        });
+      } else if (status === 409 || message) {
+        setSnackbar({ open: true, message: message, severity: "error" });
+      } else {
+        setSnackbar({
+          open: true,
+          message: "Something went wrong. Please try again.",
+          severity: "error",
+        });
+      }
     } finally {
       setSaveLoading(false);
     }
@@ -355,8 +369,13 @@ const RoomsPage = () => {
         severity: "success",
       });
       fetchData();
-    } catch {
-      setSnackbar({ open: true, message: "Delete failed", severity: "error" });
+    } catch (error: any) {
+      const message = error.response?.data?.message;
+      setSnackbar({
+        open: true,
+        message: message || "Failed to delete room",
+        severity: "error",
+      });
     } finally {
       setDeleteConfirmOpen(false);
       setRoomToDelete(null);
