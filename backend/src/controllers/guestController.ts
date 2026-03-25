@@ -5,6 +5,7 @@ import {
   findAllGuests,
   getGuestById,
   removeGuest,
+  searchGuestService,
   updateGuestInfo,
 } from "../services/guestService";
 
@@ -130,5 +131,21 @@ export const deleteGuest = async (req: Request, res: Response) => {
       .json({ data: deletedGuest, message: "Guest Deleted Successfully" });
   } catch (error) {
     handleError(error, res);
+  }
+};
+
+export const searchGuest = async (req: Request, res: Response) => {
+  try {
+    const { email, idNumber } = req.query as {
+      email?: string;
+      idNumber?: string;
+    };
+    const guest = await searchGuestService(email, idNumber);
+    if (!guest) {
+      return res.status(404).json({ found: false, data: null });
+    }
+    res.status(200).json({ found: true, data: guest });
+  } catch (error: any) {
+    res.status(400).json({ message: error.message || "Search failed." });
   }
 };

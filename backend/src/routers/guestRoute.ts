@@ -4,6 +4,7 @@ import {
   deleteGuest,
   getAllGuests,
   getSingleGuest,
+  searchGuest,
   updateGuest,
 } from "../controllers/guestController";
 import { requireRole } from "../middlewares/requireRole";
@@ -14,6 +15,7 @@ const writeAccess = [UserRole.ADMIN, UserRole.MANAGER, UserRole.RECEPTIONIST];
 
 guestRouter.post("/", requireRole(writeAccess), createGuest);
 guestRouter.get("/", requireRole(writeAccess), getAllGuests);
+guestRouter.get("/search", requireRole(writeAccess), searchGuest);
 guestRouter.get("/:id", requireRole(writeAccess), getSingleGuest);
 guestRouter.put("/:id", requireRole(writeAccess), updateGuest);
 guestRouter.delete(

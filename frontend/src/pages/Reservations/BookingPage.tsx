@@ -24,11 +24,21 @@ import {
   People,
   Layers,
   NightsStay,
+  Person,
+  Email,
+  Phone,
+  Badge,
+  Home,
 } from "@mui/icons-material";
 import api from "../../services/api";
 import { useHotel } from "../../context/HotelContext";
 
-const steps = ["Booking Details", "Verification", "Guest Information"];
+const steps = [
+  "Booking Details",
+  "Verification",
+  "Guest Information",
+  "Confirm",
+];
 
 const BookingPage = () => {
   const { hotel } = useHotel();
@@ -39,6 +49,7 @@ const BookingPage = () => {
   const [availableRooms, setAvailableRooms] = useState<any[]>([]);
   const [guestExists, setGuestExists] = useState(false);
   const [guestId, setGuestId] = useState<string | null>(null);
+  const [bookingSuccess, setBookingSuccess] = useState(false);
 
   const [guestData, setGuestData] = useState({
     firstName: "",
@@ -107,7 +118,6 @@ const BookingPage = () => {
         [name]:
           name === "adults" || name === "children" ? Number(value) : value,
       };
-
       if (name === "checkInDate" || name === "checkOutDate") {
         const newCheckIn = name === "checkInDate" ? value : prev.checkInDate;
         const newCheckOut = name === "checkOutDate" ? value : prev.checkOutDate;
@@ -120,7 +130,6 @@ const BookingPage = () => {
           return { ...updated, room: "" };
         }
       }
-
       return updated;
     });
   };
@@ -150,20 +159,16 @@ const BookingPage = () => {
       return;
     }
     setLoading(true);
+    setError(null);
     try {
-      const response = await api.get("/guests");
-      const allGuests = Array.isArray(response.data)
-        ? response.data
-        : response.data.data || [];
+      const params: Record<string, string> = {};
+      if (guestData.email) params.email = guestData.email;
+      if (guestData.idNumber) params.idNumber = guestData.idNumber;
 
-      const foundGuest = allGuests.find(
-        (g: any) =>
-          (guestData.idNumber && g.idNumber === guestData.idNumber) ||
-          (guestData.email &&
-            g.email?.toLowerCase() === guestData.email?.toLowerCase()),
-      );
+      const response = await api.get("/guests/search", { params });
+      const { found, data: foundGuest } = response.data;
 
-      if (foundGuest) {
+      if (found && foundGuest) {
         setGuestExists(true);
         setGuestId(foundGuest._id);
         setGuestData({
@@ -177,11 +182,33 @@ const BookingPage = () => {
         setActiveStep(3);
       } else {
         setGuestExists(false);
+        setGuestId(null);
+        setGuestData((prev) => ({
+          ...prev,
+          firstName: "",
+          lastName: "",
+          phoneNumber: "",
+          address: "",
+        }));
         setActiveStep(2);
       }
-    } catch (err) {
-      setGuestExists(false);
-      setActiveStep(2);
+    } catch (err: any) {
+      if (err.response?.status === 404) {
+        setGuestExists(false);
+        setGuestId(null);
+        setGuestData((prev) => ({
+          ...prev,
+          firstName: "",
+          lastName: "",
+          phoneNumber: "",
+          address: "",
+        }));
+        setActiveStep(2);
+      } else {
+        setError(
+          err.response?.data?.message || "Search failed. Please try again.",
+        );
+      }
     } finally {
       setLoading(false);
     }
@@ -219,23 +246,17 @@ const BookingPage = () => {
 
           if (isDuplicate) {
             try {
-              const allGuestsRes = await api.get("/guests");
-              const allGuests = Array.isArray(allGuestsRes.data)
-                ? allGuestsRes.data
-                : allGuestsRes.data.data || [];
-
-              const existingGuest = allGuests.find(
-                (g: any) => String(g.idNumber) === String(guestData.idNumber),
-              );
-
-              if (existingGuest) {
-                finalGuestId = existingGuest._id;
+              const searchRes = await api.get("/guests/search", {
+                params: { idNumber: guestData.idNumber },
+              });
+              if (searchRes.data.found && searchRes.data.data) {
+                finalGuestId = searchRes.data.data._id;
               } else {
                 throw new Error(
                   "Guest exists but could not be recovered. Check ID.",
                 );
               }
-            } catch (recoverErr) {
+            } catch {
               throw new Error("Failed to recover existing guest details.");
             }
           } else {
@@ -261,11 +282,10 @@ const BookingPage = () => {
         notes: bookingData.notes || "",
       });
 
-      setActiveStep(3);
+      setBookingSuccess(true);
     } catch (err: any) {
       const responseData = err.response?.data;
       let errorMsg = "Booking failed.";
-
       if (responseData) {
         if (responseData.errors && Array.isArray(responseData.errors)) {
           errorMsg = responseData.errors.join(" | ");
@@ -275,7 +295,6 @@ const BookingPage = () => {
       } else if (err.message) {
         errorMsg = err.message;
       }
-
       setError(errorMsg);
     } finally {
       setLoading(false);
@@ -317,7 +336,6 @@ const BookingPage = () => {
           },
         }}
       >
-        {/* Top color band */}
         <Box
           sx={{
             height: 6,
@@ -327,9 +345,7 @@ const BookingPage = () => {
             transition: "background 0.25s",
           }}
         />
-
         <Box sx={{ p: 2.5 }}>
-          {/* Header row */}
           <Box
             display="flex"
             justifyContent="space-between"
@@ -373,7 +389,6 @@ const BookingPage = () => {
                 )}
               </Box>
             </Box>
-
             {isSelected ? (
               <CheckCircle
                 sx={{ fontSize: 22, color: "primary.main", flexShrink: 0 }}
@@ -392,7 +407,6 @@ const BookingPage = () => {
             )}
           </Box>
 
-          {/* Room type badge */}
           {room.roomType?.name && (
             <Chip
               label={room.roomType.name}
@@ -415,20 +429,21 @@ const BookingPage = () => {
 
           <Divider sx={{ mb: 2 }} />
 
-          {/* Stats row */}
-          <Box display="flex" justifyContent="space-between" alignItems="center">
+          <Box
+            display="flex"
+            justifyContent="space-between"
+            alignItems="center"
+          >
             <Box>
               <Typography
                 variant="h5"
                 fontWeight="800"
                 color={isSelected ? "primary.main" : "text.primary"}
                 lineHeight={1}
-                sx={{
-                  transition: "color 0.25s",
-                  letterSpacing: "-0.02em",
-                }}
+                sx={{ transition: "color 0.25s", letterSpacing: "-0.02em" }}
               >
-                {hotel?.currency}{price}
+                {hotel?.currency}
+                {price}
               </Typography>
               <Box display="flex" alignItems="center" gap={0.4} mt={0.3}>
                 <NightsStay sx={{ fontSize: 11, color: "text.disabled" }} />
@@ -437,7 +452,6 @@ const BookingPage = () => {
                 </Typography>
               </Box>
             </Box>
-
             <Box textAlign="right">
               {nights > 0 && (
                 <>
@@ -448,7 +462,8 @@ const BookingPage = () => {
                     lineHeight={1}
                     sx={{ transition: "color 0.25s" }}
                   >
-                    {hotel?.currency}{nights * price}
+                    {hotel?.currency}
+                    {nights * price}
                   </Typography>
                   <Typography variant="caption" color="text.secondary">
                     {nights} night{nights !== 1 ? "s" : ""}
@@ -476,6 +491,125 @@ const BookingPage = () => {
     );
   };
 
+  const GuestInfoCard = () => (
+    <Paper
+      elevation={0}
+      sx={{
+        p: 3,
+        borderRadius: 3,
+        border: "1.5px solid",
+        borderColor: guestExists ? "success.main" : "primary.main",
+        bgcolor: guestExists ? "success.main" + "0a" : "primary.main" + "0a",
+        mb: 3,
+      }}
+    >
+      <Box display="flex" alignItems="center" gap={1} mb={2}>
+        <CheckCircle
+          sx={{
+            color: guestExists ? "success.main" : "primary.main",
+            fontSize: 20,
+          }}
+        />
+        <Typography
+          variant="subtitle2"
+          fontWeight={700}
+          color={guestExists ? "success.main" : "primary.main"}
+        >
+          {guestExists ? "Existing Guest Found" : "New Guest"}
+        </Typography>
+      </Box>
+      <Grid container spacing={2}>
+        <Grid item xs={12} sm={6}>
+          <Box display="flex" alignItems="center" gap={1}>
+            <Person sx={{ fontSize: 16, color: "text.secondary" }} />
+            <Box>
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                fontWeight={600}
+              >
+                Full Name
+              </Typography>
+              <Typography variant="body2" fontWeight={700}>
+                {guestData.firstName} {guestData.lastName}
+              </Typography>
+            </Box>
+          </Box>
+        </Grid>
+        <Grid item xs={12} sm={6}>
+          <Box display="flex" alignItems="center" gap={1}>
+            <Email sx={{ fontSize: 16, color: "text.secondary" }} />
+            <Box>
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                fontWeight={600}
+              >
+                Email
+              </Typography>
+              <Typography variant="body2" fontWeight={700}>
+                {guestData.email || "—"}
+              </Typography>
+            </Box>
+          </Box>
+        </Grid>
+        <Grid item xs={12} sm={6}>
+          <Box display="flex" alignItems="center" gap={1}>
+            <Phone sx={{ fontSize: 16, color: "text.secondary" }} />
+            <Box>
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                fontWeight={600}
+              >
+                Phone
+              </Typography>
+              <Typography variant="body2" fontWeight={700}>
+                {guestData.phoneNumber || "—"}
+              </Typography>
+            </Box>
+          </Box>
+        </Grid>
+        <Grid item xs={12} sm={6}>
+          <Box display="flex" alignItems="center" gap={1}>
+            <Badge sx={{ fontSize: 16, color: "text.secondary" }} />
+            <Box>
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                fontWeight={600}
+              >
+                Passport / ID
+              </Typography>
+              <Typography variant="body2" fontWeight={700}>
+                {guestData.idNumber || "—"}
+              </Typography>
+            </Box>
+          </Box>
+        </Grid>
+        {guestData.address && (
+          <Grid item xs={12}>
+            <Box display="flex" alignItems="center" gap={1}>
+              <Home sx={{ fontSize: 16, color: "text.secondary" }} />
+              <Box>
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  fontWeight={600}
+                >
+                  Address
+                </Typography>
+                <Typography variant="body2" fontWeight={700}>
+                  {guestData.address}
+                </Typography>
+              </Box>
+            </Box>
+          </Grid>
+        )}
+      </Grid>
+    </Paper>
+  );
+
   return (
     <Box
       sx={{ width: "100%", px: { xs: 2, sm: 4, md: 8 }, py: { xs: 3, md: 6 } }}
@@ -491,7 +625,7 @@ const BookingPage = () => {
         Create Reservation
       </Typography>
 
-      {activeStep === 3 ? (
+      {bookingSuccess ? (
         <Paper
           sx={{
             p: { xs: 4, md: 8 },
@@ -502,7 +636,11 @@ const BookingPage = () => {
         >
           <CheckCircleOutline color="success" sx={{ fontSize: 100, mb: 2 }} />
           <Typography variant="h5" fontWeight="bold">
-            Success!
+            Booking Confirmed!
+          </Typography>
+          <Typography variant="body2" color="text.secondary" mt={1}>
+            The reservation for {guestData.firstName} {guestData.lastName} has
+            been created successfully.
           </Typography>
           <Button
             variant="contained"
@@ -592,8 +730,6 @@ const BookingPage = () => {
                     onChange={handleBookingInputChange}
                   />
                 </Grid>
-
-                {/* ── Room Selection Section ── */}
                 <Grid item xs={12} width={"100%"}>
                   <Box sx={{ mt: 1 }}>
                     <Box
@@ -608,7 +744,9 @@ const BookingPage = () => {
                             width: 32,
                             height: 32,
                             borderRadius: "10px",
-                            bgcolor: datesReady ? "primary.main" : "action.disabledBackground",
+                            bgcolor: datesReady
+                              ? "primary.main"
+                              : "action.disabledBackground",
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
@@ -626,7 +764,6 @@ const BookingPage = () => {
                           Select a Room
                         </Typography>
                       </Box>
-
                       {datesReady && availableRooms.length > 0 && (
                         <Chip
                           label={`${availableRooms.length} available`}
@@ -641,7 +778,6 @@ const BookingPage = () => {
                         />
                       )}
                     </Box>
-
                     {!datesReady ? (
                       <Box
                         sx={{
@@ -688,8 +824,12 @@ const BookingPage = () => {
 
             {activeStep === 1 && (
               <Box sx={{ maxWidth: 500, mx: "auto", textAlign: "center" }}>
-                <Typography variant="h6" mb={3}>
+                <Typography variant="h6" mb={1}>
                   Guest Search
+                </Typography>
+                <Typography variant="body2" color="text.secondary" mb={3}>
+                  Enter the guest's email or passport number to check if they
+                  already exist in the system.
                 </Typography>
                 <Stack spacing={3}>
                   <TextField
@@ -712,67 +852,216 @@ const BookingPage = () => {
             )}
 
             {activeStep === 2 && (
-              <Grid container spacing={3} sx={{ width: "100%", m: 0 }}>
-                <Grid item xs={12} md={6} width={"100%"}>
-                  <TextField
-                    fullWidth
-                    label="First Name"
-                    required
-                    name="firstName"
-                    value={guestData.firstName}
-                    onChange={handleGuestInputChange}
-                  />
+              <Box>
+                <Alert severity="info" sx={{ mb: 3, borderRadius: 2 }}>
+                  No guest found with those details. Please fill in the new
+                  guest's information below.
+                </Alert>
+                <Grid container spacing={3} sx={{ width: "100%", m: 0 }}>
+                  <Grid item xs={12} md={6} width={"100%"}>
+                    <TextField
+                      fullWidth
+                      label="First Name"
+                      required
+                      name="firstName"
+                      value={guestData.firstName}
+                      onChange={handleGuestInputChange}
+                    />
+                  </Grid>
+                  <Grid item xs={12} md={6} width={"100%"}>
+                    <TextField
+                      fullWidth
+                      label="Last Name"
+                      required
+                      name="lastName"
+                      value={guestData.lastName}
+                      onChange={handleGuestInputChange}
+                    />
+                  </Grid>
+                  <Grid item xs={12} md={6} width={"100%"}>
+                    <TextField
+                      fullWidth
+                      label="Email"
+                      required
+                      name="email"
+                      value={guestData.email}
+                      onChange={handleGuestInputChange}
+                    />
+                  </Grid>
+                  <Grid item xs={12} md={6} width={"100%"}>
+                    <TextField
+                      fullWidth
+                      label="Phone"
+                      required
+                      name="phoneNumber"
+                      value={guestData.phoneNumber}
+                      onChange={handleGuestInputChange}
+                    />
+                  </Grid>
+                  <Grid item xs={12} md={6} width={"100%"}>
+                    <TextField
+                      fullWidth
+                      label="Passport Number"
+                      required
+                      name="idNumber"
+                      value={guestData.idNumber}
+                      onChange={handleGuestInputChange}
+                    />
+                  </Grid>
+                  <Grid item xs={12} md={6} width={"100%"}>
+                    <TextField
+                      fullWidth
+                      label="Address"
+                      name="address"
+                      value={guestData.address}
+                      onChange={handleGuestInputChange}
+                    />
+                  </Grid>
                 </Grid>
-                <Grid item xs={12} md={6} width={"100%"}>
-                  <TextField
-                    fullWidth
-                    label="Last Name"
-                    required
-                    name="lastName"
-                    value={guestData.lastName}
-                    onChange={handleGuestInputChange}
-                  />
-                </Grid>
-                <Grid item xs={12} md={6} width={"100%"}>
-                  <TextField
-                    fullWidth
-                    label="Email"
-                    required
-                    name="email"
-                    value={guestData.email}
-                    onChange={handleGuestInputChange}
-                  />
-                </Grid>
-                <Grid item xs={12} md={6} width={"100%"}>
-                  <TextField
-                    fullWidth
-                    label="Phone"
-                    required
-                    name="phoneNumber"
-                    value={guestData.phoneNumber}
-                    onChange={handleGuestInputChange}
-                  />
-                </Grid>
-                <Grid item xs={12} md={6} width={"100%"}>
-                  <TextField
-                    fullWidth
-                    label="Passport Number"
-                    required
-                    name="idNumber"
-                    value={guestData.idNumber}
-                    onChange={handleGuestInputChange}
-                  />
-                </Grid>
-                <Grid item xs={12} md={6} width={"100%"}>
-                  <TextField
-                    fullWidth
-                    label="Address"
-                    name="address"
-                    value={guestData.address}
-                    onChange={handleGuestInputChange}
-                  />
-                </Grid>
-              </Grid>
+              </Box>
+            )}
+
+            {activeStep === 3 && (
+              <Box sx={{ maxWidth: 680, mx: "auto" }}>
+                <Typography
+                  variant="h6"
+                  fontWeight={700}
+                  mb={3}
+                  textAlign="center"
+                >
+                  Review & Confirm Booking
+                </Typography>
+                <GuestInfoCard />
+                <Paper
+                  elevation={0}
+                  sx={{
+                    p: 3,
+                    borderRadius: 3,
+                    border: "1.5px solid",
+                    borderColor: "divider",
+                    mb: 3,
+                  }}
+                >
+                  <Typography
+                    variant="subtitle2"
+                    fontWeight={700}
+                    color="text.secondary"
+                    mb={2}
+                    textTransform="uppercase"
+                  >
+                    Booking Details
+                  </Typography>
+                  <Grid container spacing={2}>
+                    <Grid item xs={6}>
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        fontWeight={600}
+                      >
+                        Room
+                      </Typography>
+                      <Typography variant="body2" fontWeight={700}>
+                        {selectedRoomObj
+                          ? `Room ${selectedRoomObj.roomNumber}`
+                          : "—"}
+                        {selectedRoomObj?.roomType?.name
+                          ? ` · ${selectedRoomObj.roomType.name}`
+                          : ""}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        fontWeight={600}
+                      >
+                        Guests
+                      </Typography>
+                      <Typography variant="body2" fontWeight={700}>
+                        {bookingData.adults} adult
+                        {bookingData.adults !== 1 ? "s" : ""}
+                        {bookingData.children > 0
+                          ? `, ${bookingData.children} child${bookingData.children !== 1 ? "ren" : ""}`
+                          : ""}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        fontWeight={600}
+                      >
+                        Check-In
+                      </Typography>
+                      <Typography variant="body2" fontWeight={700}>
+                        {bookingData.checkInDate}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        fontWeight={600}
+                      >
+                        Check-Out
+                      </Typography>
+                      <Typography variant="body2" fontWeight={700}>
+                        {bookingData.checkOutDate}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        fontWeight={600}
+                      >
+                        Nights
+                      </Typography>
+                      <Typography variant="body2" fontWeight={700}>
+                        {nights}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        fontWeight={600}
+                      >
+                        Price / Night
+                      </Typography>
+                      <Typography variant="body2" fontWeight={700}>
+                        {hotel?.currency}
+                        {pricePerNight}
+                      </Typography>
+                    </Grid>
+                  </Grid>
+                  <Divider sx={{ my: 2 }} />
+                  <Box
+                    display="flex"
+                    justifyContent="space-between"
+                    alignItems="center"
+                  >
+                    <Typography variant="subtitle1" fontWeight={700}>
+                      Total Amount
+                    </Typography>
+                    <Typography variant="h5" fontWeight={900} color="primary">
+                      {hotel?.currency}
+                      {basePrice}
+                    </Typography>
+                  </Box>
+                </Paper>
+                <TextField
+                  fullWidth
+                  multiline
+                  rows={3}
+                  label="Notes (optional)"
+                  name="notes"
+                  value={bookingData.notes}
+                  onChange={handleBookingInputChange}
+                  placeholder="Any special requests or notes..."
+                  sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
+                />
+              </Box>
             )}
 
             <Box
@@ -784,19 +1073,23 @@ const BookingPage = () => {
             >
               <Button
                 disabled={activeStep === 0}
-                onClick={() =>
-                  setActiveStep((prev) =>
-                    prev === 2 ? 1 : prev === 1 ? 0 : prev - 1,
-                  )
-                }
+                onClick={() => {
+                  setError(null);
+                  if (activeStep === 3) {
+                    setActiveStep(guestExists ? 1 : 2);
+                  } else {
+                    setActiveStep((prev) => prev - 1);
+                  }
+                }}
               >
                 Back
               </Button>
-              {activeStep === 0 ? (
+              {activeStep === 0 && (
                 <Button variant="contained" onClick={handleStep0Next}>
                   Next
                 </Button>
-              ) : activeStep === 1 ? (
+              )}
+              {activeStep === 1 && (
                 <Button
                   variant="contained"
                   onClick={checkGuest}
@@ -804,13 +1097,21 @@ const BookingPage = () => {
                 >
                   {loading ? <CircularProgress size={24} /> : "Search"}
                 </Button>
-              ) : (
+              )}
+              {activeStep === 2 && (
+                <Button variant="contained" onClick={handleStep2Next}>
+                  Next
+                </Button>
+              )}
+              {activeStep === 3 && (
                 <Button
                   variant="contained"
+                  color="success"
                   onClick={handleFinalSubmit}
                   disabled={loading}
+                  sx={{ px: 4, fontWeight: 700 }}
                 >
-                  {loading ? <CircularProgress size={24} /> : "Confirm & Pay"}
+                  {loading ? <CircularProgress size={24} /> : "Confirm Booking"}
                 </Button>
               )}
             </Box>
@@ -828,7 +1129,6 @@ const BookingPage = () => {
                 <AccountCircle color="primary" /> Reservation Summary
               </Typography>
             </Box>
-
             <Box
               display="flex"
               flexDirection={{ xs: "column", md: "row" }}
@@ -853,14 +1153,12 @@ const BookingPage = () => {
                   {guestData.idNumber}
                 </Typography>
               </Stack>
-
               <Divider
                 orientation="vertical"
                 flexItem
                 sx={{ display: { xs: "none", md: "block" } }}
               />
               <Divider sx={{ display: { xs: "block", md: "none" } }} />
-
               <Stack
                 spacing={0.5}
                 flex={1}
@@ -882,14 +1180,12 @@ const BookingPage = () => {
                   {bookingData.checkInDate} / {bookingData.checkOutDate}
                 </Typography>
               </Stack>
-
               <Divider
                 orientation="vertical"
                 flexItem
                 sx={{ display: { xs: "none", md: "block" } }}
               />
               <Divider sx={{ display: { xs: "block", md: "none" } }} />
-
               <Stack spacing={0.5} flex={1} sx={{ textAlign: { md: "right" } }}>
                 <Typography
                   variant="caption"

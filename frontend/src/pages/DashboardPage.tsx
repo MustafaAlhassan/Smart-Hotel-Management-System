@@ -17,6 +17,11 @@ import {
   Stack,
   Divider,
   LinearProgress,
+  List,
+  ListItem,
+  ListItemAvatar,
+  Avatar,
+  ListItemText,
 } from "@mui/material";
 import {
   People,
@@ -31,6 +36,10 @@ import {
   DonutLarge,
   CleaningServices,
   Handyman,
+  Person,
+  Check,
+  CheckCircle,
+  Checklist,
 } from "@mui/icons-material";
 import {
   PieChart,
@@ -52,7 +61,7 @@ import type { DashboardData } from "../types/types";
 import { useNavigate } from "react-router-dom";
 import { useHotel } from "../context/HotelContext";
 
-const CARD_SIZE = 170;
+const CARD_SIZE = 220;
 const CHART_HEIGHT = 380;
 
 const DashboardPage = () => {
@@ -114,10 +123,12 @@ const DashboardPage = () => {
 
   if (!data) return null;
 
-  const occupancyRate =
-    data.rooms.total > 0
+  const occupancyRate = data.rooms.occupancyRate
+    ? parseFloat(data.rooms.occupancyRate)
+    : data.rooms.total > 0
       ? Math.round((data.rooms.occupied / data.rooms.total) * 100)
       : 0;
+
   const availableRate = 100 - occupancyRate;
 
   const occupancyData = [
@@ -127,36 +138,22 @@ const DashboardPage = () => {
     { name: "Maintenance", value: data.rooms.maintenance || 0 },
   ];
 
-  const activityData = [
-    {
-      name: "Today",
-      "Check-Ins": data.todayActivity.checkIns,
-      "Check-Outs": data.todayActivity.checkOuts,
-    },
-  ];
+  const checkInsCount =
+    (data.todayActivity as any).checkInsCount ??
+    data.todayActivity.checkIns ??
+    0;
+  const checkOutsCount =
+    (data.todayActivity as any).checkOutsCount ??
+    data.todayActivity.checkOuts ??
+    0;
 
-  const revenueBreakdown = [
-    { name: "Rooms", value: Math.round(data.financials.monthlyRevenue * 0.6) },
-    {
-      name: "Services",
-      value: Math.round(data.financials.monthlyRevenue * 0.25),
-    },
-    { name: "F&B", value: Math.round(data.financials.monthlyRevenue * 0.15) },
-  ];
+  const arrivalsList = (data.todayActivity as any).arrivals || [];
 
-  const weeklyActivity = [
-    { day: "Mon", checkIns: 4, checkOuts: 2 },
-    { day: "Tue", checkIns: 6, checkOuts: 5 },
-    { day: "Wed", checkIns: 3, checkOuts: 4 },
-    { day: "Thu", checkIns: 8, checkOuts: 3 },
-    { day: "Fri", checkIns: 10, checkOuts: 7 },
-    { day: "Sat", checkIns: 9, checkOuts: 6 },
-    {
-      day: "Sun",
-      checkIns: data.todayActivity.checkIns,
-      checkOuts: data.todayActivity.checkOuts,
-    },
-  ];
+  const rawTrend = (data.financials as any).revenueTrend || [];
+  const formattedTrend = rawTrend.map((item: any) => ({
+    name: new Date(item.date).toLocaleDateString("en-US", { weekday: "short" }),
+    Revenue: item.amount || 0,
+  }));
 
   const allStatCards = [
     {
@@ -200,14 +197,6 @@ const DashboardPage = () => {
       receptionistVisible: false,
     },
     {
-      title: "Occupancy",
-      value: `${occupancyRate}%`,
-      icon: <TrendingUp />,
-      color: theme.palette.warning.main,
-      housekeepingVisible: false,
-      receptionistVisible: true,
-    },
-    {
       title: "Guests",
       value: data.guests.total,
       icon: <People />,
@@ -217,7 +206,7 @@ const DashboardPage = () => {
     },
     {
       title: "Today's Check-Ins",
-      value: data.todayActivity.checkIns,
+      value: checkInsCount,
       icon: <EventAvailable />,
       color: theme.palette.primary.main,
       housekeepingVisible: false,
@@ -225,7 +214,7 @@ const DashboardPage = () => {
     },
     {
       title: "Today's Check-Outs",
-      value: data.todayActivity.checkOuts,
+      value: checkOutsCount,
       icon: <EventBusy />,
       color: theme.palette.error.main,
       housekeepingVisible: false,
@@ -371,7 +360,7 @@ const DashboardPage = () => {
           sx={{ color: theme.palette.primary.main }}
         />
       ),
-      value: data.todayActivity.checkIns,
+      value: checkInsCount,
       detail: "Guests arrived",
       housekeepingVisible: false,
       receptionistVisible: true,
@@ -381,7 +370,7 @@ const DashboardPage = () => {
       icon: (
         <EventBusy fontSize="small" sx={{ color: theme.palette.error.main }} />
       ),
-      value: data.todayActivity.checkOuts,
+      value: checkOutsCount,
       detail: "Guests departed",
       housekeepingVisible: false,
       receptionistVisible: true,
@@ -417,6 +406,7 @@ const DashboardPage = () => {
         mx: "auto",
       }}
     >
+      {/* Header */}
       <Box mb={5}>
         <Typography variant="h4" fontWeight={900} letterSpacing={-0.5}>
           Dashboard
@@ -431,6 +421,7 @@ const DashboardPage = () => {
         </Typography>
       </Box>
 
+      {/* Stat Cards */}
       <Box display="flex" justifyContent="center" mb={5}>
         <Box
           sx={{
@@ -447,10 +438,11 @@ const DashboardPage = () => {
         </Box>
       </Box>
 
+      {/* Admin / Manager View */}
       {!isHousekeeping && !isReceptionist && (
         <>
-          <Grid container spacing={2.5} mb={2.5} justifyContent="center">
-            <Grid item xs={12} md={4} sx={{ width: "300px" }}>
+          <Grid container spacing={2.5} mb={3} justifyContent="center">
+            <Grid item xs={12} md={4} sx={{ minWidth: "300px" }}>
               <ChartCard title="Room Distribution">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
@@ -474,157 +466,65 @@ const DashboardPage = () => {
               </ChartCard>
             </Grid>
 
-            <Grid item xs={12} md={4} sx={{ width: "300px" }}>
-              <ChartCard title="Today's Front Desk">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={activityData} barCategoryGap="50%">
-                    <CartesianGrid
-                      strokeDasharray="3 3"
-                      vertical={false}
-                      stroke={theme.palette.divider}
-                    />
-                    <XAxis
-                      dataKey="name"
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{ fontSize: 12 }}
-                    />
-                    <YAxis
-                      axisLine={false}
-                      tickLine={false}
-                      allowDecimals={false}
-                      tick={{ fontSize: 12 }}
-                    />
-                    <Tooltip
-                      {...tooltipStyle}
-                      cursor={{ fill: theme.palette.action.hover }}
-                    />
-                    <Legend iconType="circle" iconSize={9} />
-                    <Bar
-                      dataKey="Check-Ins"
-                      fill={theme.palette.primary.main}
-                      radius={[6, 6, 0, 0]}
-                    />
-                    <Bar
-                      dataKey="Check-Outs"
-                      fill={theme.palette.error.main}
-                      radius={[6, 6, 0, 0]}
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
+            <Grid item xs={12} md={4} sx={{ minWidth: "300px" }}>
+              <ChartCard title="Today's Arrivals">
+                <Button
+                    onClick={() => navigate("/all-reservations")}
+                    fullWidth
+                    variant="outlined"
+                    startIcon={<Checklist />}
+                    sx={{
+                      borderRadius: 2.5,
+                      py: 2,
+                      fontWeight: 700,
+                      borderWidth: 2,
+                    }}
+                  >
+                    Check Reservations
+                  </Button>
+                <Box sx={{ width: "100%", height: "100%", overflow: "auto" }}>
+                  <List dense>
+                    {arrivalsList.length === 0 && (
+                      <Typography
+                        variant="body2"
+                        color="text.secondary"
+                        textAlign="center"
+                        mt={4}
+                      >
+                        No arrivals scheduled
+                      </Typography>
+                    )}
+                    {arrivalsList.slice(0, 6).map((booking: any) => (
+                      <ListItem key={booking._id} sx={{ px: 0 }}>
+                        <ListItemAvatar>
+                          <Avatar
+                            sx={{
+                              bgcolor: theme.palette.primary.light,
+                              color: theme.palette.primary.dark,
+                            }}
+                          >
+                            <Person />
+                          </Avatar>
+                        </ListItemAvatar>
+                        <ListItemText
+                          primary={
+                            booking.guest?.firstName +
+                            " " +
+                            booking.guest?.lastName
+                          }
+                          secondary={
+                            <Typography variant="caption" component="span">
+                              Room: {booking.room?.roomNumber || "N/A"}
+                            </Typography>
+                          }
+                        />
+                      </ListItem>
+                    ))}
+                  </List>
+                </Box>
               </ChartCard>
             </Grid>
-
-            <Grid item xs={12} md={4} sx={{ width: "300px" }}>
-              <ChartCard title="Revenue Breakdown">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={revenueBreakdown} barCategoryGap="50%">
-                    <CartesianGrid
-                      strokeDasharray="3 3"
-                      vertical={false}
-                      stroke={theme.palette.divider}
-                    />
-                    <XAxis
-                      dataKey="name"
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{ fontSize: 12 }}
-                    />
-                    <YAxis
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{ fontSize: 12 }}
-                    />
-                    <Tooltip
-                      {...tooltipStyle}
-                      cursor={{ fill: theme.palette.action.hover }}
-                    />
-                    <Bar
-                      dataKey="value"
-                      name={`Revenue (${hotel?.currency})`}
-                      fill={theme.palette.success.main}
-                      radius={[6, 6, 0, 0]}
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
-              </ChartCard>
-            </Grid>
-          </Grid>
-
-          <Grid container spacing={2.5} mb={2.5} justifyContent="center">
-            <Grid item xs={12} md={8} sx={{ width: "500px" }}>
-              <ChartCard title="Weekly Check-In / Check-Out Trend">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={weeklyActivity}>
-                    <defs>
-                      <linearGradient id="ciGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop
-                          offset="5%"
-                          stopColor={theme.palette.primary.main}
-                          stopOpacity={0.2}
-                        />
-                        <stop
-                          offset="95%"
-                          stopColor={theme.palette.primary.main}
-                          stopOpacity={0}
-                        />
-                      </linearGradient>
-                      <linearGradient id="coGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop
-                          offset="5%"
-                          stopColor={theme.palette.error.main}
-                          stopOpacity={0.2}
-                        />
-                        <stop
-                          offset="95%"
-                          stopColor={theme.palette.error.main}
-                          stopOpacity={0}
-                        />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid
-                      strokeDasharray="3 3"
-                      vertical={false}
-                      stroke={theme.palette.divider}
-                    />
-                    <XAxis
-                      dataKey="day"
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{ fontSize: 12 }}
-                    />
-                    <YAxis
-                      axisLine={false}
-                      tickLine={false}
-                      allowDecimals={false}
-                      tick={{ fontSize: 12 }}
-                    />
-                    <Tooltip {...tooltipStyle} />
-                    <Legend iconType="circle" iconSize={9} />
-                    <Area
-                      type="monotone"
-                      dataKey="checkIns"
-                      name="Check-Ins"
-                      stroke={theme.palette.primary.main}
-                      strokeWidth={2}
-                      fill="url(#ciGrad)"
-                      dot={{ r: 4, fill: theme.palette.primary.main }}
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="checkOuts"
-                      name="Check-Outs"
-                      stroke={theme.palette.error.main}
-                      strokeWidth={2}
-                      fill="url(#coGrad)"
-                      dot={{ r: 4, fill: theme.palette.error.main }}
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </ChartCard>
-            </Grid>
-
-            <Grid item xs={12} md={4} sx={{ width: "500px" }}>
+            <Grid item xs={12} md={4} sx={{ minWidth: "300px" }}>
               <ChartCard title="Quick Actions">
                 <Stack spacing={2.5} height="100%" justifyContent="center">
                   <Button
@@ -717,125 +617,119 @@ const DashboardPage = () => {
               </ChartCard>
             </Grid>
           </Grid>
+
+          <Grid container spacing={2.5} mb={2.5} justifyContent="center">
+            <Grid item xs={12} md={8} sx={{ width: "100%" }}>
+              <ChartCard title="Revenue Trend (Last 7 Days)">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={formattedTrend}>
+                    <defs>
+                      <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop
+                          offset="5%"
+                          stopColor={theme.palette.success.main}
+                          stopOpacity={0.3}
+                        />
+                        <stop
+                          offset="95%"
+                          stopColor={theme.palette.success.main}
+                          stopOpacity={0}
+                        />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      vertical={false}
+                      stroke={theme.palette.divider}
+                    />
+                    <XAxis
+                      dataKey="name"
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fontSize: 12 }}
+                    />
+                    <YAxis
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fontSize: 12 }}
+                      tickFormatter={(val) =>
+                        `${hotel?.currency}${val / 1000}k`
+                      }
+                    />
+                    <Tooltip
+                      {...tooltipStyle}
+                      formatter={(value: number) => [
+                        `${hotel?.currency}${value.toLocaleString()}`,
+                        "Revenue",
+                      ]}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="Revenue"
+                      stroke={theme.palette.success.main}
+                      strokeWidth={2}
+                      fill="url(#revGrad)"
+                      dot={{ r: 4, fill: theme.palette.success.main }}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </ChartCard>
+            </Grid>
+          </Grid>
         </>
       )}
 
+      {/* Receptionist View */}
       {isReceptionist && (
         <Grid container spacing={2.5} mb={2.5} justifyContent="center">
-          <Grid item xs={12} md={6} sx={{ width: "400px" }}>
-            <ChartCard title="Today's Front Desk">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={activityData} barCategoryGap="50%">
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    vertical={false}
-                    stroke={theme.palette.divider}
-                  />
-                  <XAxis
-                    dataKey="name"
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fontSize: 12 }}
-                  />
-                  <YAxis
-                    axisLine={false}
-                    tickLine={false}
-                    allowDecimals={false}
-                    tick={{ fontSize: 12 }}
-                  />
-                  <Tooltip
-                    {...tooltipStyle}
-                    cursor={{ fill: theme.palette.action.hover }}
-                  />
-                  <Legend iconType="circle" iconSize={9} />
-                  <Bar
-                    dataKey="Check-Ins"
-                    fill={theme.palette.primary.main}
-                    radius={[6, 6, 0, 0]}
-                  />
-                  <Bar
-                    dataKey="Check-Outs"
-                    fill={theme.palette.error.main}
-                    radius={[6, 6, 0, 0]}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            </ChartCard>
-          </Grid>
-          <Grid item xs={12} md={6} sx={{ width: "400px" }}>
-            <ChartCard title="Weekly Check-In / Check-Out Trend">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={weeklyActivity}>
-                  <defs>
-                    <linearGradient id="ciGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop
-                        offset="5%"
-                        stopColor={theme.palette.primary.main}
-                        stopOpacity={0.2}
+          <Grid item xs={12} md={6} sx={{ minWidth: "300px" }}>
+            <ChartCard title="Today's Arrivals">
+              <Box sx={{ width: "100%", height: "100%", overflow: "auto" }}>
+                <List dense>
+                  {arrivalsList.length === 0 && (
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      textAlign="center"
+                      mt={4}
+                    >
+                      No arrivals scheduled
+                    </Typography>
+                  )}
+                  {arrivalsList.slice(0, 6).map((booking: any) => (
+                    <ListItem key={booking._id} sx={{ px: 0 }}>
+                      <ListItemAvatar>
+                        <Avatar
+                          sx={{
+                            bgcolor: theme.palette.primary.light,
+                            color: theme.palette.primary.dark,
+                          }}
+                        >
+                          <Person />
+                        </Avatar>
+                      </ListItemAvatar>
+                      <ListItemText
+                        primary={
+                          booking.guest?.firstName +
+                          " " +
+                          booking.guest?.lastName
+                        }
+                        secondary={
+                          <Typography variant="caption" component="span">
+                            Room: {booking.room?.roomNumber || "N/A"}
+                          </Typography>
+                        }
                       />
-                      <stop
-                        offset="95%"
-                        stopColor={theme.palette.primary.main}
-                        stopOpacity={0}
-                      />
-                    </linearGradient>
-                    <linearGradient id="coGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop
-                        offset="5%"
-                        stopColor={theme.palette.error.main}
-                        stopOpacity={0.2}
-                      />
-                      <stop
-                        offset="95%"
-                        stopColor={theme.palette.error.main}
-                        stopOpacity={0}
-                      />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    vertical={false}
-                    stroke={theme.palette.divider}
-                  />
-                  <XAxis
-                    dataKey="day"
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fontSize: 12 }}
-                  />
-                  <YAxis
-                    axisLine={false}
-                    tickLine={false}
-                    allowDecimals={false}
-                    tick={{ fontSize: 12 }}
-                  />
-                  <Tooltip {...tooltipStyle} />
-                  <Legend iconType="circle" iconSize={9} />
-                  <Area
-                    type="monotone"
-                    dataKey="checkIns"
-                    name="Check-Ins"
-                    stroke={theme.palette.primary.main}
-                    strokeWidth={2}
-                    fill="url(#ciGrad)"
-                    dot={{ r: 4, fill: theme.palette.primary.main }}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="checkOuts"
-                    name="Check-Outs"
-                    stroke={theme.palette.error.main}
-                    strokeWidth={2}
-                    fill="url(#coGrad)"
-                    dot={{ r: 4, fill: theme.palette.error.main }}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
+                    </ListItem>
+                  ))}
+                </List>
+              </Box>
             </ChartCard>
           </Grid>
         </Grid>
       )}
 
+      {/* Table Section */}
       <TableContainer
         component={Paper}
         elevation={0}
