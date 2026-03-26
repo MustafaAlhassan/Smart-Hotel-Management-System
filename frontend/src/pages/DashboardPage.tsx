@@ -778,50 +778,157 @@ const DashboardPage = () => {
       {/* Receptionist View */}
       {isReceptionist && (
         <Grid container spacing={2.5} mb={2.5} justifyContent="center">
-          <Grid item xs={12} md={6} sx={{ minWidth: "300px" }}>
-            <ChartCard title="Today's Arrivals">
-              <Box sx={{ width: "100%", height: "100%", overflow: "auto" }}>
-                <List dense>
-                  {arrivalsList.length === 0 && (
+          <Grid item xs={12} md={4} sx={{ minWidth: "300px" }}>
+              <ChartCard title="Today's arrivals">
+                <Box
+                  sx={{
+                    display: "flex",
+                    flexDirection: "column",
+                    height: "100%",
+                  }}
+                >
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      mb: 1.5,
+                    }}
+                  >
                     <Typography
-                      variant="body2"
+                      variant="caption"
                       color="text.secondary"
-                      textAlign="center"
-                      mt={4}
+                      fontWeight={500}
                     >
-                      No arrivals scheduled
+                      {arrivalsList.length} guest
+                      {arrivalsList.length !== 1 ? "s" : ""} expected
                     </Typography>
-                  )}
-                  {arrivalsList.slice(0, 6).map((booking: any) => (
-                    <ListItem key={booking._id} sx={{ px: 0 }}>
-                      <ListItemAvatar>
-                        <Avatar
-                          sx={{
-                            bgcolor: theme.palette.primary.light,
-                            color: theme.palette.primary.dark,
-                          }}
-                        >
-                          <Person />
-                        </Avatar>
-                      </ListItemAvatar>
-                      <ListItemText
-                        primary={
-                          booking.guest?.firstName +
-                          " " +
-                          booking.guest?.lastName
-                        }
-                        secondary={
-                          <Typography variant="caption" component="span">
-                            Room: {booking.room?.roomNumber || "N/A"}
-                          </Typography>
-                        }
-                      />
-                    </ListItem>
-                  ))}
-                </List>
-              </Box>
-            </ChartCard>
-          </Grid>
+                    <Chip
+                      label={`${arrivalsList.length} arriving`}
+                      size="small"
+                      color="info"
+                      variant="outlined"
+                      sx={{ height: 20, fontSize: "0.65rem", fontWeight: 600 }}
+                    />
+                  </Box>
+
+                  <Button
+                    onClick={() => navigate("/all-reservations")}
+                    fullWidth
+                    variant="outlined"
+                    startIcon={
+                      <Checklist sx={{ fontSize: "16px !important" }} />
+                    }
+                    sx={{
+                      borderRadius: 2,
+                      py: 1.2,
+                      fontWeight: 600,
+                      fontSize: "0.82rem",
+                      textTransform: "none",
+                      mb: 1.5,
+                      borderColor: "divider",
+                      color: "text.secondary",
+                      "&:hover": {
+                        borderColor: "primary.main",
+                        color: "primary.main",
+                      },
+                    }}
+                  >
+                    Check reservations
+                  </Button>
+
+                  <Box sx={{ flex: 1, overflow: "auto" }}>
+                    {arrivalsList.length === 0 ? (
+                      <Box sx={{ textAlign: "center", py: 4 }}>
+                        <Typography variant="body2" color="text.disabled">
+                          No arrivals scheduled today
+                        </Typography>
+                      </Box>
+                    ) : (
+                      <List dense disablePadding>
+                        {arrivalsList.slice(0, 6).map((booking: any) => {
+                          const firstName = booking.guest?.firstName || "";
+                          const lastName = booking.guest?.lastName || "";
+                          const initials =
+                            `${firstName[0] || ""}${lastName[0] || ""}`.toUpperCase();
+                          return (
+                            <ListItem
+                              key={booking._id}
+                              sx={{
+                                px: 1,
+                                py: 0.8,
+                                borderRadius: 2,
+                                "&:hover": { bgcolor: "action.hover" },
+                              }}
+                            >
+                              <ListItemAvatar sx={{ minWidth: 44 }}>
+                                <Avatar
+                                  sx={{
+                                    width: 34,
+                                    height: 34,
+                                    fontSize: "0.75rem",
+                                    fontWeight: 600,
+                                    bgcolor: alpha(
+                                      theme.palette.primary.main,
+                                      0.12,
+                                    ),
+                                    color: "primary.main",
+                                  }}
+                                >
+                                  {initials || <Person sx={{ fontSize: 16 }} />}
+                                </Avatar>
+                              </ListItemAvatar>
+                              <ListItemText
+                                primary={
+                                  <Typography
+                                    variant="body2"
+                                    fontWeight={600}
+                                    noWrap
+                                  >
+                                    {firstName} {lastName}
+                                  </Typography>
+                                }
+                                secondary={
+                                  <Stack
+                                    direction="row"
+                                    alignItems="center"
+                                    spacing={0.5}
+                                    mt={0.2}
+                                  >
+                                    <Box
+                                      sx={{
+                                        width: 6,
+                                        height: 6,
+                                        borderRadius: "50%",
+                                        bgcolor: "success.main",
+                                        flexShrink: 0,
+                                      }}
+                                    />
+                                    <Typography
+                                      variant="caption"
+                                      color="text.secondary"
+                                    >
+                                      Room {booking.room?.roomNumber || "N/A"}
+                                    </Typography>
+                                  </Stack>
+                                }
+                              />
+                              <Typography
+                                variant="caption"
+                                color="text.disabled"
+                                sx={{ whiteSpace: "nowrap" }}
+                              >
+                                Check-in
+                              </Typography>
+                            </ListItem>
+                          );
+                        })}
+                      </List>
+                    )}
+                  </Box>
+                </Box>
+              </ChartCard>
+            </Grid>
         </Grid>
       )}
 

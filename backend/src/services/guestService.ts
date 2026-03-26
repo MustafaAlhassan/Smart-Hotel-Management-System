@@ -78,9 +78,6 @@ export const searchGuestService = async (email?: string, idNumber?: string) => {
     conditions.push({ email: { $regex: new RegExp(`^${email}$`, "i") } });
   if (idNumber) conditions.push({ idNumber });
 
-  console.log(email);
-  console.log(idNumber);
-
   const guest = await GuestModel.findOne({ $or: conditions }).lean();
   return guest || null;
 };
