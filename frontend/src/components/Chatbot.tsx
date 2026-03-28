@@ -19,6 +19,7 @@ import {
   Person as PersonIcon,
   AutoAwesome as SparkleIcon,
 } from "@mui/icons-material";
+import api from "../services/api";
 
 export const Chatbot = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -34,6 +35,38 @@ export const Chatbot = () => {
   const isDark = theme.palette.mode === "dark";
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
+  // ── Stable session ID for this browser tab (persisted in sessionStorage) ──
+  const sessionId = useRef<string>(() => {
+    const existing = sessionStorage.getItem("chatSessionId");
+    if (existing) return existing;
+    const userId =
+      localStorage.getItem("userId") || localStorage.getItem("id") || "";
+    const id = userId
+      ? `${userId}-${Date.now()}`
+      : `guest-${Math.random().toString(36).slice(2)}-${Date.now()}`;
+    sessionStorage.setItem("chatSessionId", id);
+    return id;
+  });
+
+  // Resolve the ref value once on mount
+  useEffect(() => {
+    const existing = sessionStorage.getItem("chatSessionId");
+    if (!existing) {
+      const userId =
+        localStorage.getItem("userId") || localStorage.getItem("id") || "";
+      const id = userId
+        ? `${userId}-${Date.now()}`
+        : `guest-${Math.random().toString(36).slice(2)}-${Date.now()}`;
+      sessionStorage.setItem("chatSessionId", id);
+      sessionId.current = id as any;
+    } else {
+      sessionId.current = existing as any;
+    }
+  }, []);
+
+  const getSessionId = (): string =>
+    sessionStorage.getItem("chatSessionId") ?? "fallback-session";
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
@@ -47,6 +80,25 @@ export const Chatbot = () => {
     return () => clearTimeout(timer);
   }, []);
 
+  // ── Clear backend session memory when chat is closed ──
+  const handleClose = async () => {
+    setIsOpen(false);
+    try {
+      await api.post("/chat/clear", { sessionId: getSessionId() });
+    } catch {
+      // silently ignore — non-critical
+    }
+    // Also reset local chat history so next open starts fresh
+    setChatHistory([]);
+    // Generate a new session ID for the next conversation
+    const userId =
+      localStorage.getItem("userId") || localStorage.getItem("id") || "";
+    const newId = userId
+      ? `${userId}-${Date.now()}`
+      : `guest-${Math.random().toString(36).slice(2)}-${Date.now()}`;
+    sessionStorage.setItem("chatSessionId", newId);
+  };
+
   const handleSendMessage = async () => {
     if (!message.trim()) return;
 
@@ -57,20 +109,24 @@ export const Chatbot = () => {
 
     try {
       const role = localStorage.getItem("role") || "";
-      const response = await fetch("http://localhost:5000/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: userMessage, role }),
+
+      const response = await api.post("/chat", {
+        message: userMessage,
+        role,
+        sessionId: getSessionId(),
       });
 
-      const data = await response.json();
-      const botReply = data.response || "Sorry, I am offline.";
-
+      const botReply =
+        response.data?.response || "Sorry, I couldn't get a response.";
       setChatHistory((prev) => [...prev, { sender: "bot", text: botReply }]);
-    } catch (error) {
+    } catch (error: any) {
+      const serverMessage = error?.response?.data?.response;
       setChatHistory((prev) => [
         ...prev,
-        { sender: "bot", text: "I'm having trouble connecting to the server." },
+        {
+          sender: "bot",
+          text: serverMessage || "I'm having trouble connecting to the server.",
+        },
       ]);
     } finally {
       setIsLoading(false);
@@ -188,6 +244,7 @@ export const Chatbot = () => {
             border: `1px solid ${colors.paperBorder}`,
           }}
         >
+          {/* ── Header ── */}
           <Box
             sx={{
               p: "14px 16px",
@@ -261,7 +318,7 @@ export const Chatbot = () => {
             </Box>
             <IconButton
               size="small"
-              onClick={() => setIsOpen(false)}
+              onClick={handleClose}
               sx={{
                 color: "rgba(255,255,255,0.55)",
                 width: 32,
@@ -277,6 +334,7 @@ export const Chatbot = () => {
             </IconButton>
           </Box>
 
+          {/* ── Messages ── */}
           <Box
             sx={{
               flex: 1,
@@ -511,7 +569,7 @@ export const Chatbot = () => {
                   {[0, 1, 2].map((i) => (
                     <Box
                       key={i}
-                      className={`chatbot-typing-dot`}
+                      className="chatbot-typing-dot"
                       sx={{
                         width: 7,
                         height: 7,
@@ -526,6 +584,7 @@ export const Chatbot = () => {
             <div ref={messagesEndRef} />
           </Box>
 
+          {/* ── Input ── */}
           <Box
             sx={{
               px: 2,
@@ -611,6 +670,7 @@ export const Chatbot = () => {
         </Paper>
       </Slide>
 
+      {/* ── FAB ── */}
       <Box
         sx={{
           position: "fixed",
