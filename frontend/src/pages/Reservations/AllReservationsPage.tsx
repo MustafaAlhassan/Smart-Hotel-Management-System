@@ -33,6 +33,7 @@ import {
   Select,
   FormControl,
   InputLabel,
+  Pagination,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import EditIcon from "@mui/icons-material/Edit";
@@ -51,6 +52,8 @@ import { useNavigate } from "react-router-dom";
 import api from "../../services/api";
 import { useHotel } from "../../context/HotelContext";
 
+const ITEMS_PER_PAGE = 10;
+
 const AllReservationsPage = () => {
   const navigate = useNavigate();
   const theme = useTheme();
@@ -64,6 +67,8 @@ const AllReservationsPage = () => {
   const [filterCheckIn, setFilterCheckIn] = useState("");
   const [filterCheckOut, setFilterCheckOut] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
+
+  const [currentPage, setCurrentPage] = useState(1);
 
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [currentBooking, setCurrentBooking] = useState<any>(null);
@@ -114,7 +119,12 @@ const AllReservationsPage = () => {
       const data = Array.isArray(response.data)
         ? response.data
         : response.data.data || [];
-      setBookings(data);
+      // Sort newest check-in date first
+      const sorted = [...data].sort(
+        (a: any, b: any) =>
+          new Date(b.checkInDate).getTime() - new Date(a.checkInDate).getTime()
+      );
+      setBookings(sorted);
     } catch (err) {
       showMessage("Failed to load reservations.", "error");
     } finally {
@@ -140,6 +150,11 @@ const AllReservationsPage = () => {
     };
     fetchRooms();
   }, []);
+
+  // Reset to page 1 whenever filters or search change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filterCheckIn, filterCheckOut, filterStatus]);
 
   const calculateTotal = (booking: any) => {
     if (booking.totalPrice && booking.totalPrice > 0) return booking.totalPrice;
@@ -258,6 +273,12 @@ const AllReservationsPage = () => {
 
     return matchesSearch && matchesCheckIn && matchesCheckOut && matchesStatus;
   });
+
+  const totalPages = Math.ceil(filteredBookings.length / ITEMS_PER_PAGE);
+  const paginatedBookings = filteredBookings.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
 
   const statusOptions = [
     { label: "Confirmed", color: "#16a34a" },
@@ -504,8 +525,8 @@ const AllReservationsPage = () => {
         </Box>
       ) : isMobile ? (
         <Box>
-          {filteredBookings.length > 0 ? (
-            filteredBookings.map((booking) => {
+          {paginatedBookings.length > 0 ? (
+            paginatedBookings.map((booking) => {
               const totalPrice = calculateTotal(booking);
               return (
                 <Card key={booking._id} sx={{ mb: 2, borderRadius: "12px", boxShadow: 2 }}>
@@ -592,116 +613,144 @@ const AllReservationsPage = () => {
               <Typography color="text.secondary">No reservations found.</Typography>
             </Paper>
           )}
+
+          {/* Mobile Pagination */}
+          {totalPages > 1 && (
+            <Box sx={{ display: "flex", justifyContent: "center", mt: 3 }}>
+              <Pagination
+                count={totalPages}
+                page={currentPage}
+                onChange={(_, value) => setCurrentPage(value)}
+                color="primary"
+                shape="rounded"
+              />
+            </Box>
+          )}
         </Box>
       ) : (
-        <TableContainer
-          component={Paper}
-          sx={{
-            borderRadius: "15px",
-            boxShadow: "0 4px 20px rgba(0,0,0,0.05)",
-            width: "100%",
-            overflowX: "auto",
-          }}
-        >
-          <Table sx={{ minWidth: 800 }}>
-            <TableHead>
-              <TableRow>
-                <TableCell sx={{ fontWeight: "bold", py: 2 }}>Guest Information</TableCell>
-                <TableCell sx={{ fontWeight: "bold" }}>Room</TableCell>
-                <TableCell sx={{ fontWeight: "bold" }}>Check In / Out</TableCell>
-                <TableCell sx={{ fontWeight: "bold" }}>Total Price</TableCell>
-                <TableCell sx={{ fontWeight: "bold" }}>Status</TableCell>
-                <TableCell align="center" sx={{ fontWeight: "bold" }}>Actions</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {filteredBookings.length > 0 ? (
-                filteredBookings.map((booking) => {
-                  const totalPrice = calculateTotal(booking);
-                  return (
-                    <TableRow
-                      key={booking._id}
-                      hover
-                      sx={{ "&:last-child td, &:last-child th": { border: 0 } }}
-                    >
-                      <TableCell>
-                        <Typography variant="subtitle2" sx={{ fontWeight: "700" }}>
-                          {booking.guest?.firstName} {booking.guest?.lastName}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="body2" sx={{ fontWeight: "500" }}>
-                          Room {booking.room?.roomNumber || "N/A"}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="body2">
-                          {new Date(booking.checkInDate).toLocaleDateString()} -{" "}
-                          {new Date(booking.checkOutDate).toLocaleDateString()}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="subtitle2" color="primary.main" sx={{ fontWeight: "bold" }}>
-                          {hotel?.currency} {totalPrice}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>{getStatusChip(booking.status)}</TableCell>
-                      <TableCell align="center">
-                        <Tooltip title="More Information">
-                          <IconButton
-                            color="info"
-                            size="small"
-                            sx={{ mr: 1 }}
-                            onClick={() => handleOpenMoreInfo(booking)}
-                          >
-                            <InfoOutlinedIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Create Invoice">
-                          <IconButton
-                            color="success"
-                            size="small"
-                            sx={{ mr: 1 }}
-                            onClick={() => handleCreateInvoice(booking._id)}
-                          >
-                            <ReceiptIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Edit">
-                          <IconButton
-                            color="info"
-                            size="small"
-                            sx={{ mr: 1 }}
-                            onClick={() => handleEditClick(booking)}
-                          >
-                            <EditIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Cancel Booking">
-                          <IconButton
-                            color="error"
-                            size="small"
-                            onClick={() => handleOpenCancelDialog(booking)}
-                          >
-                            <CancelIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
-              ) : (
+        <>
+          <TableContainer
+            component={Paper}
+            sx={{
+              borderRadius: "15px",
+              boxShadow: "0 4px 20px rgba(0,0,0,0.05)",
+              width: "100%",
+              overflowX: "auto",
+            }}
+          >
+            <Table sx={{ minWidth: 800 }}>
+              <TableHead>
                 <TableRow>
-                  <TableCell colSpan={6} align="center" sx={{ py: 10 }}>
-                    <Typography color="text.secondary">
-                      No reservations found matching your search.
-                    </Typography>
-                  </TableCell>
+                  <TableCell sx={{ fontWeight: "bold", py: 2 }}>Guest Information</TableCell>
+                  <TableCell sx={{ fontWeight: "bold" }}>Room</TableCell>
+                  <TableCell sx={{ fontWeight: "bold" }}>Check In / Out</TableCell>
+                  <TableCell sx={{ fontWeight: "bold" }}>Total Price</TableCell>
+                  <TableCell sx={{ fontWeight: "bold" }}>Status</TableCell>
+                  <TableCell align="center" sx={{ fontWeight: "bold" }}>Actions</TableCell>
                 </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
+              </TableHead>
+              <TableBody>
+                {paginatedBookings.length > 0 ? (
+                  paginatedBookings.map((booking) => {
+                    const totalPrice = calculateTotal(booking);
+                    return (
+                      <TableRow
+                        key={booking._id}
+                        hover
+                        sx={{ "&:last-child td, &:last-child th": { border: 0 } }}
+                      >
+                        <TableCell>
+                          <Typography variant="subtitle2" sx={{ fontWeight: "700" }}>
+                            {booking.guest?.firstName} {booking.guest?.lastName}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>
+                          <Typography variant="body2" sx={{ fontWeight: "500" }}>
+                            Room {booking.room?.roomNumber || "N/A"}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>
+                          <Typography variant="body2">
+                            {new Date(booking.checkInDate).toLocaleDateString()} -{" "}
+                            {new Date(booking.checkOutDate).toLocaleDateString()}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>
+                          <Typography variant="subtitle2" color="primary.main" sx={{ fontWeight: "bold" }}>
+                            {hotel?.currency} {totalPrice}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>{getStatusChip(booking.status)}</TableCell>
+                        <TableCell align="center">
+                          <Tooltip title="More Information">
+                            <IconButton
+                              color="info"
+                              size="small"
+                              sx={{ mr: 1 }}
+                              onClick={() => handleOpenMoreInfo(booking)}
+                            >
+                              <InfoOutlinedIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Create Invoice">
+                            <IconButton
+                              color="success"
+                              size="small"
+                              sx={{ mr: 1 }}
+                              onClick={() => handleCreateInvoice(booking._id)}
+                            >
+                              <ReceiptIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Edit">
+                            <IconButton
+                              color="info"
+                              size="small"
+                              sx={{ mr: 1 }}
+                              onClick={() => handleEditClick(booking)}
+                            >
+                              <EditIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Cancel Booking">
+                            <IconButton
+                              color="error"
+                              size="small"
+                              onClick={() => handleOpenCancelDialog(booking)}
+                            >
+                              <CancelIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={6} align="center" sx={{ py: 10 }}>
+                      <Typography color="text.secondary">
+                        No reservations found matching your search.
+                      </Typography>
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+
+          {/* Desktop Pagination */}
+          {totalPages > 1 && (
+            <Box sx={{ display: "flex", justifyContent: "center", mt: 3 }}>
+              <Pagination
+                count={totalPages}
+                page={currentPage}
+                onChange={(_, value) => setCurrentPage(value)}
+                color="primary"
+                shape="rounded"
+              />
+            </Box>
+          )}
+        </>
       )}
 
       {/* More Information Dialog */}
