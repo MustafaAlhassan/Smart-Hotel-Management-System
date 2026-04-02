@@ -779,156 +779,238 @@ const DashboardPage = () => {
       {isReceptionist && (
         <Grid container spacing={2.5} mb={2.5} justifyContent="center">
           <Grid item xs={12} md={4} sx={{ minWidth: "300px" }}>
-              <ChartCard title="Today's arrivals">
+            <ChartCard title="Today's arrivals">
+              <Box
+                sx={{
+                  display: "flex",
+                  flexDirection: "column",
+                  height: "100%",
+                }}
+              >
                 <Box
                   sx={{
                     display: "flex",
-                    flexDirection: "column",
-                    height: "100%",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    mb: 1.5,
                   }}
                 >
-                  <Box
-                    sx={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      mb: 1.5,
-                    }}
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    fontWeight={500}
                   >
-                    <Typography
-                      variant="caption"
-                      color="text.secondary"
-                      fontWeight={500}
-                    >
-                      {arrivalsList.length} guest
-                      {arrivalsList.length !== 1 ? "s" : ""} expected
-                    </Typography>
-                    <Chip
-                      label={`${arrivalsList.length} arriving`}
-                      size="small"
-                      color="info"
-                      variant="outlined"
-                      sx={{ height: 20, fontSize: "0.65rem", fontWeight: 600 }}
-                    />
-                  </Box>
-
-                  <Button
-                    onClick={() => navigate("/all-reservations")}
-                    fullWidth
+                    {arrivalsList.length} guest
+                    {arrivalsList.length !== 1 ? "s" : ""} expected
+                  </Typography>
+                  <Chip
+                    label={`${arrivalsList.length} arriving`}
+                    size="small"
+                    color="info"
                     variant="outlined"
-                    startIcon={
-                      <Checklist sx={{ fontSize: "16px !important" }} />
-                    }
-                    sx={{
-                      borderRadius: 2,
-                      py: 1.2,
-                      fontWeight: 600,
-                      fontSize: "0.82rem",
-                      textTransform: "none",
-                      mb: 1.5,
-                      borderColor: "divider",
-                      color: "text.secondary",
-                      "&:hover": {
-                        borderColor: "primary.main",
-                        color: "primary.main",
-                      },
-                    }}
-                  >
-                    Check reservations
-                  </Button>
-
-                  <Box sx={{ flex: 1, overflow: "auto" }}>
-                    {arrivalsList.length === 0 ? (
-                      <Box sx={{ textAlign: "center", py: 4 }}>
-                        <Typography variant="body2" color="text.disabled">
-                          No arrivals scheduled today
-                        </Typography>
-                      </Box>
-                    ) : (
-                      <List dense disablePadding>
-                        {arrivalsList.slice(0, 6).map((booking: any) => {
-                          const firstName = booking.guest?.firstName || "";
-                          const lastName = booking.guest?.lastName || "";
-                          const initials =
-                            `${firstName[0] || ""}${lastName[0] || ""}`.toUpperCase();
-                          return (
-                            <ListItem
-                              key={booking._id}
-                              sx={{
-                                px: 1,
-                                py: 0.8,
-                                borderRadius: 2,
-                                "&:hover": { bgcolor: "action.hover" },
-                              }}
-                            >
-                              <ListItemAvatar sx={{ minWidth: 44 }}>
-                                <Avatar
-                                  sx={{
-                                    width: 34,
-                                    height: 34,
-                                    fontSize: "0.75rem",
-                                    fontWeight: 600,
-                                    bgcolor: alpha(
-                                      theme.palette.primary.main,
-                                      0.12,
-                                    ),
-                                    color: "primary.main",
-                                  }}
-                                >
-                                  {initials || <Person sx={{ fontSize: 16 }} />}
-                                </Avatar>
-                              </ListItemAvatar>
-                              <ListItemText
-                                primary={
-                                  <Typography
-                                    variant="body2"
-                                    fontWeight={600}
-                                    noWrap
-                                  >
-                                    {firstName} {lastName}
-                                  </Typography>
-                                }
-                                secondary={
-                                  <Stack
-                                    direction="row"
-                                    alignItems="center"
-                                    spacing={0.5}
-                                    mt={0.2}
-                                  >
-                                    <Box
-                                      sx={{
-                                        width: 6,
-                                        height: 6,
-                                        borderRadius: "50%",
-                                        bgcolor: "success.main",
-                                        flexShrink: 0,
-                                      }}
-                                    />
-                                    <Typography
-                                      variant="caption"
-                                      color="text.secondary"
-                                    >
-                                      Room {booking.room?.roomNumber || "N/A"}
-                                    </Typography>
-                                  </Stack>
-                                }
-                              />
-                              <Typography
-                                variant="caption"
-                                color="text.disabled"
-                                sx={{ whiteSpace: "nowrap" }}
-                              >
-                                Check-in
-                              </Typography>
-                            </ListItem>
-                          );
-                        })}
-                      </List>
-                    )}
-                  </Box>
+                    sx={{ height: 20, fontSize: "0.65rem", fontWeight: 600 }}
+                  />
                 </Box>
-              </ChartCard>
-            </Grid>
+
+                <Button
+                  onClick={() => navigate("/all-reservations")}
+                  fullWidth
+                  variant="outlined"
+                  startIcon={<Checklist sx={{ fontSize: "16px !important" }} />}
+                  sx={{
+                    borderRadius: 2,
+                    py: 1.2,
+                    fontWeight: 600,
+                    fontSize: "0.82rem",
+                    textTransform: "none",
+                    mb: 1.5,
+                    borderColor: "divider",
+                    color: "text.secondary",
+                    "&:hover": {
+                      borderColor: "primary.main",
+                      color: "primary.main",
+                    },
+                  }}
+                >
+                  Check reservations
+                </Button>
+
+                <Box sx={{ flex: 1, overflow: "auto" }}>
+                  {arrivalsList.length === 0 ? (
+                    <Box sx={{ textAlign: "center", py: 4 }}>
+                      <Typography variant="body2" color="text.disabled">
+                        No arrivals scheduled today
+                      </Typography>
+                    </Box>
+                  ) : (
+                    <List dense disablePadding>
+                      {arrivalsList.slice(0, 6).map((booking: any) => {
+                        const firstName = booking.guest?.firstName || "";
+                        const lastName = booking.guest?.lastName || "";
+                        const initials =
+                          `${firstName[0] || ""}${lastName[0] || ""}`.toUpperCase();
+                        return (
+                          <ListItem
+                            key={booking._id}
+                            sx={{
+                              px: 1,
+                              py: 0.8,
+                              borderRadius: 2,
+                              "&:hover": { bgcolor: "action.hover" },
+                            }}
+                          >
+                            <ListItemAvatar sx={{ minWidth: 44 }}>
+                              <Avatar
+                                sx={{
+                                  width: 34,
+                                  height: 34,
+                                  fontSize: "0.75rem",
+                                  fontWeight: 600,
+                                  bgcolor: alpha(
+                                    theme.palette.primary.main,
+                                    0.12,
+                                  ),
+                                  color: "primary.main",
+                                }}
+                              >
+                                {initials || <Person sx={{ fontSize: 16 }} />}
+                              </Avatar>
+                            </ListItemAvatar>
+                            <ListItemText
+                              primary={
+                                <Typography
+                                  variant="body2"
+                                  fontWeight={600}
+                                  noWrap
+                                >
+                                  {firstName} {lastName}
+                                </Typography>
+                              }
+                              secondary={
+                                <Stack
+                                  direction="row"
+                                  alignItems="center"
+                                  spacing={0.5}
+                                  mt={0.2}
+                                >
+                                  <Box
+                                    sx={{
+                                      width: 6,
+                                      height: 6,
+                                      borderRadius: "50%",
+                                      bgcolor: "success.main",
+                                      flexShrink: 0,
+                                    }}
+                                  />
+                                  <Typography
+                                    variant="caption"
+                                    color="text.secondary"
+                                  >
+                                    Room {booking.room?.roomNumber || "N/A"}
+                                  </Typography>
+                                </Stack>
+                              }
+                            />
+                            <Typography
+                              variant="caption"
+                              color="text.disabled"
+                              sx={{ whiteSpace: "nowrap" }}
+                            >
+                              Check-in
+                            </Typography>
+                          </ListItem>
+                        );
+                      })}
+                    </List>
+                  )}
+                </Box>
+              </Box>
+            </ChartCard>
+          </Grid>
+          <Grid item xs={12} md={4} sx={{ minWidth: "300px" }}>
+            <ChartCard title="Quick Actions">
+              <Stack spacing={2.5} height="100%" justifyContent="center">
+                <Button
+                  onClick={() => navigate("/booking")}
+                  fullWidth
+                  variant="contained"
+                  startIcon={<AddCircleOutline />}
+                  sx={{
+                    borderRadius: 2.5,
+                    py: 2,
+                    fontWeight: 700,
+                    boxShadow: "none",
+                  }}
+                >
+                  Create New Booking
+                </Button>
+                <Button
+                  onClick={() => navigate("/guests")}
+                  fullWidth
+                  variant="outlined"
+                  startIcon={<PersonAddAlt />}
+                  sx={{
+                    borderRadius: 2.5,
+                    py: 2,
+                    fontWeight: 700,
+                    borderWidth: 2,
+                  }}
+                >
+                  Add New Guest
+                </Button>
+                <Divider />
+                <Box>
+                  <Stack direction="row" justifyContent="space-between" mb={1}>
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      fontWeight={600}
+                    >
+                      Occupancy Rate
+                    </Typography>
+                    <Typography variant="body2" fontWeight={700}>
+                      {occupancyRate}%
+                    </Typography>
+                  </Stack>
+                  <LinearProgress
+                    variant="determinate"
+                    value={occupancyRate}
+                    sx={{
+                      height: 8,
+                      borderRadius: 4,
+                      bgcolor: theme.palette.action.hover,
+                      "& .MuiLinearProgress-bar": { borderRadius: 4 },
+                    }}
+                  />
+                </Box>
+                <Box>
+                  <Stack direction="row" justifyContent="space-between" mb={1}>
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      fontWeight={600}
+                    >
+                      Availability Rate
+                    </Typography>
+                    <Typography variant="body2" fontWeight={700}>
+                      {availableRate}%
+                    </Typography>
+                  </Stack>
+                  <LinearProgress
+                    variant="determinate"
+                    value={availableRate}
+                    color="success"
+                    sx={{
+                      height: 8,
+                      borderRadius: 4,
+                      bgcolor: theme.palette.action.hover,
+                      "& .MuiLinearProgress-bar": { borderRadius: 4 },
+                    }}
+                  />
+                </Box>
+              </Stack>
+            </ChartCard>
+          </Grid>
         </Grid>
       )}
 
