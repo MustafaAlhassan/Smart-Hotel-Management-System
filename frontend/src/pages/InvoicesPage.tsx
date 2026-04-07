@@ -1192,29 +1192,29 @@ const InvoicesPage = () => {
                 <Table size="small" sx={{ minWidth: 380 }}>
                   <TableHead>
                     <TableRow className="p-thead" sx={{ borderBottom: `2px solid ${theme.palette.divider}` }}>
-                      <TableCell sx={{ fontWeight: 700, pb: 2, px: 0 }}>Description</TableCell>
-                      <TableCell align="center" sx={{ fontWeight: 700, pb: 2, px: 0 }}>Qty</TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 700, pb: 2, px: 0 }}>Unit Price</TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 700, pb: 2, px: 0 }}>Amount</TableCell>
+                      <TableCell sx={{ fontWeight: 700, pb: 1 }}>Description</TableCell>
+                      <TableCell align="center" sx={{ fontWeight: 700, pb: 1 }}>Qty</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 700, pb: 1 }}>Unit Price</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 700, pb: 1 }}>Amount</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
                     <TableRow>
-                      <TableCell sx={{ py: 2, px: 0 }}>Room Charge</TableCell>
+                      <TableCell sx={{ py: 2}}>Room Charge</TableCell>
                       <TableCell align="center">1</TableCell>
                       <TableCell align="right">{currency}{currentInvoice.totalRoomCharge.toFixed(2)}</TableCell>
                       <TableCell align="right">{currency}{currentInvoice.totalRoomCharge.toFixed(2)}</TableCell>
                     </TableRow>
                     {currentInvoice.usedServices?.map((item, index) => (
                       <TableRow key={index}>
-                        <TableCell sx={{ py: 2, px: 0 }}>{item.name}</TableCell>
+                        <TableCell sx={{ py: 2 }}>{typeof item.service === "object" ? item.service.name : item.name || "Service"}</TableCell>
                         <TableCell align="center">{item.quantity}</TableCell>
                         <TableCell align="right">{currency}{item.price.toFixed(2)}</TableCell>
                         <TableCell align="right">{currency}{item.total.toFixed(2)}</TableCell>
                       </TableRow>
                     ))}
                     <TableRow>
-                      <TableCell colSpan={3} align="right" sx={{ py: 2, px: 0, fontWeight: 600 }}>
+                      <TableCell colSpan={3} align="right" sx={{ py: 2, fontWeight: 600 }}>
                         Taxes
                       </TableCell>
                       <TableCell align="right">{currency}{currentInvoice.taxAmount.toFixed(2)}</TableCell>
@@ -1226,7 +1226,7 @@ const InvoicesPage = () => {
                       <TableCell colSpan={3} align="right" sx={{ py: 2, px: 1, fontWeight: 800, fontSize: "1rem" }}>
                         TOTAL DUE
                       </TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 900, fontSize: "1.1rem", px: 0 }}>
+                      <TableCell align="right" sx={{ fontWeight: 900, fontSize: "1.1rem" }}>
                         {currency}{currentInvoice.totalAmountDue.toFixed(2)}
                       </TableCell>
                     </TableRow>
