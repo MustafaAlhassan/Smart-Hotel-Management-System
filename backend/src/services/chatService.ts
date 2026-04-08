@@ -696,7 +696,7 @@ FORMATTING REMINDER:
   // ── Build the Gemini client and chat session ──
   const genAI = new GoogleGenerativeAI(API_KEY);
   const model = genAI.getGenerativeModel({
-    model: "gemini-2.5-flash",
+    model: "gemma-4-31b-it",
     systemInstruction: systemPrompt,
   });
 
