@@ -282,7 +282,6 @@ const AllReservationsPage = () => {
 
   const statusOptions = [
     { label: "Confirmed", color: "#16a34a" },
-    { label: "Pending", color: "#d97706" },
     { label: "Checked-In", color: "#0284c7" },
     { label: "Checked-Out", color: "#64748b" },
     { label: "Cancelled", color: "#dc2626" },
@@ -292,7 +291,6 @@ const AllReservationsPage = () => {
     const s = status?.toLowerCase();
     const config: any = {
       confirmed: { color: "success", label: "Confirmed" },
-      pending: { color: "warning", label: "Pending" },
       cancelled: { color: "error", label: "Cancelled" },
       "checked-in": { color: "info", label: "Checked In" },
       "checked-out": { color: "default", label: "Checked Out" },
@@ -999,7 +997,6 @@ const AllReservationsPage = () => {
                   onChange={handleEditChange}
                 >
                   <MenuItem value="Confirmed">Confirmed</MenuItem>
-                  <MenuItem value="Pending">Pending</MenuItem>
                   <MenuItem value="Checked-In">Checked-In</MenuItem>
                   <MenuItem value="Checked-Out">Checked-Out</MenuItem>
                   <MenuItem value="Cancelled">Cancelled</MenuItem>
