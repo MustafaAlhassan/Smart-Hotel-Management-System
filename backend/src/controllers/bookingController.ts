@@ -56,7 +56,7 @@ const handleError = (error: any, res: Response) => {
   }
 
   console.error("Server Error:", error);
-  res.status(500).json({ message: error });
+  res.status(500).json({ message: error.message });
 };
 
 const isIdInvalid = (id: string, res: Response) => {

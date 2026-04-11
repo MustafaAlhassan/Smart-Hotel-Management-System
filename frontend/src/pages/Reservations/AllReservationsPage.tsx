@@ -122,7 +122,7 @@ const AllReservationsPage = () => {
       // Sort newest check-in date first
       const sorted = [...data].sort(
         (a: any, b: any) =>
-          new Date(b.checkInDate).getTime() - new Date(a.checkInDate).getTime()
+          new Date(b.checkInDate).getTime() - new Date(a.checkInDate).getTime(),
       );
       setBookings(sorted);
     } catch (err) {
@@ -163,7 +163,9 @@ const AllReservationsPage = () => {
     if (!booking.checkInDate || !booking.checkOutDate) return 0;
     const start = new Date(booking.checkInDate);
     const end = new Date(booking.checkOutDate);
-    const diff = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+    const diff = Math.ceil(
+      (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24),
+    );
     const nights = diff > 0 ? diff : 0;
     return nights * pricePerNight;
   };
@@ -185,13 +187,16 @@ const AllReservationsPage = () => {
       await api.delete(`/bookings/${bookingToCancel._id}`);
       setBookings((prev) =>
         prev.map((b) =>
-          b._id === bookingToCancel._id ? { ...b, status: "Cancelled" } : b
-        )
+          b._id === bookingToCancel._id ? { ...b, status: "Cancelled" } : b,
+        ),
       );
       showMessage("Booking cancelled successfully.");
       handleCloseCancelDialog();
     } catch (err: any) {
-      showMessage(err.response?.data?.message || "Error cancelling booking.", "error");
+      showMessage(
+        err.response?.data?.message || "Error cancelling booking.",
+        "error",
+      );
     } finally {
       setCancelLoading(false);
     }
@@ -202,7 +207,10 @@ const AllReservationsPage = () => {
       await api.post("/invoices", { bookingId: id });
       showMessage("Invoice created successfully.");
     } catch (err: any) {
-      showMessage(err.response?.data?.message || "Error creating invoice.", "error");
+      showMessage(
+        err.response?.data?.message || "Error creating invoice.",
+        "error",
+      );
     }
   };
 
@@ -210,7 +218,9 @@ const AllReservationsPage = () => {
     setCurrentBooking(booking);
     setEditFormData({
       checkInDate: booking.checkInDate ? booking.checkInDate.split("T")[0] : "",
-      checkOutDate: booking.checkOutDate ? booking.checkOutDate.split("T")[0] : "",
+      checkOutDate: booking.checkOutDate
+        ? booking.checkOutDate.split("T")[0]
+        : "",
       status: booking.status || "Confirmed",
       room: booking.room?._id || "",
       totalPrice: calculateTotal(booking),
@@ -231,15 +241,18 @@ const AllReservationsPage = () => {
   const handleEditSave = async () => {
     if (!currentBooking) return;
     try {
-      const response = await api.put(`/bookings/${currentBooking._id}`, editFormData);
+      const response = await api.put(
+        `/bookings/${currentBooking._id}`,
+        editFormData,
+      );
       const updatedBooking = response.data.data || response.data;
       setBookings((prev) =>
-        prev.map((b) => (b._id === currentBooking._id ? updatedBooking : b))
+        prev.map((b) => (b._id === currentBooking._id ? updatedBooking : b)),
       );
       showMessage("Booking updated successfully.");
       handleEditClose();
     } catch (err: any) {
-      showMessage(err.response?.data?.message || "Error updating booking.", "error");
+      showMessage("Error updating booking.", "error");
     }
   };
 
@@ -262,11 +275,19 @@ const AllReservationsPage = () => {
       roomNumber.includes(searchTerm) ||
       email.toLowerCase().includes(searchTerm.toLowerCase());
 
-    const bookingCheckIn = booking.checkInDate ? booking.checkInDate.split("T")[0] : "";
-    const bookingCheckOut = booking.checkOutDate ? booking.checkOutDate.split("T")[0] : "";
+    const bookingCheckIn = booking.checkInDate
+      ? booking.checkInDate.split("T")[0]
+      : "";
+    const bookingCheckOut = booking.checkOutDate
+      ? booking.checkOutDate.split("T")[0]
+      : "";
 
-    const matchesCheckIn = filterCheckIn ? bookingCheckIn === filterCheckIn : true;
-    const matchesCheckOut = filterCheckOut ? bookingCheckOut === filterCheckOut : true;
+    const matchesCheckIn = filterCheckIn
+      ? bookingCheckIn === filterCheckIn
+      : true;
+    const matchesCheckOut = filterCheckOut
+      ? bookingCheckOut === filterCheckOut
+      : true;
     const matchesStatus = filterStatus
       ? booking.status?.toLowerCase() === filterStatus.toLowerCase()
       : true;
@@ -277,7 +298,7 @@ const AllReservationsPage = () => {
   const totalPages = Math.ceil(filteredBookings.length / ITEMS_PER_PAGE);
   const paginatedBookings = filteredBookings.slice(
     (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE
+    currentPage * ITEMS_PER_PAGE,
   );
 
   const statusOptions = [
@@ -298,7 +319,12 @@ const AllReservationsPage = () => {
     };
     const current = config[s] || config.default;
     return (
-      <Chip label={current.label} color={current.color} size="small" variant="outlined" />
+      <Chip
+        label={current.label}
+        color={current.color}
+        size="small"
+        variant="outlined"
+      />
     );
   };
 
@@ -341,7 +367,13 @@ const AllReservationsPage = () => {
 
       <Paper
         elevation={0}
-        sx={{ p: 2, mb: 2, borderRadius: "12px", width: "100%", boxSizing: "border-box" }}
+        sx={{
+          p: 2,
+          mb: 2,
+          borderRadius: "12px",
+          width: "100%",
+          boxSizing: "border-box",
+        }}
       >
         <TextField
           fullWidth
@@ -381,7 +413,12 @@ const AllReservationsPage = () => {
               size="small"
               startIcon={<ClearIcon fontSize="small" />}
               onClick={handleClearFilters}
-              sx={{ ml: "auto", textTransform: "none", fontSize: "0.75rem", color: "text.secondary" }}
+              sx={{
+                ml: "auto",
+                textTransform: "none",
+                fontSize: "0.75rem",
+                color: "text.secondary",
+              }}
             >
               Clear all
             </Button>
@@ -396,11 +433,18 @@ const AllReservationsPage = () => {
             value={filterCheckIn}
             onChange={(e) => setFilterCheckIn(e.target.value)}
             InputLabelProps={{ shrink: true }}
-            sx={{ flex: 1, "& .MuiOutlinedInput-root": { borderRadius: "10px" } }}
+            sx={{
+              flex: 1,
+              "& .MuiOutlinedInput-root": { borderRadius: "10px" },
+            }}
             InputProps={{
               endAdornment: filterCheckIn ? (
                 <InputAdornment position="end">
-                  <IconButton size="small" onClick={() => setFilterCheckIn("")} edge="end">
+                  <IconButton
+                    size="small"
+                    onClick={() => setFilterCheckIn("")}
+                    edge="end"
+                  >
                     <ClearIcon fontSize="small" />
                   </IconButton>
                 </InputAdornment>
@@ -415,11 +459,18 @@ const AllReservationsPage = () => {
             value={filterCheckOut}
             onChange={(e) => setFilterCheckOut(e.target.value)}
             InputLabelProps={{ shrink: true }}
-            sx={{ flex: 1, "& .MuiOutlinedInput-root": { borderRadius: "10px" } }}
+            sx={{
+              flex: 1,
+              "& .MuiOutlinedInput-root": { borderRadius: "10px" },
+            }}
             InputProps={{
               endAdornment: filterCheckOut ? (
                 <InputAdornment position="end">
-                  <IconButton size="small" onClick={() => setFilterCheckOut("")} edge="end">
+                  <IconButton
+                    size="small"
+                    onClick={() => setFilterCheckOut("")}
+                    edge="end"
+                  >
                     <ClearIcon fontSize="small" />
                   </IconButton>
                 </InputAdornment>
@@ -429,7 +480,11 @@ const AllReservationsPage = () => {
 
           <FormControl
             size="small"
-            sx={{ flex: 1, minWidth: 160, "& .MuiOutlinedInput-root": { borderRadius: "10px" } }}
+            sx={{
+              flex: 1,
+              minWidth: 160,
+              "& .MuiOutlinedInput-root": { borderRadius: "10px" },
+            }}
           >
             <InputLabel>Status</InputLabel>
             <Select
@@ -439,7 +494,11 @@ const AllReservationsPage = () => {
               endAdornment={
                 filterStatus ? (
                   <InputAdornment position="end" sx={{ mr: 2 }}>
-                    <IconButton size="small" onClick={() => setFilterStatus("")} edge="end">
+                    <IconButton
+                      size="small"
+                      onClick={() => setFilterStatus("")}
+                      edge="end"
+                    >
                       <ClearIcon fontSize="small" />
                     </IconButton>
                   </InputAdornment>
@@ -518,7 +577,14 @@ const AllReservationsPage = () => {
       </Paper>
 
       {loading ? (
-        <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", p: 10 }}>
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            p: 10,
+          }}
+        >
           <CircularProgress size={50} />
         </Box>
       ) : isMobile ? (
@@ -527,9 +593,17 @@ const AllReservationsPage = () => {
             paginatedBookings.map((booking) => {
               const totalPrice = calculateTotal(booking);
               return (
-                <Card key={booking._id} sx={{ mb: 2, borderRadius: "12px", boxShadow: 2 }}>
+                <Card
+                  key={booking._id}
+                  sx={{ mb: 2, borderRadius: "12px", boxShadow: 2 }}
+                >
                   <CardContent>
-                    <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+                    <Box
+                      display="flex"
+                      justifyContent="space-between"
+                      alignItems="center"
+                      mb={2}
+                    >
                       <Typography variant="h6" fontWeight="bold">
                         {booking.guest?.firstName} {booking.guest?.lastName}
                       </Typography>
@@ -538,29 +612,55 @@ const AllReservationsPage = () => {
                     <Divider sx={{ mb: 2 }} />
                     <Stack spacing={1.5}>
                       <Box display="flex" alignItems="center" gap={1}>
-                        <PersonIcon fontSize="small" color="action" sx={{ opacity: 0.6 }} />
+                        <PersonIcon
+                          fontSize="small"
+                          color="action"
+                          sx={{ opacity: 0.6 }}
+                        />
                       </Box>
                       <Box display="flex" alignItems="center" gap={1}>
-                        <HotelIcon fontSize="small" color="action" sx={{ opacity: 0.6 }} />
+                        <HotelIcon
+                          fontSize="small"
+                          color="action"
+                          sx={{ opacity: 0.6 }}
+                        />
                         <Typography variant="body2" fontWeight="500">
                           Room {booking.room?.roomNumber || "N/A"}
                         </Typography>
                       </Box>
                       <Box display="flex" alignItems="center" gap={1}>
-                        <EventIcon fontSize="small" color="action" sx={{ opacity: 0.6 }} />
+                        <EventIcon
+                          fontSize="small"
+                          color="action"
+                          sx={{ opacity: 0.6 }}
+                        />
                         <Typography variant="body2">
                           {new Date(booking.checkInDate).toLocaleDateString()} -{" "}
                           {new Date(booking.checkOutDate).toLocaleDateString()}
                         </Typography>
                       </Box>
                       <Box display="flex" alignItems="center" gap={1}>
-                        <AttachMoneyIcon fontSize="small" color="action" sx={{ opacity: 0.6 }} />
-                        <Typography variant="subtitle1" color="primary.main" fontWeight="bold">
+                        <AttachMoneyIcon
+                          fontSize="small"
+                          color="action"
+                          sx={{ opacity: 0.6 }}
+                        />
+                        <Typography
+                          variant="subtitle1"
+                          color="primary.main"
+                          fontWeight="bold"
+                        >
                           {hotel?.currency} {totalPrice}
                         </Typography>
                       </Box>
                     </Stack>
-                    <Box display="flex" justifyContent="flex-end" mt={2} gap={1} flexWrap="wrap">
+                    <Box
+                      display="flex"
+                      justifyContent="flex-end"
+                      mt={2}
+                      gap={1}
+                      flexWrap="wrap"
+                    >
                       <Button
                         variant="outlined"
                         color="info"
@@ -607,8 +707,13 @@ const AllReservationsPage = () => {
               );
             })
           ) : (
-            <Paper sx={{ p: 4, textAlign: "center", borderRadius: "12px" }} elevation={0}>
-              <Typography color="text.secondary">No reservations found.</Typography>
+            <Paper
+              sx={{ p: 4, textAlign: "center", borderRadius: "12px" }}
+              elevation={0}
+            >
+              <Typography color="text.secondary">
+                No reservations found.
+              </Typography>
             </Paper>
           )}
 
@@ -639,12 +744,18 @@ const AllReservationsPage = () => {
             <Table sx={{ minWidth: 800 }}>
               <TableHead>
                 <TableRow>
-                  <TableCell sx={{ fontWeight: "bold", py: 2 }}>Guest Information</TableCell>
+                  <TableCell sx={{ fontWeight: "bold", py: 2 }}>
+                    Guest Information
+                  </TableCell>
                   <TableCell sx={{ fontWeight: "bold" }}>Room</TableCell>
-                  <TableCell sx={{ fontWeight: "bold" }}>Check In / Out</TableCell>
+                  <TableCell sx={{ fontWeight: "bold" }}>
+                    Check In / Out
+                  </TableCell>
                   <TableCell sx={{ fontWeight: "bold" }}>Total Price</TableCell>
                   <TableCell sx={{ fontWeight: "bold" }}>Status</TableCell>
-                  <TableCell align="center" sx={{ fontWeight: "bold" }}>Actions</TableCell>
+                  <TableCell align="center" sx={{ fontWeight: "bold" }}>
+                    Actions
+                  </TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -655,26 +766,41 @@ const AllReservationsPage = () => {
                       <TableRow
                         key={booking._id}
                         hover
-                        sx={{ "&:last-child td, &:last-child th": { border: 0 } }}
+                        sx={{
+                          "&:last-child td, &:last-child th": { border: 0 },
+                        }}
                       >
                         <TableCell>
-                          <Typography variant="subtitle2" sx={{ fontWeight: "700" }}>
+                          <Typography
+                            variant="subtitle2"
+                            sx={{ fontWeight: "700" }}
+                          >
                             {booking.guest?.firstName} {booking.guest?.lastName}
                           </Typography>
                         </TableCell>
                         <TableCell>
-                          <Typography variant="body2" sx={{ fontWeight: "500" }}>
+                          <Typography
+                            variant="body2"
+                            sx={{ fontWeight: "500" }}
+                          >
                             Room {booking.room?.roomNumber || "N/A"}
                           </Typography>
                         </TableCell>
                         <TableCell>
                           <Typography variant="body2">
-                            {new Date(booking.checkInDate).toLocaleDateString()} -{" "}
-                            {new Date(booking.checkOutDate).toLocaleDateString()}
+                            {new Date(booking.checkInDate).toLocaleDateString()}{" "}
+                            -{" "}
+                            {new Date(
+                              booking.checkOutDate,
+                            ).toLocaleDateString()}
                           </Typography>
                         </TableCell>
                         <TableCell>
-                          <Typography variant="subtitle2" color="primary.main" sx={{ fontWeight: "bold" }}>
+                          <Typography
+                            variant="subtitle2"
+                            color="primary.main"
+                            sx={{ fontWeight: "bold" }}
+                          >
                             {hotel?.currency} {totalPrice}
                           </Typography>
                         </TableCell>
@@ -793,8 +919,16 @@ const AllReservationsPage = () => {
               }}
             >
               <Stack spacing={1.5}>
-                <Box display="flex" justifyContent="space-between" alignItems="center">
-                  <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                <Box
+                  display="flex"
+                  justifyContent="space-between"
+                  alignItems="center"
+                >
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    fontWeight={600}
+                  >
                     Adults
                   </Typography>
                   <Typography variant="body2" fontWeight={700}>
@@ -802,8 +936,16 @@ const AllReservationsPage = () => {
                   </Typography>
                 </Box>
                 <Divider />
-                <Box display="flex" justifyContent="space-between" alignItems="center">
-                  <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                <Box
+                  display="flex"
+                  justifyContent="space-between"
+                  alignItems="center"
+                >
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    fontWeight={600}
+                  >
                     Children
                   </Typography>
                   <Typography variant="body2" fontWeight={700}>
@@ -812,10 +954,18 @@ const AllReservationsPage = () => {
                 </Box>
                 <Divider />
                 <Box>
-                  <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    fontWeight={600}
+                  >
                     Notes
                   </Typography>
-                  <Typography variant="body2" mt={0.5} sx={{ whiteSpace: "pre-wrap" }}>
+                  <Typography
+                    variant="body2"
+                    mt={0.5}
+                    sx={{ whiteSpace: "pre-wrap" }}
+                  >
                     {moreInfoBooking.notes || "No notes provided."}
                   </Typography>
                 </Box>
@@ -881,36 +1031,68 @@ const AllReservationsPage = () => {
             >
               <Stack spacing={1}>
                 <Box display="flex" justifyContent="space-between">
-                  <Typography variant="caption" color="text.secondary" fontWeight={600}>Guest</Typography>
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    fontWeight={600}
+                  >
+                    Guest
+                  </Typography>
                   <Typography variant="body2" fontWeight={700}>
-                    {bookingToCancel.guest?.firstName} {bookingToCancel.guest?.lastName}
+                    {bookingToCancel.guest?.firstName}{" "}
+                    {bookingToCancel.guest?.lastName}
                   </Typography>
                 </Box>
                 <Divider />
                 <Box display="flex" justifyContent="space-between">
-                  <Typography variant="caption" color="text.secondary" fontWeight={600}>Room</Typography>
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    fontWeight={600}
+                  >
+                    Room
+                  </Typography>
                   <Typography variant="body2" fontWeight={600}>
                     {bookingToCancel.room?.roomNumber || "N/A"}
                   </Typography>
                 </Box>
                 <Divider />
                 <Box display="flex" justifyContent="space-between">
-                  <Typography variant="caption" color="text.secondary" fontWeight={600}>Check-in</Typography>
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    fontWeight={600}
+                  >
+                    Check-in
+                  </Typography>
                   <Typography variant="body2">
                     {new Date(bookingToCancel.checkInDate).toLocaleDateString()}
                   </Typography>
                 </Box>
                 <Divider />
                 <Box display="flex" justifyContent="space-between">
-                  <Typography variant="caption" color="text.secondary" fontWeight={600}>Check-out</Typography>
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    fontWeight={600}
+                  >
+                    Check-out
+                  </Typography>
                   <Typography variant="body2">
-                    {new Date(bookingToCancel.checkOutDate).toLocaleDateString()}
+                    {new Date(
+                      bookingToCancel.checkOutDate,
+                    ).toLocaleDateString()}
                   </Typography>
                 </Box>
               </Stack>
             </Paper>
           )}
-          <Typography variant="body2" color="error.main" fontWeight={600} mt={2}>
+          <Typography
+            variant="body2"
+            color="error.main"
+            fontWeight={600}
+            mt={2}
+          >
             This action cannot be undone.
           </Typography>
         </DialogContent>
@@ -929,9 +1111,18 @@ const AllReservationsPage = () => {
             variant="contained"
             color="error"
             disabled={cancelLoading}
-            sx={{ borderRadius: "8px", textTransform: "none", fontWeight: 700, minWidth: 120 }}
+            sx={{
+              borderRadius: "8px",
+              textTransform: "none",
+              fontWeight: 700,
+              minWidth: 120,
+            }}
           >
-            {cancelLoading ? <CircularProgress size={18} color="inherit" /> : "Yes, Cancel"}
+            {cancelLoading ? (
+              <CircularProgress size={18} color="inherit" />
+            ) : (
+              "Yes, Cancel"
+            )}
           </Button>
         </DialogActions>
       </Dialog>
@@ -944,7 +1135,9 @@ const AllReservationsPage = () => {
         fullWidth
         PaperProps={{ sx: { borderRadius: "12px", m: { xs: 1, sm: 2 } } }}
       >
-        <DialogTitle sx={{ fontWeight: "bold", pb: 1 }}>Edit Reservation</DialogTitle>
+        <DialogTitle sx={{ fontWeight: "bold", pb: 1 }}>
+          Edit Reservation
+        </DialogTitle>
         <DialogContent dividers>
           <Box component="form" sx={{ mt: 1 }}>
             <Grid container spacing={3}>
