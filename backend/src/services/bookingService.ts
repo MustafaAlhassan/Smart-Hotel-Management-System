@@ -7,6 +7,7 @@ import {
 } from "./rooms/roomService";
 import { GuestModel } from "../models/guestModel";
 import { RoomModel, RoomStatus } from "../models/rooms/roomModel";
+import { InvoiceModel } from "../models/invoiceModel";
 
 export const checkRoomAvailability = async (
   roomId: string | Types.ObjectId,
@@ -154,9 +155,18 @@ export const updateBookingInfo = async (
     const actualCheckIn = updateData.checkInDate
       ? new Date(updateData.checkInDate)
       : new Date(currentBooking.checkInDate);
+
     if (now.getTime() < actualCheckIn.getTime()) {
       throw new Error("Cannot check-out before the booking check-in time!");
     }
+
+    const invoice = await InvoiceModel.findOne({ booking: id });
+    if (!invoice) {
+      throw new Error(
+        "Cannot check-out: no invoice has been created for this booking. Please generate an invoice first.",
+      );
+    }
+
     if (now.getTime() < scheduledCheckOut.getTime()) {
       updateData.checkOutDate = now;
     }
