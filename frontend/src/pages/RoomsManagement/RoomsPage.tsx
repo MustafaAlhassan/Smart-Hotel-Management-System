@@ -493,8 +493,8 @@ const RoomsPage = () => {
               pb: 2,
               display: "flex",
               flexDirection: { xs: "column", sm: "row" },
-              flexWrap: "wrap",
-              gap: 1.5,
+              flexWrap: { sm: "wrap" },
+              gap: { xs: 2, sm: 1.5 },
             }}
           >
             <TextField
@@ -506,7 +506,7 @@ const RoomsPage = () => {
               }}
               size="small"
               fullWidth={isMobile}
-              sx={{ flex: "2 1 200px" }}
+              sx={{ flex: { sm: "1 1 200px" } }}
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
@@ -533,7 +533,7 @@ const RoomsPage = () => {
             <FormControl
               size="small"
               fullWidth={isMobile}
-              sx={{ flex: "1 1 140px" }}
+              sx={{ flex: { sm: "1 1 140px" } }}
             >
               <InputLabel>Status</InputLabel>
               <Select
@@ -558,7 +558,7 @@ const RoomsPage = () => {
               <FormControl
                 size="small"
                 fullWidth={isMobile}
-                sx={{ flex: "1 1 150px" }}
+                sx={{ flex: { sm: "1 1 150px" } }}
               >
                 <InputLabel>Room Type</InputLabel>
                 <Select
@@ -583,7 +583,7 @@ const RoomsPage = () => {
             <FormControl
               size="small"
               fullWidth={isMobile}
-              sx={{ flex: "1 1 120px" }}
+              sx={{ flex: { sm: "1 1 120px" } }}
             >
               <InputLabel>Floor</InputLabel>
               <Select
@@ -616,7 +616,7 @@ const RoomsPage = () => {
                   textTransform: "none",
                   fontWeight: 600,
                   whiteSpace: "nowrap",
-                  alignSelf: "center",
+                  alignSelf: { sm: "center" },
                 }}
               >
                 Clear

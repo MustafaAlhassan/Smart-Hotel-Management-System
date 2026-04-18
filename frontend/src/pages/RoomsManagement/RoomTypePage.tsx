@@ -383,8 +383,8 @@ const RoomTypesPage = () => {
               pb: 2,
               display: "flex",
               flexDirection: { xs: "column", sm: "row" },
-              flexWrap: "wrap",
-              gap: { xs: 1.5, sm: 1.5 },
+              flexWrap: { sm: "wrap" },
+              gap: { xs: 2, sm: 1.5 },
             }}
           >
             <TextField
@@ -396,7 +396,7 @@ const RoomTypesPage = () => {
               }}
               size="small"
               fullWidth={isMobile}
-              sx={{ flex: "2 1 200px" }}
+              sx={{ flex: { sm: "2 1 200px" } }}
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
@@ -423,7 +423,7 @@ const RoomTypesPage = () => {
             <FormControl
               size="small"
               fullWidth={isMobile}
-              sx={{ flex: "1 1 140px" }}
+              sx={{ flex: { sm: "1 1 140px" } }}
             >
               <InputLabel>Amenity</InputLabel>
               <Select
@@ -447,7 +447,7 @@ const RoomTypesPage = () => {
             <FormControl
               size="small"
               fullWidth={isMobile}
-              sx={{ flex: "1 1 150px" }}
+              sx={{ flex: { sm: "1 1 150px" } }}
             >
               <InputLabel>Sort By</InputLabel>
               <Select
@@ -478,7 +478,7 @@ const RoomTypesPage = () => {
                   textTransform: "none",
                   fontWeight: 600,
                   whiteSpace: "nowrap",
-                  alignSelf: "center",
+                  alignSelf: { sm: "center" },
                 }}
               >
                 Clear
@@ -1156,6 +1156,7 @@ const RoomTypesPage = () => {
         )}
       </Dialog>
 
+      {/* ── Add / Edit dialog ── */}
       {canEdit && (
         <>
           <Dialog
@@ -1277,6 +1278,7 @@ const RoomTypesPage = () => {
             </DialogActions>
           </Dialog>
 
+          {/* ── Delete confirm dialog ── */}
           <Dialog
             open={deleteConfirmOpen}
             onClose={() => setDeleteConfirmOpen(false)}
