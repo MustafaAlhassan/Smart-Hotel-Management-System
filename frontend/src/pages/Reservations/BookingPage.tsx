@@ -23,7 +23,6 @@ import {
   CheckCircle,
   People,
   Layers,
-  NightsStay,
   Person,
   Email,
   Phone,
@@ -32,6 +31,15 @@ import {
 } from "@mui/icons-material";
 import api from "../../services/api";
 import { useHotel } from "../../context/HotelContext";
+
+const API_BASE_URL = "http://localhost:5000";
+
+const getFullImageUrl = (imagePath: string | undefined): string => {
+  if (!imagePath) return "";
+  if (imagePath.startsWith("http") || imagePath.startsWith("blob:"))
+    return imagePath;
+  return `${API_BASE_URL}/${imagePath}`;
+};
 
 const steps = [
   "Booking Details",
@@ -310,6 +318,9 @@ const BookingPage = () => {
     const price = room.basePrice || room.roomType?.basePrice || 0;
     const isSelected = String(bookingData.room) === String(room._id);
     const capacity = room.roomType?.capacity;
+    const [imgError, setImgError] = useState(false);
+    const imageUrl = getFullImageUrl(room.image);
+    const hasImage = !!imageUrl && !imgError;
 
     return (
       <Box
@@ -318,174 +329,207 @@ const BookingPage = () => {
           setBookingData((prev) => ({ ...prev, room: String(room._id) }));
         }}
         sx={{
-          position: "relative",
-          borderRadius: "16px",
-          cursor: "pointer",
+          borderRadius: 4,
           overflow: "hidden",
-          transition: "all 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
-          border: "1.5px solid",
-          borderColor: isSelected ? "primary.main" : "divider",
-          transform: isSelected ? "translateY(-3px)" : "none",
+          cursor: "pointer",
+          border: isSelected ? "2px solid" : "1px solid",
+          borderColor: isSelected ? "primary.main" : "rgba(255,255,255,0.08)",
+          bgcolor: "rgba(255,255,255,0.03)",
           boxShadow: isSelected
-            ? "0 12px 32px rgba(0,0,0,0.25)"
-            : "0 2px 8px rgba(0,0,0,0.08)",
+            ? "0 0 0 3px rgba(2,136,209,0.18), 0 12px 40px rgba(0,0,0,0.5)"
+            : "0 4px 24px rgba(0,0,0,0.4)",
+          display: "flex",
+          flexDirection: "column",
+          transition: "transform 0.2s ease, box-shadow 0.2s ease",
           "&:hover": {
-            transform: "translateY(-3px)",
-            boxShadow: "0 12px 32px rgba(0,0,0,0.2)",
-            borderColor: "primary.main",
+            transform: "translateY(-4px)",
+            boxShadow: isSelected
+              ? "0 0 0 3px rgba(2,136,209,0.25), 0 16px 48px rgba(0,0,0,0.6)"
+              : "0 12px 40px rgba(0,0,0,0.6)",
           },
         }}
       >
-        <Box
-          sx={{
-            height: 6,
-            background: isSelected
-              ? "linear-gradient(90deg, #0288d1, #26c6da)"
-              : "linear-gradient(90deg, #37474f, #546e7a)",
-            transition: "background 0.25s",
-          }}
-        />
-        <Box sx={{ p: 2.5 }}>
+        <Box sx={{ position: "relative" }}>
+          {hasImage ? (
+            <Box
+              component="img"
+              src={imageUrl}
+              alt={`Room ${room.roomNumber}`}
+              onError={() => setImgError(true)}
+              sx={{
+                width: 220,
+                height: 125,
+                objectFit: "fill",
+                display: "block",
+              }}
+            />
+          ) : (
+            <Box
+              sx={{
+                height: 200,
+                background: "linear-gradient(135deg, #1e293b 0%, #0f172a 100%)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexDirection: "column",
+                gap: 1,
+              }}
+            >
+              <KingBed sx={{ fontSize: 52, color: "rgba(255,255,255,0.15)" }} />
+              <Typography
+                variant="caption"
+                color="text.disabled"
+                fontWeight={600}
+                letterSpacing={1}
+              >
+                NO IMAGE
+              </Typography>
+            </Box>
+          )}
+
           <Box
-            display="flex"
-            justifyContent="space-between"
-            alignItems="flex-start"
-            mb={2}
+            sx={{
+              position: "absolute",
+              inset: 0,
+              background:
+                "linear-gradient(to top, rgba(0,0,0,0.80) 0%, rgba(0,0,0,0.20) 50%, transparent 100%)",
+            }}
+          />
+
+          <Box
+            sx={{
+              position: "absolute",
+              top: 10,
+              left: 10,
+              right: 10,
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
           >
-            <Box display="flex" alignItems="center" gap={1.5}>
+            {isSelected ? (
               <Box
                 sx={{
-                  width: 42,
-                  height: 42,
-                  borderRadius: "12px",
-                  background: isSelected
-                    ? "linear-gradient(135deg, #0288d1, #26c6da)"
-                    : "linear-gradient(135deg, #37474f, #546e7a)",
+                  bgcolor: "primary.main",
+                  borderRadius: "50%",
+                  width: 28,
+                  height: 28,
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  flexShrink: 0,
-                  transition: "background 0.25s",
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.4)",
                 }}
               >
-                <KingBed sx={{ fontSize: 20, color: "#fff" }} />
+                <CheckCircle sx={{ fontSize: 18, color: "#fff" }} />
               </Box>
-              <Box>
-                <Typography
-                  variant="subtitle1"
-                  fontWeight="700"
-                  lineHeight={1.2}
-                  sx={{ letterSpacing: "-0.01em" }}
-                >
-                  Room {room.roomNumber}
-                </Typography>
-                {room.floor != null && (
-                  <Box display="flex" alignItems="center" gap={0.4} mt={0.2}>
-                    <Layers sx={{ fontSize: 11, color: "text.disabled" }} />
-                    <Typography variant="caption" color="text.secondary">
-                      Floor {room.floor}
-                    </Typography>
-                  </Box>
-                )}
-              </Box>
-            </Box>
-            {isSelected ? (
-              <CheckCircle
-                sx={{ fontSize: 22, color: "primary.main", flexShrink: 0 }}
-              />
             ) : (
-              <Box
-                sx={{
-                  width: 22,
-                  height: 22,
-                  borderRadius: "50%",
-                  border: "1.5px solid",
-                  borderColor: "divider",
-                  flexShrink: 0,
-                }}
-              />
+              <Box />
             )}
           </Box>
 
-          {room.roomType?.name && (
-            <Chip
-              label={room.roomType.name}
-              size="small"
-              sx={{
-                mb: 2,
-                height: 22,
-                fontSize: "0.68rem",
-                fontWeight: 600,
-                letterSpacing: "0.04em",
-                textTransform: "uppercase",
-                borderRadius: "6px",
-                bgcolor: isSelected ? "primary.main" : "action.hover",
-                color: isSelected ? "primary.contrastText" : "text.secondary",
-                border: "none",
-                transition: "all 0.25s",
-              }}
-            />
-          )}
-
-          <Divider sx={{ mb: 2 }} />
-
           <Box
-            display="flex"
-            justifyContent="space-between"
-            alignItems="center"
+            sx={{
+              position: "absolute",
+              bottom: 0,
+              left: 0,
+              right: 0,
+              p: "12px 14px 10px",
+            }}
           >
-            <Box>
+            <Typography
+              variant="h5"
+              fontWeight={800}
+              color="#fff"
+              letterSpacing={-0.5}
+              lineHeight={1}
+            >
+              {room.roomNumber}
+            </Typography>
+            {room.roomType?.name && (
               <Typography
-                variant="h5"
-                fontWeight="800"
-                color={isSelected ? "primary.main" : "text.primary"}
-                lineHeight={1}
-                sx={{ transition: "color 0.25s", letterSpacing: "-0.02em" }}
+                variant="caption"
+                sx={{ color: "rgba(255,255,255,0.72)", fontWeight: 500 }}
               >
+                {room.roomType.name}
+              </Typography>
+            )}
+          </Box>
+        </Box>
+
+        <Box
+          sx={{
+            p: 2,
+            flex: 1,
+            display: "flex",
+            flexDirection: "column",
+            gap: 1,
+          }}
+        >
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
+            <Box display="flex" alignItems="center" gap={0.5}>
+              <Layers sx={{ fontSize: 15, color: "text.secondary" }} />
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                fontWeight={500}
+              >
+                Floor {room.floor}
+              </Typography>
+            </Box>
+            <Box display="flex" alignItems="baseline" gap={0.3}>
+              <Typography variant="body1" fontWeight={800} color="primary.main">
                 {hotel?.currency}
                 {price}
               </Typography>
-              <Box display="flex" alignItems="center" gap={0.4} mt={0.3}>
-                <NightsStay sx={{ fontSize: 11, color: "text.disabled" }} />
-                <Typography variant="caption" color="text.secondary">
-                  per night
-                </Typography>
-              </Box>
+              <Typography variant="caption" color="text.disabled">
+                / night
+              </Typography>
             </Box>
-            <Box textAlign="right">
-              {nights > 0 && (
-                <>
-                  <Typography
-                    variant="body2"
-                    fontWeight="700"
-                    color={isSelected ? "primary.main" : "text.primary"}
-                    lineHeight={1}
-                    sx={{ transition: "color 0.25s" }}
-                  >
-                    {hotel?.currency}
-                    {nights * price}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    {nights} night{nights !== 1 ? "s" : ""}
-                  </Typography>
-                </>
-              )}
+          </Box>
+
+          {(nights > 0 || capacity) && (
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
               {capacity && (
-                <Box
-                  display="flex"
-                  alignItems="center"
-                  gap={0.4}
-                  justifyContent="flex-end"
-                  mt={nights > 0 ? 0.5 : 0}
-                >
-                  <People sx={{ fontSize: 11, color: "text.disabled" }} />
+                <Box display="flex" alignItems="center" gap={0.5}>
+                  <People sx={{ fontSize: 14, color: "text.disabled" }} />
                   <Typography variant="caption" color="text.secondary">
                     Up to {capacity}
                   </Typography>
                 </Box>
               )}
+              {nights > 0 && (
+                <Typography
+                  variant="body2"
+                  fontWeight={700}
+                  color="primary.main"
+                  sx={{ ml: "auto" }}
+                >
+                  {hotel?.currency}
+                  {nights * price}
+                  <Typography
+                    component="span"
+                    variant="caption"
+                    color="text.secondary"
+                    sx={{ ml: 0.5 }}
+                  >
+                    total
+                  </Typography>
+                </Typography>
+              )}
             </Box>
-          </Box>
+          )}
         </Box>
       </Box>
     );
@@ -811,7 +855,15 @@ const BookingPage = () => {
                     ) : (
                       <Grid container spacing={2}>
                         {availableRooms.map((room) => (
-                          <Grid item xs={12} sm={6} md={4} key={room._id}>
+                          <Grid
+                            item
+                            xs={12}
+                            sm={6}
+                            md={4}
+                            lg={3}
+                            key={room._id}
+                            margin={"auto"}
+                          >
                             <RoomCard room={room} />
                           </Grid>
                         ))}
