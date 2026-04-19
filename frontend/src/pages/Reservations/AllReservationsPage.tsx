@@ -252,7 +252,7 @@ const AllReservationsPage = () => {
       showMessage("Booking updated successfully.");
       handleEditClose();
     } catch (err: any) {
-      showMessage("Error updating booking.", "error");
+      showMessage(err.response?.data?.message || "Error updating booking.", "error");
     }
   };
 

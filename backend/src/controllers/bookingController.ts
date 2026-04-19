@@ -46,6 +46,7 @@ const handleError = (error: any, res: Response) => {
     "Cannot check-out before the booking check-in time!",
     "Check-in date must be before check-out date",
     "Check-out date must be after check-in date",
+    "Cannot check-out: no invoice has been created for this booking. Please generate an invoice first.",
   ];
 
   if (
@@ -85,7 +86,9 @@ export const getAvailableRoomsController = async (
       checkOut as string,
     );
 
-    res.status(200).json({ data: rooms, message: "Available rooms fetched successfully" });
+    res
+      .status(200)
+      .json({ data: rooms, message: "Available rooms fetched successfully" });
   } catch (error: any) {
     handleError(error, res);
   }
