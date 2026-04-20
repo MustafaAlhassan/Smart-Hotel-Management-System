@@ -62,6 +62,7 @@ import api from "../services/api";
 import type { DashboardData } from "../types/types";
 import { useNavigate } from "react-router-dom";
 import { useHotel } from "../context/HotelContext";
+import { color } from "@mui/system";
 
 const CARD_SIZE = 220;
 const CHART_HEIGHT = 380;
@@ -306,13 +307,22 @@ const DashboardPage = () => {
     </Paper>
   );
 
-  const tooltipStyle = {
+  const tooltipStyle1 = {
     contentStyle: {
       borderRadius: 10,
       border: `1px solid ${theme.palette.divider}`,
       boxShadow: theme.shadows[4],
       fontSize: 12,
-      backgroundColor: theme.palette.background.paper,
+    },
+  };
+
+  const tooltipStyle2 = {
+    contentStyle: {
+      borderRadius: 10,
+      border: `1px solid ${theme.palette.divider}`,
+      boxShadow: theme.shadows[4],
+      fontSize: 12,
+      backgroundColor: theme.darken,
     },
   };
 
@@ -461,7 +471,7 @@ const DashboardPage = () => {
                       <Cell fill="#795548" />
                       <Cell fill="#607d8b" />
                     </Pie>
-                    <Tooltip {...tooltipStyle} />
+                    <Tooltip {...tooltipStyle1} />
                     <Legend iconType="circle" iconSize={9} />
                   </PieChart>
                 </ResponsiveContainer>
@@ -753,7 +763,7 @@ const DashboardPage = () => {
                       }
                     />
                     <Tooltip
-                      {...tooltipStyle}
+                      {...tooltipStyle2}
                       formatter={(value: number) => [
                         `${hotel?.currency}${value.toLocaleString()}`,
                         "Revenue",

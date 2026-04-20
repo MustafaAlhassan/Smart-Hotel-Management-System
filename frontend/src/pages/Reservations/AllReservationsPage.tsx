@@ -1605,7 +1605,6 @@ const AllReservationsPage = () => {
         </DialogActions>
       </Dialog>
 
-      {/* ── Edit Dialog ── */}
       <Dialog
         open={editDialogOpen}
         onClose={handleEditClose}
@@ -1617,8 +1616,8 @@ const AllReservationsPage = () => {
           Edit Reservation
         </DialogTitle>
         <DialogContent dividers>
-          <Grid container spacing={2.5} sx={{ mt: 0.5 }}>
-            <Grid item xs={12}>
+          <Grid container spacing={2} sx={{ mt: 0.5 }}>
+            <Grid item xs={12} sx={{ width: "100%"}}>
               <TextField
                 select
                 label="Room"
@@ -1634,7 +1633,7 @@ const AllReservationsPage = () => {
                 ))}
               </TextField>
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid item xs={12} sm={6} sx={{ width: "100%" }}>
               <TextField
                 label="Check-in Date"
                 type="date"
@@ -1645,7 +1644,7 @@ const AllReservationsPage = () => {
                 InputLabelProps={{ shrink: true }}
               />
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid item xs={12} sm={6} sx={{ width: "100%" }}>
               <TextField
                 label="Check-out Date"
                 type="date"
@@ -1656,7 +1655,7 @@ const AllReservationsPage = () => {
                 InputLabelProps={{ shrink: true }}
               />
             </Grid>
-            <Grid item xs={12}>
+            <Grid item xs={12}  sx={{ width: "100%" }}>
               <TextField
                 select
                 label="Status"
@@ -1683,7 +1682,7 @@ const AllReservationsPage = () => {
                 ))}
               </TextField>
             </Grid>
-            <Grid item xs={12}>
+            <Grid item xs={12}  sx={{ width: "100%" }}>
               <TextField
                 label="Notes"
                 multiline
