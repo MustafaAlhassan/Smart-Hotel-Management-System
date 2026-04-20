@@ -34,6 +34,7 @@ import {
   InputLabel,
   Select,
   InputAdornment,
+  Tooltip,
 } from "@mui/material";
 import {
   Print as PrintIcon,
@@ -45,6 +46,10 @@ import {
   FilterList as FilterListIcon,
   Clear as ClearIcon,
   Search as SearchIcon,
+  Receipt as ReceiptIcon,
+  AttachMoney as AttachMoneyIcon,
+  CheckCircleOutline as CheckCircleOutlineIcon,
+  HourglassEmpty as HourglassEmptyIcon,
 } from "@mui/icons-material";
 import api from "../services/api";
 import { useHotel } from "../context/HotelContext";
@@ -151,13 +156,17 @@ const PRINT_STYLES = `
 
 const PAGE_SIZE = 10;
 
-const getRoleColor = (role: string): string => {
+const getRoleColor = (role: string) => {
   const r = role?.toLowerCase();
-  if (r === "admin") return "#4caf50";
-  if (r === "manager") return "#2196f3";
-  if (r === "receptionist") return "#9c27b0";
-  if (r === "housekeeping") return "#ff9800";
-  return "#757575";
+  if (r === "admin")
+    return { bg: "#dcfce7", color: "#166534", border: "#bbf7d0" };
+  if (r === "manager")
+    return { bg: "#dbeafe", color: "#1e40af", border: "#bfdbfe" };
+  if (r === "receptionist")
+    return { bg: "#ede9fe", color: "#5b21b6", border: "#ddd6fe" };
+  if (r === "housekeeping")
+    return { bg: "#fff7ed", color: "#9a3412", border: "#fed7aa" };
+  return { bg: "#f1f5f9", color: "#475569", border: "#e2e8f0" };
 };
 
 const CreatedByBadge = ({ user }: { user?: ICreatedBy }) => {
@@ -169,27 +178,186 @@ const CreatedByBadge = ({ user }: { user?: ICreatedBy }) => {
     );
   const initials =
     `${user.firstName?.[0] ?? ""}${user.lastName?.[0] ?? ""}`.toUpperCase();
+  const colors = getRoleColor(user.role);
   return (
     <Box display="flex" alignItems="center" gap={1}>
       <Avatar
         sx={{
-          width: 26,
-          height: 26,
+          width: 28,
+          height: 28,
           fontSize: "0.65rem",
           fontWeight: 700,
-          bgcolor: getRoleColor(user.role),
+          bgcolor: colors.bg,
+          color: colors.color,
+          border: `1px solid ${colors.border}`,
         }}
       >
         {initials}
       </Avatar>
       <Box>
-        <Typography variant="body2" fontWeight={600} lineHeight={1.2}>
+        <Typography
+          variant="body2"
+          fontWeight={600}
+          lineHeight={1.3}
+          fontSize="0.8rem"
+        >
           {user.firstName} {user.lastName}
         </Typography>
-        <Typography variant="caption" color="text.secondary" lineHeight={1}>
+        <Typography
+          variant="caption"
+          lineHeight={1}
+          sx={{
+            fontSize: "0.68rem",
+            px: 0.75,
+            py: 0.25,
+            borderRadius: 0.75,
+            bgcolor: colors.bg,
+            color: colors.color,
+            border: `1px solid ${colors.border}`,
+            fontWeight: 600,
+            display: "inline-block",
+            mt: 0.3,
+          }}
+        >
           {user.role}
         </Typography>
       </Box>
+    </Box>
+  );
+};
+
+const StatCard = ({
+  icon,
+  label,
+  value,
+  iconBg,
+  iconColor,
+  valueColor,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string | number;
+  iconBg: string;
+  iconColor: string;
+  valueColor?: string;
+}) => (
+  <Paper
+    elevation={0}
+    sx={{
+      p: 2,
+      borderRadius: 3,
+      border: "1px solid",
+      borderColor: "divider",
+      display: "flex",
+      alignItems: "center",
+      gap: 2,
+      flex: 1,
+      minWidth: 0,
+    }}
+  >
+    <Box
+      sx={{
+        width: 42,
+        height: 42,
+        borderRadius: 2,
+        bgcolor: iconBg,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        flexShrink: 0,
+        color: iconColor,
+      }}
+    >
+      {icon}
+    </Box>
+    <Box minWidth={0}>
+      <Typography
+        variant="caption"
+        color="text.secondary"
+        fontWeight={600}
+        sx={{
+          fontSize: "0.68rem",
+          letterSpacing: "0.05em",
+          textTransform: "uppercase",
+          display: "block",
+        }}
+      >
+        {label}
+      </Typography>
+      <Typography
+        variant="h6"
+        fontWeight={800}
+        lineHeight={1.2}
+        noWrap
+        sx={{
+          color: valueColor ?? "text.primary",
+          fontSize: { xs: "1rem", md: "1.15rem" },
+        }}
+      >
+        {value}
+      </Typography>
+    </Box>
+  </Paper>
+);
+
+const StatusChip = ({ status }: { status: string }) => {
+  const isPaid = status === "Paid";
+  return (
+    <Box
+      component="span"
+      sx={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 0.6,
+        px: 1.25,
+        py: 0.4,
+        borderRadius: 20,
+        fontSize: "0.72rem",
+        fontWeight: 700,
+        bgcolor: isPaid ? "#f0fdf4" : "#fffbeb",
+        color: isPaid ? "#15803d" : "#b45309",
+        border: `1px solid ${isPaid ? "#bbf7d0" : "#fde68a"}`,
+        letterSpacing: "0.02em",
+        whiteSpace: "nowrap",
+      }}
+    >
+      <Box
+        component="span"
+        sx={{
+          width: 6,
+          height: 6,
+          borderRadius: "50%",
+          bgcolor: isPaid ? "#22c55e" : "#f59e0b",
+          flexShrink: 0,
+        }}
+      />
+      {status}
+    </Box>
+  );
+};
+
+const InvoiceIdBadge = ({ id }: { id: string }) => {
+  const theme = useTheme();
+  return (
+    <Box
+      component="span"
+      sx={{
+        fontFamily: "monospace",
+        fontSize: "0.75rem",
+        fontWeight: 700,
+        letterSpacing: "0.06em",
+        px: 1,
+        py: 0.5,
+        borderRadius: 1,
+        bgcolor:
+          theme.palette.mode === "dark" ? "rgba(255,255,255,0.06)" : "#f8fafc",
+        color: "text.secondary",
+        border: "1px solid",
+        borderColor: "divider",
+        display: "inline-block",
+      }}
+    >
+      {id.slice(-8).toUpperCase()}
     </Box>
   );
 };
@@ -210,8 +378,12 @@ const InvoicesPage = () => {
   const [filterCreatedBy, setFilterCreatedBy] = useState("");
   const [filterInvoiceId, setFilterInvoiceId] = useState("");
 
-  const [invoiceGuests, setInvoiceGuests] = useState<Record<string, IGuest | null>>({});
-  const [guestsLoading, setGuestsLoading] = useState<Record<string, boolean>>({});
+  const [invoiceGuests, setInvoiceGuests] = useState<
+    Record<string, IGuest | null>
+  >({});
+  const [guestsLoading, setGuestsLoading] = useState<Record<string, boolean>>(
+    {},
+  );
 
   const [openPaymentDialog, setOpenPaymentDialog] = useState(false);
   const [openPrintDialog, setOpenPrintDialog] = useState(false);
@@ -242,55 +414,62 @@ const InvoicesPage = () => {
   const showSnackbar = (message: string, severity: "success" | "error") =>
     setSnackbar({ open: true, message, severity });
 
-  const resolveGuest = useCallback(async (booking: any): Promise<IGuest | null> => {
-    if (!booking) return null;
-    if (typeof booking === "string") {
-      if (!bookingCache[booking]) {
-        try {
-          const res = await api.get(`/bookings/${booking}`);
-          bookingCache[booking] = res.data.data || res.data;
-        } catch {
-          return null;
+  const resolveGuest = useCallback(
+    async (booking: any): Promise<IGuest | null> => {
+      if (!booking) return null;
+      if (typeof booking === "string") {
+        if (!bookingCache[booking]) {
+          try {
+            const res = await api.get(`/bookings/${booking}`);
+            bookingCache[booking] = res.data.data || res.data;
+          } catch {
+            return null;
+          }
         }
+        booking = bookingCache[booking];
       }
-      booking = bookingCache[booking];
-    }
-    if (!booking?.guest) return null;
-    if (typeof booking.guest === "object" && booking.guest.firstName) {
-      const guest = booking.guest as IGuest;
-      guestCache[guest._id] = guest;
-      return guest;
-    }
-    const guestId = typeof booking.guest === "string" ? booking.guest : booking.guest._id;
-    if (!guestId) return null;
-    if (guestCache[guestId]) return guestCache[guestId];
-    try {
-      const res = await api.get(`/guests/${guestId}`);
-      const guest: IGuest = res.data.data || res.data;
-      guestCache[guestId] = guest;
-      return guest;
-    } catch {
-      return null;
-    }
-  }, []);
+      if (!booking?.guest) return null;
+      if (typeof booking.guest === "object" && booking.guest.firstName) {
+        const guest = booking.guest as IGuest;
+        guestCache[guest._id] = guest;
+        return guest;
+      }
+      const guestId =
+        typeof booking.guest === "string" ? booking.guest : booking.guest._id;
+      if (!guestId) return null;
+      if (guestCache[guestId]) return guestCache[guestId];
+      try {
+        const res = await api.get(`/guests/${guestId}`);
+        const guest: IGuest = res.data.data || res.data;
+        guestCache[guestId] = guest;
+        return guest;
+      } catch {
+        return null;
+      }
+    },
+    [],
+  );
 
-  const resolveGuestsForInvoices = useCallback(async (invoiceList: IInvoice[]) => {
-    const loadingMap: Record<string, boolean> = {};
-    invoiceList.forEach((inv) => (loadingMap[inv._id] = true));
-    setGuestsLoading(loadingMap);
-    const results = await Promise.allSettled(
-      invoiceList.map((inv) => resolveGuest(inv.booking))
-    );
-    const guestMap: Record<string, IGuest | null> = {};
-    const doneMap: Record<string, boolean> = {};
-    results.forEach((result, idx) => {
-      const id = invoiceList[idx]._id;
-      guestMap[id] = result.status === "fulfilled" ? result.value : null;
-      doneMap[id] = false;
-    });
-    setInvoiceGuests(guestMap);
-    setGuestsLoading(doneMap);
-  }, [resolveGuest]);
+  const resolveGuestsForInvoices = useCallback(
+    async (invoiceList: IInvoice[]) => {
+      const loadingMap: Record<string, boolean> = {};
+      invoiceList.forEach((inv) => (loadingMap[inv._id] = true));
+      setGuestsLoading(loadingMap);
+      const results = await Promise.allSettled(
+        invoiceList.map((inv) => resolveGuest(inv.booking)),
+      );
+      const guestMap: Record<string, IGuest | null> = {};
+      const doneMap: Record<string, boolean> = {};
+      results.forEach((result, idx) => {
+        const id = invoiceList[idx]._id;
+        guestMap[id] = result.status === "fulfilled" ? result.value : null;
+        doneMap[id] = false;
+      });
+      setInvoiceGuests(guestMap);
+      setGuestsLoading(doneMap);
+    },
+    [resolveGuest],
+  );
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -302,8 +481,10 @@ const InvoicesPage = () => {
       if (invoicesResult.status === "rejected") {
         const err = invoicesResult.reason;
         showSnackbar(
-          err?.response?.data?.message || err?.message || "Failed to fetch invoices",
-          "error"
+          err?.response?.data?.message ||
+            err?.message ||
+            "Failed to fetch invoices",
+          "error",
         );
         return;
       }
@@ -340,6 +521,18 @@ const InvoicesPage = () => {
     return options;
   }, [invoices]);
 
+  const stats = useMemo(() => {
+    const total = invoices.length;
+    const paid = invoices.filter((i) => i.paymentStatus === "Paid").length;
+    const pending = invoices.filter(
+      (i) => i.paymentStatus === "Pending",
+    ).length;
+    const revenue = invoices
+      .filter((i) => i.paymentStatus === "Paid")
+      .reduce((sum, i) => sum + i.totalAmountDue, 0);
+    return { total, paid, pending, revenue };
+  }, [invoices]);
+
   const hasActiveFilters = filterStatus || filterCreatedBy || filterInvoiceId;
 
   const handleClearFilters = () => {
@@ -358,7 +551,10 @@ const InvoicesPage = () => {
         ? inv.createdBy?._id === filterCreatedBy
         : true;
       const matchesInvoiceId = filterInvoiceId
-        ? inv._id.slice(-8).toUpperCase().includes(filterInvoiceId.toUpperCase().trim())
+        ? inv._id
+            .slice(-8)
+            .toUpperCase()
+            .includes(filterInvoiceId.toUpperCase().trim())
         : true;
       return matchesStatus && matchesCreatedBy && matchesInvoiceId;
     });
@@ -369,12 +565,10 @@ const InvoicesPage = () => {
   }, [filterStatus, filterCreatedBy, filterInvoiceId]);
 
   const totalPages = Math.ceil(filteredInvoices.length / PAGE_SIZE);
-  const paginated = filteredInvoices.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-
-  const getStatusChipColor = (status: string) => {
-    if (status === "Paid") return "success";
-    return "warning";
-  };
+  const paginated = filteredInvoices.slice(
+    (page - 1) * PAGE_SIZE,
+    page * PAGE_SIZE,
+  );
 
   const getStatusPrintClass = (status: string) => {
     if (status === "Paid") return "p-status-paid";
@@ -431,7 +625,10 @@ const InvoicesPage = () => {
       setOpenPaymentDialog(false);
       fetchData();
     } catch (error: any) {
-      showSnackbar(error.response?.data?.message || "Failed to update payment", "error");
+      showSnackbar(
+        error.response?.data?.message || "Failed to update payment",
+        "error",
+      );
     } finally {
       setUpdatePaymentLoading(false);
     }
@@ -441,19 +638,27 @@ const InvoicesPage = () => {
     if (!currentInvoice || !serviceData.serviceId) return;
     setAddServiceLoading(true);
     try {
-      const response = await api.patch(`/invoices/${currentInvoice._id}/services`, {
-        serviceId: serviceData.serviceId,
-        quantity: serviceData.quantity,
-      });
+      const response = await api.patch(
+        `/invoices/${currentInvoice._id}/services`,
+        {
+          serviceId: serviceData.serviceId,
+          quantity: serviceData.quantity,
+        },
+      );
       const updated: IInvoice = response.data.data || response.data;
       setCurrentInvoice(updated);
-      setInvoices((prev) => prev.map((inv) => (inv._id === updated._id ? updated : inv)));
+      setInvoices((prev) =>
+        prev.map((inv) => (inv._id === updated._id ? updated : inv)),
+      );
       showSnackbar("Service added successfully", "success");
       setOpenAddServiceDialog(false);
       setSelectedService(null);
       fetchData();
     } catch (error: any) {
-      showSnackbar(error.response?.data?.message || "Failed to add service", "error");
+      showSnackbar(
+        error.response?.data?.message || "Failed to add service",
+        "error",
+      );
     } finally {
       setAddServiceLoading(false);
     }
@@ -463,8 +668,17 @@ const InvoicesPage = () => {
 
   if (loading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" height="80vh">
-        <CircularProgress sx={{ color: theme.palette.primary.main }} size={52} thickness={4} />
+      <Box
+        display="flex"
+        justifyContent="center"
+        alignItems="center"
+        height="80vh"
+      >
+        <CircularProgress
+          sx={{ color: theme.palette.primary.main }}
+          size={52}
+          thickness={4}
+        />
       </Box>
     );
   }
@@ -487,7 +701,7 @@ const InvoicesPage = () => {
           justifyContent: "space-between",
           alignItems: { xs: "stretch", sm: "flex-end" },
           gap: 2,
-          mb: 4,
+          mb: 3,
           "@media print": { display: "none" },
         }}
       >
@@ -496,17 +710,67 @@ const InvoicesPage = () => {
             variant="h4"
             fontWeight={900}
             letterSpacing={-0.5}
-            sx={{ fontSize: { xs: "1.75rem", md: "2.125rem", textAlign: "left" } }}
+            sx={{
+              fontSize: { xs: "1.75rem", md: "2.125rem" },
+              textAlign: "left",
+            }}
           >
             Invoices
           </Typography>
-          <Typography variant="body2" color="text.secondary" mt={0.5} textAlign="left">
+          <Typography
+            variant="body2"
+            color="text.secondary"
+            mt={0.5}
+            textAlign="left"
+          >
             Manage guest billing and payments
           </Typography>
         </Box>
       </Box>
 
-      {/* ── Filters Panel ── */}
+      <Stack
+        direction={{ xs: "grid", sm: "row" } as any}
+        sx={{
+          display: "grid",
+          gridTemplateColumns: { xs: "1fr 1fr", sm: "repeat(4, 1fr)" },
+          gap: 2,
+          mb: 3,
+          "@media print": { display: "none" },
+        }}
+      >
+        <StatCard
+          icon={<ReceiptIcon fontSize="small" />}
+          label="Total Invoices"
+          value={stats.total}
+          iconBg="#eff6ff"
+          iconColor="#2563eb"
+        />
+        <StatCard
+          icon={<AttachMoneyIcon fontSize="small" />}
+          label="Total Revenue"
+          value={`${currency}${stats.revenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+          iconBg="#f0fdf4"
+          iconColor="#16a34a"
+          valueColor="#15803d"
+        />
+        <StatCard
+          icon={<CheckCircleOutlineIcon fontSize="small" />}
+          label="Paid"
+          value={stats.paid}
+          iconBg="#f0fdf4"
+          iconColor="#16a34a"
+          valueColor="#15803d"
+        />
+        <StatCard
+          icon={<HourglassEmptyIcon fontSize="small" />}
+          label="Pending"
+          value={stats.pending}
+          iconBg="#fffbeb"
+          iconColor="#d97706"
+          valueColor="#b45309"
+        />
+      </Stack>
+
       <Paper
         elevation={0}
         sx={{
@@ -529,22 +793,33 @@ const InvoicesPage = () => {
               size="small"
               startIcon={<ClearIcon fontSize="small" />}
               onClick={handleClearFilters}
-              sx={{ ml: "auto", textTransform: "none", fontSize: "0.75rem", color: "text.secondary" }}
+              sx={{
+                ml: "auto",
+                textTransform: "none",
+                fontSize: "0.75rem",
+                color: "text.secondary",
+              }}
             >
               Clear all
             </Button>
           )}
         </Box>
 
-        <Stack direction={{ xs: "column", sm: "row" }} spacing={2} flexWrap="wrap">
-          {/* Invoice ID Search */}
+        <Stack
+          direction={{ xs: "column", sm: "row" }}
+          spacing={2}
+          flexWrap="wrap"
+        >
           <TextField
             size="small"
             label="Search Invoice ID"
             placeholder="e.g. DB6D9144"
             value={filterInvoiceId}
             onChange={(e) => setFilterInvoiceId(e.target.value)}
-            sx={{ minWidth: 200, "& .MuiOutlinedInput-root": { borderRadius: "10px" } }}
+            sx={{
+              minWidth: 200,
+              "& .MuiOutlinedInput-root": { borderRadius: "10px" },
+            }}
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
@@ -553,7 +828,11 @@ const InvoicesPage = () => {
               ),
               endAdornment: filterInvoiceId ? (
                 <InputAdornment position="end">
-                  <IconButton size="small" onClick={() => setFilterInvoiceId("")} edge="end">
+                  <IconButton
+                    size="small"
+                    onClick={() => setFilterInvoiceId("")}
+                    edge="end"
+                  >
                     <ClearIcon fontSize="small" />
                   </IconButton>
                 </InputAdornment>
@@ -561,10 +840,12 @@ const InvoicesPage = () => {
             }}
           />
 
-          {/* Payment Status */}
           <FormControl
             size="small"
-            sx={{ minWidth: 180, "& .MuiOutlinedInput-root": { borderRadius: "10px" } }}
+            sx={{
+              minWidth: 180,
+              "& .MuiOutlinedInput-root": { borderRadius: "10px" },
+            }}
           >
             <InputLabel>Payment Status</InputLabel>
             <Select
@@ -574,7 +855,11 @@ const InvoicesPage = () => {
               endAdornment={
                 filterStatus ? (
                   <InputAdornment position="end" sx={{ mr: 2 }}>
-                    <IconButton size="small" onClick={() => setFilterStatus("")} edge="end">
+                    <IconButton
+                      size="small"
+                      onClick={() => setFilterStatus("")}
+                      edge="end"
+                    >
                       <ClearIcon fontSize="small" />
                     </IconButton>
                   </InputAdornment>
@@ -584,23 +869,39 @@ const InvoicesPage = () => {
               <MenuItem value="">All Statuses</MenuItem>
               <MenuItem value="Paid">
                 <Box display="flex" alignItems="center" gap={1}>
-                  <Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: "#16a34a" }} />
+                  <Box
+                    sx={{
+                      width: 8,
+                      height: 8,
+                      borderRadius: "50%",
+                      bgcolor: "#16a34a",
+                    }}
+                  />
                   Paid
                 </Box>
               </MenuItem>
               <MenuItem value="Pending">
                 <Box display="flex" alignItems="center" gap={1}>
-                  <Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: "#d97706" }} />
+                  <Box
+                    sx={{
+                      width: 8,
+                      height: 8,
+                      borderRadius: "50%",
+                      bgcolor: "#d97706",
+                    }}
+                  />
                   Pending
                 </Box>
               </MenuItem>
             </Select>
           </FormControl>
 
-          {/* Created By */}
           <FormControl
             size="small"
-            sx={{ minWidth: 220, "& .MuiOutlinedInput-root": { borderRadius: "10px" } }}
+            sx={{
+              minWidth: 220,
+              "& .MuiOutlinedInput-root": { borderRadius: "10px" },
+            }}
           >
             <InputLabel>Created By</InputLabel>
             <Select
@@ -610,7 +911,11 @@ const InvoicesPage = () => {
               endAdornment={
                 filterCreatedBy ? (
                   <InputAdornment position="end" sx={{ mr: 2 }}>
-                    <IconButton size="small" onClick={() => setFilterCreatedBy("")} edge="end">
+                    <IconButton
+                      size="small"
+                      onClick={() => setFilterCreatedBy("")}
+                      edge="end"
+                    >
                       <ClearIcon fontSize="small" />
                     </IconButton>
                   </InputAdornment>
@@ -619,7 +924,10 @@ const InvoicesPage = () => {
             >
               <MenuItem value="">All Staff</MenuItem>
               {creatorOptions.map((opt) => {
-                const creator = invoices.find((inv) => inv.createdBy?._id === opt.id)?.createdBy;
+                const creator = invoices.find(
+                  (inv) => inv.createdBy?._id === opt.id,
+                )?.createdBy;
+                const colors = getRoleColor(creator?.role ?? "");
                 return (
                   <MenuItem key={opt.id} value={opt.id}>
                     <Box display="flex" alignItems="center" gap={1}>
@@ -629,10 +937,16 @@ const InvoicesPage = () => {
                           height: 22,
                           fontSize: "0.6rem",
                           fontWeight: 700,
-                          bgcolor: creator ? getRoleColor(creator.role) : "#757575",
+                          bgcolor: colors.bg,
+                          color: colors.color,
+                          border: `1px solid ${colors.border}`,
                         }}
                       >
-                        {opt.label.split(" ").map((n) => n[0]).join("").toUpperCase()}
+                        {opt.label
+                          .split(" ")
+                          .map((n) => n[0])
+                          .join("")
+                          .toUpperCase()}
                       </Avatar>
                       {opt.label}
                     </Box>
@@ -643,7 +957,6 @@ const InvoicesPage = () => {
           </FormControl>
         </Stack>
 
-        {/* Active filter chips */}
         {hasActiveFilters && (
           <Box display="flex" gap={1} flexWrap="wrap" mt={1.5}>
             {filterInvoiceId && (
@@ -680,7 +993,12 @@ const InvoicesPage = () => {
       {isMobile ? (
         <Box sx={{ "@media print": { display: "none" } }}>
           {filteredInvoices.length === 0 ? (
-            <Typography variant="body1" color="text.secondary" textAlign="center" py={5}>
+            <Typography
+              variant="body1"
+              color="text.secondary"
+              textAlign="center"
+              py={5}
+            >
               No invoices found.
             </Typography>
           ) : (
@@ -710,33 +1028,55 @@ const InvoicesPage = () => {
                       }}
                     >
                       {isGuestLoading ? (
-                        <Skeleton variant="text" width={140} height={24} sx={{ bgcolor: "rgba(255,255,255,0.2)" }} />
+                        <Skeleton
+                          variant="text"
+                          width={140}
+                          height={24}
+                          sx={{ bgcolor: "rgba(255,255,255,0.2)" }}
+                        />
                       ) : (
-                        <Typography variant="subtitle1" fontWeight={700} color="#fff">
-                          {guest ? `${guest.firstName} ${guest.lastName}` : "Unknown Guest"}
+                        <Typography
+                          variant="subtitle1"
+                          fontWeight={700}
+                          color="#fff"
+                        >
+                          {guest
+                            ? `${guest.firstName} ${guest.lastName}`
+                            : "Unknown Guest"}
                         </Typography>
                       )}
-                      <Chip
-                        label={invoice.paymentStatus}
-                        size="small"
-                        color={getStatusChipColor(invoice.paymentStatus)}
-                        sx={{ fontWeight: 700, borderRadius: 1.5 }}
-                      />
+                      <StatusChip status={invoice.paymentStatus} />
                     </Box>
                     <CardContent sx={{ pt: 2, pb: "12px !important" }}>
                       <Stack spacing={1.2}>
-                        <Box display="flex" justifyContent="space-between" alignItems="center">
-                          <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                        <Box
+                          display="flex"
+                          justifyContent="space-between"
+                          alignItems="center"
+                        >
+                          <Typography
+                            variant="caption"
+                            color="text.secondary"
+                            fontWeight={600}
+                          >
                             INVOICE ID
                           </Typography>
-                          <Typography variant="body2" fontWeight={700} letterSpacing={0.5}>
-                            {invoice._id.slice(-8).toUpperCase()}
-                          </Typography>
+                          <InvoiceIdBadge id={invoice._id} />
                         </Box>
-                        <Box display="flex" justifyContent="space-between" alignItems="center">
+                        <Box
+                          display="flex"
+                          justifyContent="space-between"
+                          alignItems="center"
+                        >
                           <Box display="flex" alignItems="center" gap={0.8}>
-                            <CalendarTodayIcon sx={{ fontSize: 14, opacity: 0.55 }} />
-                            <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                            <CalendarTodayIcon
+                              sx={{ fontSize: 14, opacity: 0.55 }}
+                            />
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                              fontWeight={600}
+                            >
                               DATE
                             </Typography>
                           </Box>
@@ -744,50 +1084,92 @@ const InvoicesPage = () => {
                             {new Date(invoice.issueDate).toLocaleDateString()}
                           </Typography>
                         </Box>
-                        <Box display="flex" justifyContent="space-between" alignItems="center">
+                        <Box
+                          display="flex"
+                          justifyContent="space-between"
+                          alignItems="center"
+                        >
                           <Box display="flex" alignItems="center" gap={0.8}>
                             <BadgeIcon sx={{ fontSize: 14, opacity: 0.55 }} />
-                            <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                              fontWeight={600}
+                            >
                               CREATED BY
                             </Typography>
                           </Box>
                           <CreatedByBadge user={invoice.createdBy} />
                         </Box>
                         <Divider />
-                        <Box display="flex" justifyContent="space-between" alignItems="center">
-                          <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                        <Box
+                          display="flex"
+                          justifyContent="space-between"
+                          alignItems="center"
+                        >
+                          <Typography
+                            variant="caption"
+                            color="text.secondary"
+                            fontWeight={600}
+                          >
                             TOTAL
                           </Typography>
-                          <Typography variant="h6" fontWeight={900} color="success.main" lineHeight={1}>
-                            {currency}{invoice.totalAmountDue.toFixed(2)}
+                          <Typography
+                            variant="h6"
+                            fontWeight={900}
+                            color="success.main"
+                            lineHeight={1}
+                          >
+                            {currency}
+                            {invoice.totalAmountDue.toFixed(2)}
                           </Typography>
                         </Box>
                       </Stack>
-                      <Stack direction="row" spacing={1} justifyContent="flex-end" mt={1.5}>
-                        <IconButton
-                          size="small"
-                          color="success"
-                          onClick={() => handleOpenAddService(invoice)}
-                          sx={{ bgcolor: "action.hover", borderRadius: "8px" }}
-                        >
-                          <AddCircleOutlineIcon fontSize="small" />
-                        </IconButton>
-                        <IconButton
-                          size="small"
-                          color="primary"
-                          onClick={() => handleOpenPayment(invoice)}
-                          sx={{ bgcolor: "action.hover", borderRadius: "8px" }}
-                        >
-                          <PaymentIcon fontSize="small" />
-                        </IconButton>
-                        <IconButton
-                          size="small"
-                          color="secondary"
-                          onClick={() => handleOpenPrint(invoice)}
-                          sx={{ bgcolor: "action.hover", borderRadius: "8px" }}
-                        >
-                          <VisibilityIcon fontSize="small" />
-                        </IconButton>
+                      <Stack
+                        direction="row"
+                        spacing={1}
+                        justifyContent="flex-end"
+                        mt={1.5}
+                      >
+                        <Tooltip title="Add service">
+                          <IconButton
+                            size="small"
+                            color="success"
+                            onClick={() => handleOpenAddService(invoice)}
+                            sx={{
+                              bgcolor: "action.hover",
+                              borderRadius: "8px",
+                            }}
+                          >
+                            <AddCircleOutlineIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Update payment">
+                          <IconButton
+                            size="small"
+                            color="primary"
+                            onClick={() => handleOpenPayment(invoice)}
+                            sx={{
+                              bgcolor: "action.hover",
+                              borderRadius: "8px",
+                            }}
+                          >
+                            <PaymentIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="View invoice">
+                          <IconButton
+                            size="small"
+                            color="secondary"
+                            onClick={() => handleOpenPrint(invoice)}
+                            sx={{
+                              bgcolor: "action.hover",
+                              borderRadius: "8px",
+                            }}
+                          >
+                            <VisibilityIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
                       </Stack>
                     </CardContent>
                   </Card>
@@ -798,7 +1180,10 @@ const InvoicesPage = () => {
                   <Pagination
                     count={totalPages}
                     page={page}
-                    onChange={(_, value) => { setPage(value); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+                    onChange={(_, value) => {
+                      setPage(value);
+                      window.scrollTo({ top: 0, behavior: "smooth" });
+                    }}
                     color="primary"
                     shape="rounded"
                     size="small"
@@ -822,97 +1207,274 @@ const InvoicesPage = () => {
           >
             <Table sx={{ minWidth: 900 }}>
               <TableHead>
-                <TableRow sx={{ bgcolor: theme.palette.action.hover }}>
-                  {["Invoice ID", "Guest Name", "Issue Date", "Created By", "Total Amount", "Status", "Actions"].map((h) => (
+                <TableRow
+                  sx={{
+                    bgcolor:
+                      theme.palette.mode === "dark"
+                        ? "rgba(255,255,255,0.04)"
+                        : "#f8fafc",
+                    "& th": {
+                      borderBottom: `2px solid ${theme.palette.divider}`,
+                    },
+                  }}
+                >
+                  {[
+                    "Invoice ID",
+                    "Guest",
+                    "Issue Date",
+                    "Created By",
+                    "Amount",
+                    "Status",
+                    "Actions",
+                  ].map((label, i) => (
                     <TableCell
-                      key={h}
-                      align={h === "Actions" || h === "Total Amount" ? "right" : "left"}
+                      key={label}
+                      align={
+                        i === 4
+                          ? "right"
+                          : i === 5
+                            ? "center"
+                            : i === 6
+                              ? "right"
+                              : "left"
+                      }
                       sx={{
+                        py: 1.5,
                         fontWeight: 700,
-                        fontSize: "0.75rem",
-                        textTransform: "uppercase",
+                        fontSize: "0.7rem",
                         letterSpacing: "0.06em",
+                        textTransform: "uppercase",
                         color: "text.secondary",
-                        py: 2,
+                        whiteSpace: "nowrap",
+                        ...(i === 0 && { pl: 2.5 }),
+                        ...(i === 6 && { pr: 2.5 }),
                       }}
                     >
-                      {h}
+                      {label}
                     </TableCell>
                   ))}
                 </TableRow>
               </TableHead>
+
               <TableBody>
                 {filteredInvoices.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} align="center" sx={{ py: 5 }}>
-                      <Typography variant="body1" color="text.secondary">
-                        No invoices found.
-                      </Typography>
+                    <TableCell colSpan={7} align="center" sx={{ py: 8 }}>
+                      <Box
+                        display="flex"
+                        flexDirection="column"
+                        alignItems="center"
+                        gap={1}
+                      >
+                        <ReceiptIcon
+                          sx={{ fontSize: 40, color: "text.disabled" }}
+                        />
+                        <Typography
+                          variant="body1"
+                          color="text.secondary"
+                          fontWeight={500}
+                        >
+                          No invoices found
+                        </Typography>
+                        {hasActiveFilters && (
+                          <Button
+                            size="small"
+                            onClick={handleClearFilters}
+                            sx={{ mt: 0.5, textTransform: "none" }}
+                          >
+                            Clear filters
+                          </Button>
+                        )}
+                      </Box>
                     </TableCell>
                   </TableRow>
                 ) : (
-                  paginated.map((invoice) => {
+                  paginated.map((invoice, rowIdx) => {
                     const guest = invoiceGuests[invoice._id];
                     const isGuestLoading = guestsLoading[invoice._id];
+                    const isEven = rowIdx % 2 === 0;
+
                     return (
                       <TableRow
                         key={invoice._id}
                         sx={{
+                          bgcolor: isEven
+                            ? "transparent"
+                            : theme.palette.mode === "dark"
+                              ? "rgba(255,255,255,0.015)"
+                              : "rgba(0,0,0,0.012)",
                           "&:last-child td": { border: 0 },
-                          "&:hover": { bgcolor: theme.palette.action.hover },
-                          transition: "background 0.15s",
+                          "&:hover": {
+                            bgcolor:
+                              theme.palette.mode === "dark"
+                                ? "rgba(255,255,255,0.06)"
+                                : "rgba(59,130,246,0.04)",
+                          },
+                          transition: "background 0.12s",
+                          "& td": {
+                            borderBottom: `1px solid ${theme.palette.divider}`,
+                          },
                         }}
                       >
-                        <TableCell>
-                          <Typography variant="body2" fontWeight={700}>
-                            {invoice._id.slice(-8).toUpperCase()}
-                          </Typography>
+                        <TableCell sx={{ pl: 2.5, py: 1.75 }}>
+                          <InvoiceIdBadge id={invoice._id} />
                         </TableCell>
-                        <TableCell>
+
+                        <TableCell sx={{ py: 1.75 }}>
                           {isGuestLoading ? (
-                            <Skeleton variant="text" width={120} height={20} />
+                            <Box>
+                              <Skeleton
+                                variant="text"
+                                width={130}
+                                height={18}
+                              />
+                              <Skeleton
+                                variant="text"
+                                width={90}
+                                height={14}
+                                sx={{ mt: 0.5 }}
+                              />
+                            </Box>
                           ) : guest ? (
-                            <Typography variant="body2" fontWeight={600}>
-                              {guest.firstName} {guest.lastName}
-                            </Typography>
+                            <Box>
+                              <Typography
+                                variant="body2"
+                                fontWeight={600}
+                                fontSize="0.85rem"
+                                lineHeight={1.3}
+                              >
+                                {guest.firstName} {guest.lastName}
+                              </Typography>
+                              <Typography
+                                variant="caption"
+                                color="text.secondary"
+                                fontSize="0.72rem"
+                              >
+                                {guest.email}
+                              </Typography>
+                            </Box>
                           ) : (
-                            <Typography variant="body2" color="text.disabled">
+                            <Typography
+                              variant="body2"
+                              color="text.disabled"
+                              fontSize="0.82rem"
+                            >
                               Unknown Guest
                             </Typography>
                           )}
                         </TableCell>
-                        <TableCell>
-                          <Typography variant="body2">
-                            {new Date(invoice.issueDate).toLocaleDateString()}
+
+                        <TableCell sx={{ py: 1.75 }}>
+                          <Typography
+                            variant="body2"
+                            color="text.secondary"
+                            fontSize="0.82rem"
+                          >
+                            {new Date(invoice.issueDate).toLocaleDateString(
+                              undefined,
+                              {
+                                year: "numeric",
+                                month: "short",
+                                day: "numeric",
+                              },
+                            )}
                           </Typography>
                         </TableCell>
-                        <TableCell>
+
+                        <TableCell sx={{ py: 1.75 }}>
                           <CreatedByBadge user={invoice.createdBy} />
                         </TableCell>
-                        <TableCell align="right">
-                          <Typography variant="body2" fontWeight={700} color="success.main">
-                            {currency}{invoice.totalAmountDue.toFixed(2)}
+
+                        <TableCell align="right" sx={{ py: 1.75 }}>
+                          <Typography
+                            variant="body2"
+                            fontWeight={700}
+                            fontSize="0.9rem"
+                            color="text.primary"
+                          >
+                            {currency}
+                            {invoice.totalAmountDue.toFixed(2)}
                           </Typography>
                         </TableCell>
-                        <TableCell>
-                          <Chip
-                            label={invoice.paymentStatus}
-                            size="small"
-                            color={getStatusChipColor(invoice.paymentStatus)}
-                            sx={{ fontWeight: 700, borderRadius: 1.5 }}
-                          />
+
+                        <TableCell align="center" sx={{ py: 1.75 }}>
+                          <StatusChip status={invoice.paymentStatus} />
                         </TableCell>
-                        <TableCell align="right">
-                          <Stack direction="row" justifyContent="flex-end" spacing={1}>
-                            <IconButton size="small" color="success" onClick={() => handleOpenAddService(invoice)}>
-                              <AddCircleOutlineIcon fontSize="small" />
-                            </IconButton>
-                            <IconButton size="small" color="primary" onClick={() => handleOpenPayment(invoice)}>
-                              <PaymentIcon fontSize="small" />
-                            </IconButton>
-                            <IconButton size="small" color="secondary" onClick={() => handleOpenPrint(invoice)}>
-                              <VisibilityIcon fontSize="small" />
-                            </IconButton>
+
+                        <TableCell align="right" sx={{ py: 1.75, pr: 2.5 }}>
+                          <Stack
+                            direction="row"
+                            justifyContent="flex-end"
+                            spacing={0.75}
+                          >
+                            <Tooltip title="Add service" arrow>
+                              <IconButton
+                                size="small"
+                                onClick={() => handleOpenAddService(invoice)}
+                                sx={{
+                                  width: 32,
+                                  height: 32,
+                                  borderRadius: 1.5,
+                                  border: "1px solid",
+                                  borderColor: "divider",
+                                  color: "#16a34a",
+                                  bgcolor: "transparent",
+                                  "&:hover": {
+                                    bgcolor: "#f0fdf4",
+                                    borderColor: "#bbf7d0",
+                                  },
+                                  transition: "all 0.15s",
+                                }}
+                              >
+                                <AddCircleOutlineIcon sx={{ fontSize: 16 }} />
+                              </IconButton>
+                            </Tooltip>
+
+                            <Tooltip title="Update payment" arrow>
+                              <IconButton
+                                size="small"
+                                onClick={() => handleOpenPayment(invoice)}
+                                sx={{
+                                  width: 32,
+                                  height: 32,
+                                  borderRadius: 1.5,
+                                  border: "1px solid",
+                                  borderColor: "divider",
+                                  color: "#2563eb",
+                                  bgcolor: "transparent",
+                                  "&:hover": {
+                                    bgcolor: "#eff6ff",
+                                    borderColor: "#bfdbfe",
+                                  },
+                                  transition: "all 0.15s",
+                                }}
+                              >
+                                <PaymentIcon sx={{ fontSize: 16 }} />
+                              </IconButton>
+                            </Tooltip>
+
+                            <Tooltip title="View invoice" arrow>
+                              <IconButton
+                                size="small"
+                                onClick={() => handleOpenPrint(invoice)}
+                                sx={{
+                                  width: 32,
+                                  height: 32,
+                                  borderRadius: 1.5,
+                                  border: "1px solid",
+                                  borderColor: "divider",
+                                  color: "#7c3aed",
+                                  bgcolor: "transparent",
+                                  "&:hover": {
+                                    bgcolor: "#f5f3ff",
+                                    borderColor: "#ddd6fe",
+                                  },
+                                  transition: "all 0.15s",
+                                }}
+                              >
+                                <VisibilityIcon sx={{ fontSize: 16 }} />
+                              </IconButton>
+                            </Tooltip>
                           </Stack>
                         </TableCell>
                       </TableRow>
@@ -921,22 +1483,47 @@ const InvoicesPage = () => {
                 )}
               </TableBody>
             </Table>
+
+            {totalPages > 1 && (
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  px: 2.5,
+                  py: 1.5,
+                  borderTop: `1px solid ${theme.palette.divider}`,
+                  bgcolor:
+                    theme.palette.mode === "dark"
+                      ? "rgba(255,255,255,0.02)"
+                      : "#fafafa",
+                }}
+              >
+                <Typography variant="caption" color="text.secondary">
+                  Showing{" "}
+                  <strong>
+                    {(page - 1) * PAGE_SIZE + 1}–
+                    {Math.min(page * PAGE_SIZE, filteredInvoices.length)}
+                  </strong>{" "}
+                  of <strong>{filteredInvoices.length}</strong> invoices
+                </Typography>
+                <Pagination
+                  count={totalPages}
+                  page={page}
+                  onChange={(_, value) => {
+                    setPage(value);
+                    window.scrollTo({ top: 0, behavior: "smooth" });
+                  }}
+                  color="primary"
+                  shape="rounded"
+                  size="small"
+                />
+              </Box>
+            )}
           </TableContainer>
-          {totalPages > 1 && (
-            <Box sx={{ display: "flex", justifyContent: "center", mt: 3 }}>
-              <Pagination
-                count={totalPages}
-                page={page}
-                onChange={(_, value) => { setPage(value); window.scrollTo({ top: 0, behavior: "smooth" }); }}
-                color="primary"
-                shape="rounded"
-              />
-            </Box>
-          )}
         </>
       )}
 
-      {/* Payment Dialog */}
       <Dialog
         open={openPaymentDialog}
         onClose={() => setOpenPaymentDialog(false)}
@@ -952,10 +1539,17 @@ const InvoicesPage = () => {
               label="Payment Status"
               fullWidth
               value={paymentData.paymentStatus}
-              onChange={(e) => setPaymentData({ ...paymentData, paymentStatus: e.target.value })}
+              onChange={(e) =>
+                setPaymentData({
+                  ...paymentData,
+                  paymentStatus: e.target.value,
+                })
+              }
             >
               {["Paid", "Pending"].map((s) => (
-                <MenuItem key={s} value={s}>{s}</MenuItem>
+                <MenuItem key={s} value={s}>
+                  {s}
+                </MenuItem>
               ))}
             </TextField>
             <TextField
@@ -963,16 +1557,27 @@ const InvoicesPage = () => {
               label="Payment Method"
               fullWidth
               value={paymentData.paymentMethod}
-              onChange={(e) => setPaymentData({ ...paymentData, paymentMethod: e.target.value })}
+              onChange={(e) =>
+                setPaymentData({
+                  ...paymentData,
+                  paymentMethod: e.target.value,
+                })
+              }
             >
               {["Cash", "Credit Card", "Online", "Bank Transfer"].map((m) => (
-                <MenuItem key={m} value={m}>{m}</MenuItem>
+                <MenuItem key={m} value={m}>
+                  {m}
+                </MenuItem>
               ))}
             </TextField>
           </Box>
         </DialogContent>
         <DialogActions sx={{ p: 2, px: 3 }}>
-          <Button onClick={() => setOpenPaymentDialog(false)} color="inherit" sx={{ fontWeight: 600 }}>
+          <Button
+            onClick={() => setOpenPaymentDialog(false)}
+            color="inherit"
+            sx={{ fontWeight: 600 }}
+          >
             Cancel
           </Button>
           <Button
@@ -981,15 +1586,21 @@ const InvoicesPage = () => {
             disabled={updatePaymentLoading}
             sx={{ borderRadius: 2, fontWeight: 700, minWidth: 90 }}
           >
-            {updatePaymentLoading ? <CircularProgress size={18} color="inherit" /> : "Update"}
+            {updatePaymentLoading ? (
+              <CircularProgress size={18} color="inherit" />
+            ) : (
+              "Update"
+            )}
           </Button>
         </DialogActions>
       </Dialog>
 
-      {/* Add Service Dialog */}
       <Dialog
         open={openAddServiceDialog}
-        onClose={() => { setOpenAddServiceDialog(false); setSelectedService(null); }}
+        onClose={() => {
+          setOpenAddServiceDialog(false);
+          setSelectedService(null);
+        }}
         maxWidth="xs"
         fullWidth
         PaperProps={{ sx: { borderRadius: 3 } }}
@@ -1003,25 +1614,39 @@ const InvoicesPage = () => {
               fullWidth
               value={serviceData.serviceId}
               onChange={(e) => {
-                const svc = availableServices.find((s) => s._id === e.target.value);
+                const svc = availableServices.find(
+                  (s) => s._id === e.target.value,
+                );
                 setServiceData({ ...serviceData, serviceId: e.target.value });
                 setSelectedService(svc || null);
               }}
             >
               {availableServices.map((s) => (
                 <MenuItem key={s._id} value={s._id}>
-                  <Box display="flex" justifyContent="space-between" width="100%" alignItems="center" gap={1}>
+                  <Box
+                    display="flex"
+                    justifyContent="space-between"
+                    width="100%"
+                    alignItems="center"
+                    gap={1}
+                  >
                     <span>{s.name}</span>
                     <Box display="flex" alignItems="center" gap={0.75}>
                       <Typography variant="body2" fontWeight={700}>
-                        {currency}{s.price.toFixed(2)}
+                        {currency}
+                        {s.price.toFixed(2)}
                       </Typography>
                       {s.isTaxable && (
                         <Chip
                           label="Tax"
                           size="small"
                           color="warning"
-                          sx={{ height: 18, fontSize: "0.6rem", fontWeight: 700, borderRadius: 1 }}
+                          sx={{
+                            height: 18,
+                            fontSize: "0.6rem",
+                            fontWeight: 700,
+                            borderRadius: 1,
+                          }}
                         />
                       )}
                     </Box>
@@ -1036,11 +1661,21 @@ const InvoicesPage = () => {
               inputProps={{ min: 1 }}
               value={serviceData.quantity}
               onChange={(e) =>
-                setServiceData({ ...serviceData, quantity: Math.max(1, parseInt(e.target.value) || 1) })
+                setServiceData({
+                  ...serviceData,
+                  quantity: Math.max(1, parseInt(e.target.value) || 1),
+                })
               }
             />
             {selectedService && (
-              <Box sx={{ p: 2, borderRadius: 2, bgcolor: "action.hover", border: `1px solid ${theme.palette.divider}` }}>
+              <Box
+                sx={{
+                  p: 2,
+                  borderRadius: 2,
+                  bgcolor: "action.hover",
+                  border: `1px solid ${theme.palette.divider}`,
+                }}
+              >
                 <Typography
                   variant="caption"
                   color="text.secondary"
@@ -1053,27 +1688,52 @@ const InvoicesPage = () => {
                 </Typography>
                 <Stack spacing={0.75}>
                   <Box display="flex" justifyContent="space-between">
-                    <Typography variant="body2" color="text.secondary">Unit price</Typography>
-                    <Typography variant="body2" fontWeight={600}>{currency}{selectedService.price.toFixed(2)}</Typography>
-                  </Box>
-                  <Box display="flex" justifyContent="space-between">
-                    <Typography variant="body2" color="text.secondary">Quantity</Typography>
-                    <Typography variant="body2" fontWeight={600}>× {serviceData.quantity}</Typography>
-                  </Box>
-                  <Box display="flex" justifyContent="space-between">
-                    <Typography variant="body2" color="text.secondary">Subtotal</Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Unit price
+                    </Typography>
                     <Typography variant="body2" fontWeight={600}>
-                      {currency}{(selectedService.price * serviceData.quantity).toFixed(2)}
+                      {currency}
+                      {selectedService.price.toFixed(2)}
                     </Typography>
                   </Box>
-                  <Box display="flex" justifyContent="space-between" alignItems="center">
-                    <Typography variant="body2" color="text.secondary">Taxable</Typography>
+                  <Box display="flex" justifyContent="space-between">
+                    <Typography variant="body2" color="text.secondary">
+                      Quantity
+                    </Typography>
+                    <Typography variant="body2" fontWeight={600}>
+                      × {serviceData.quantity}
+                    </Typography>
+                  </Box>
+                  <Box display="flex" justifyContent="space-between">
+                    <Typography variant="body2" color="text.secondary">
+                      Subtotal
+                    </Typography>
+                    <Typography variant="body2" fontWeight={600}>
+                      {currency}
+                      {(selectedService.price * serviceData.quantity).toFixed(
+                        2,
+                      )}
+                    </Typography>
+                  </Box>
+                  <Box
+                    display="flex"
+                    justifyContent="space-between"
+                    alignItems="center"
+                  >
+                    <Typography variant="body2" color="text.secondary">
+                      Taxable
+                    </Typography>
                     <Chip
                       label={selectedService.isTaxable ? "Yes" : "No"}
                       size="small"
                       color={selectedService.isTaxable ? "warning" : "default"}
                       variant="outlined"
-                      sx={{ height: 20, fontSize: "0.65rem", fontWeight: 700, borderRadius: 1 }}
+                      sx={{
+                        height: 20,
+                        fontSize: "0.65rem",
+                        fontWeight: 700,
+                        borderRadius: 1,
+                      }}
                     />
                   </Box>
                 </Stack>
@@ -1083,7 +1743,10 @@ const InvoicesPage = () => {
         </DialogContent>
         <DialogActions sx={{ p: 2, px: 3 }}>
           <Button
-            onClick={() => { setOpenAddServiceDialog(false); setSelectedService(null); }}
+            onClick={() => {
+              setOpenAddServiceDialog(false);
+              setSelectedService(null);
+            }}
             color="inherit"
             sx={{ fontWeight: 600 }}
           >
@@ -1095,12 +1758,15 @@ const InvoicesPage = () => {
             disabled={!serviceData.serviceId || addServiceLoading}
             sx={{ borderRadius: 2, fontWeight: 700, minWidth: 80 }}
           >
-            {addServiceLoading ? <CircularProgress size={18} color="inherit" /> : "Add"}
+            {addServiceLoading ? (
+              <CircularProgress size={18} color="inherit" />
+            ) : (
+              "Add"
+            )}
           </Button>
         </DialogActions>
       </Dialog>
 
-      {/* Print / View Dialog */}
       <Dialog
         open={openPrintDialog}
         onClose={() => setOpenPrintDialog(false)}
@@ -1110,7 +1776,13 @@ const InvoicesPage = () => {
         PaperProps={{
           sx: {
             borderRadius: 3,
-            "@media print": { boxShadow: "none", margin: 0, width: "100%", maxWidth: "100% !important", borderRadius: 0 },
+            "@media print": {
+              boxShadow: "none",
+              margin: 0,
+              width: "100%",
+              maxWidth: "100% !important",
+              borderRadius: 0,
+            },
           },
         }}
       >
@@ -1126,37 +1798,78 @@ const InvoicesPage = () => {
                 mb={{ xs: 3, md: 6 }}
               >
                 <Box>
-                  <Typography fontWeight={900} letterSpacing={-1} sx={{ fontSize: { xs: "1.75rem", md: "3rem" } }}>
+                  <Typography
+                    fontWeight={900}
+                    letterSpacing={-1}
+                    sx={{ fontSize: { xs: "1.75rem", md: "3rem" } }}
+                  >
                     INVOICE
                   </Typography>
-                  <Typography variant="body2" className="p-secondary" color="text.secondary" mt={0.5} sx={{ wordBreak: "break-all" }}>
+                  <Typography
+                    variant="body2"
+                    className="p-secondary"
+                    color="text.secondary"
+                    mt={0.5}
+                    sx={{ wordBreak: "break-all" }}
+                  >
                     ID: {currentInvoice._id.slice(-12).toUpperCase()}
                   </Typography>
-                  <Typography variant="body2" className="p-secondary" color="text.secondary">
-                    Date: {new Date(currentInvoice.issueDate).toLocaleDateString()}
+                  <Typography
+                    variant="body2"
+                    className="p-secondary"
+                    color="text.secondary"
+                  >
+                    Date:{" "}
+                    {new Date(currentInvoice.issueDate).toLocaleDateString()}
                   </Typography>
                   {currentInvoice.createdBy && (
-                    <Typography variant="body2" className="p-secondary" color="text.secondary">
-                      Issued by: {currentInvoice.createdBy.firstName} {currentInvoice.createdBy.lastName} ({currentInvoice.createdBy.role})
+                    <Typography
+                      variant="body2"
+                      className="p-secondary"
+                      color="text.secondary"
+                    >
+                      Issued by: {currentInvoice.createdBy.firstName}{" "}
+                      {currentInvoice.createdBy.lastName} (
+                      {currentInvoice.createdBy.role})
                     </Typography>
                   )}
                 </Box>
                 <Box textAlign={{ xs: "left", sm: "right" }}>
-                  <Typography variant="h6" fontWeight={800}>{hotel?.name ?? "AMI Hotel"}</Typography>
-                  <Typography variant="body2" className="p-secondary" color="text.secondary">
+                  <Typography variant="h6" fontWeight={800}>
+                    {hotel?.name ?? "AMI Hotel"}
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    className="p-secondary"
+                    color="text.secondary"
+                  >
                     E-mail: {hotel?.email ?? "ami@hotel.com"}
                   </Typography>
-                  <Typography variant="body2" className="p-secondary" color="text.secondary">
+                  <Typography
+                    variant="body2"
+                    className="p-secondary"
+                    color="text.secondary"
+                  >
                     Phone: {hotel?.phone ?? ""}
                   </Typography>
-                  <Typography variant="body2" className="p-secondary" color="text.secondary">
+                  <Typography
+                    variant="body2"
+                    className="p-secondary"
+                    color="text.secondary"
+                  >
                     {hotel?.address ?? ""}
                   </Typography>
                 </Box>
               </Box>
 
               <Box mb={4}>
-                <Typography variant="subtitle2" fontWeight={700} className="p-secondary" color="text.secondary" textTransform="uppercase">
+                <Typography
+                  variant="subtitle2"
+                  fontWeight={700}
+                  className="p-secondary"
+                  color="text.secondary"
+                  textTransform="uppercase"
+                >
                   Bill To
                 </Typography>
                 {printLoading ? (
@@ -1171,13 +1884,25 @@ const InvoicesPage = () => {
                     <Typography variant="h6" fontWeight={800}>
                       {currentGuest.firstName} {currentGuest.lastName}
                     </Typography>
-                    <Typography variant="body2" className="p-secondary" color="text.secondary">
+                    <Typography
+                      variant="body2"
+                      className="p-secondary"
+                      color="text.secondary"
+                    >
                       Email: {currentGuest.email}
                     </Typography>
-                    <Typography variant="body2" className="p-secondary" color="text.secondary">
+                    <Typography
+                      variant="body2"
+                      className="p-secondary"
+                      color="text.secondary"
+                    >
                       Phone: {currentGuest.phoneNumber || "N/A"}
                     </Typography>
-                    <Typography variant="body2" className="p-secondary" color="text.secondary">
+                    <Typography
+                      variant="body2"
+                      className="p-secondary"
+                      color="text.secondary"
+                    >
                       Passport Number: {currentGuest.idNumber || "N/A"}
                     </Typography>
                   </Box>
@@ -1191,43 +1916,90 @@ const InvoicesPage = () => {
               <TableContainer sx={{ mb: 4, overflowX: "auto" }}>
                 <Table size="small" sx={{ minWidth: 380 }}>
                   <TableHead>
-                    <TableRow className="p-thead" sx={{ borderBottom: `2px solid ${theme.palette.divider}` }}>
-                      <TableCell sx={{ fontWeight: 700, pb: 1 }}>Description</TableCell>
-                      <TableCell align="center" sx={{ fontWeight: 700, pb: 1 }}>Qty</TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 700, pb: 1 }}>Unit Price</TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 700, pb: 1 }}>Amount</TableCell>
+                    <TableRow
+                      className="p-thead"
+                      sx={{
+                        borderBottom: `2px solid ${theme.palette.divider}`,
+                      }}
+                    >
+                      <TableCell sx={{ fontWeight: 700, pb: 1 }}>
+                        Description
+                      </TableCell>
+                      <TableCell align="center" sx={{ fontWeight: 700, pb: 1 }}>
+                        Qty
+                      </TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 700, pb: 1 }}>
+                        Unit Price
+                      </TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 700, pb: 1 }}>
+                        Amount
+                      </TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
                     <TableRow>
-                      <TableCell sx={{ py: 2}}>Room Charge</TableCell>
+                      <TableCell sx={{ py: 2 }}>Room Charge</TableCell>
                       <TableCell align="center">1</TableCell>
-                      <TableCell align="right">{currency}{currentInvoice.totalRoomCharge.toFixed(2)}</TableCell>
-                      <TableCell align="right">{currency}{currentInvoice.totalRoomCharge.toFixed(2)}</TableCell>
+                      <TableCell align="right">
+                        {currency}
+                        {currentInvoice.totalRoomCharge.toFixed(2)}
+                      </TableCell>
+                      <TableCell align="right">
+                        {currency}
+                        {currentInvoice.totalRoomCharge.toFixed(2)}
+                      </TableCell>
                     </TableRow>
                     {currentInvoice.usedServices?.map((item, index) => (
                       <TableRow key={index}>
-                        <TableCell sx={{ py: 2 }}>{typeof item.service === "object" ? item.service.name : item.name || "Service"}</TableCell>
+                        <TableCell sx={{ py: 2 }}>
+                          {typeof item.service === "object"
+                            ? item.service.name
+                            : item.name || "Service"}
+                        </TableCell>
                         <TableCell align="center">{item.quantity}</TableCell>
-                        <TableCell align="right">{currency}{item.price.toFixed(2)}</TableCell>
-                        <TableCell align="right">{currency}{item.total.toFixed(2)}</TableCell>
+                        <TableCell align="right">
+                          {currency}
+                          {item.price.toFixed(2)}
+                        </TableCell>
+                        <TableCell align="right">
+                          {currency}
+                          {item.total.toFixed(2)}
+                        </TableCell>
                       </TableRow>
                     ))}
                     <TableRow>
-                      <TableCell colSpan={3} align="right" sx={{ py: 2, fontWeight: 600 }}>
+                      <TableCell
+                        colSpan={3}
+                        align="right"
+                        sx={{ py: 2, fontWeight: 600 }}
+                      >
                         Taxes
                       </TableCell>
-                      <TableCell align="right">{currency}{currentInvoice.taxAmount.toFixed(2)}</TableCell>
+                      <TableCell align="right">
+                        {currency}
+                        {currentInvoice.taxAmount.toFixed(2)}
+                      </TableCell>
                     </TableRow>
                     <TableRow
                       className="p-total-row"
-                      sx={{ background: theme.palette.primary.main, "& td": { border: 0 } }}
+                      sx={{
+                        background: theme.palette.primary.main,
+                        "& td": { border: 0 },
+                      }}
                     >
-                      <TableCell colSpan={3} align="right" sx={{ py: 2, px: 1, fontWeight: 800, fontSize: "1rem" }}>
+                      <TableCell
+                        colSpan={3}
+                        align="right"
+                        sx={{ py: 2, px: 1, fontWeight: 800, fontSize: "1rem" }}
+                      >
                         TOTAL DUE
                       </TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 900, fontSize: "1.1rem" }}>
-                        {currency}{currentInvoice.totalAmountDue.toFixed(2)}
+                      <TableCell
+                        align="right"
+                        sx={{ fontWeight: 900, fontSize: "1.1rem" }}
+                      >
+                        {currency}
+                        {currentInvoice.totalAmountDue.toFixed(2)}
                       </TableCell>
                     </TableRow>
                   </TableBody>
@@ -1241,11 +2013,17 @@ const InvoicesPage = () => {
                     variant="body2"
                     textAlign="right"
                     fontWeight={800}
-                    className={getStatusPrintClass(currentInvoice.paymentStatus)}
-                    sx={{ color: getStatusHexColor(currentInvoice.paymentStatus) }}
+                    className={getStatusPrintClass(
+                      currentInvoice.paymentStatus,
+                    )}
+                    sx={{
+                      color: getStatusHexColor(currentInvoice.paymentStatus),
+                    }}
                   >
                     {currentInvoice.paymentStatus.toUpperCase()}
-                    {currentInvoice.paymentMethod ? ` · ${currentInvoice.paymentMethod}` : ""}
+                    {currentInvoice.paymentMethod
+                      ? ` · ${currentInvoice.paymentMethod}`
+                      : ""}
                   </Typography>
                 </Box>
               </Box>
@@ -1253,7 +2031,11 @@ const InvoicesPage = () => {
           )}
         </DialogContent>
         <DialogActions className="no-print" sx={{ p: 2, px: 3 }}>
-          <Button onClick={() => setOpenPrintDialog(false)} color="inherit" sx={{ fontWeight: 600 }}>
+          <Button
+            onClick={() => setOpenPrintDialog(false)}
+            color="inherit"
+            sx={{ fontWeight: 600 }}
+          >
             Close
           </Button>
           <Button
