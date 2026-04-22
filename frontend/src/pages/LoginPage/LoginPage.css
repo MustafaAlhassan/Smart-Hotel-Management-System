@@ -1,0 +1,25 @@
+.login-page-main-container {
+  margin: 0 !important;
+  padding: 0 !important;
+  border-radius: 25px 25px 25px 25px;
+  -webkit-border-radius: 25px 25px 25px 25px;
+  -moz-border-radius: 25px 25px 25px 25px;
+  -ms-border-radius: 25px 25px 25px 25px;
+  -o-border-radius: 25px 25px 25px 25px;
+  transition: 0.3s;
+  -webkit-transition: 0.3s;
+  -moz-transition: 0.3s;
+  -ms-transition: 0.3s;
+  -o-transition: 0.3s;
+  position: relative;
+  top: 0;
+}
+@media (min-width: 1200px) {
+  .login-page-main-container:hover {
+    top: -5px;
+    -webkit-box-shadow: -10px -10px 30px 2px rgba(149, 241, 44, 0.55),
+      10px 10px 30px 5px rgba(86, 168, 249, 0.55);
+    box-shadow: -10px -10px 30px 2px rgba(0, 131, 143, 1),
+      10px 10px 30px 5px rgba(92, 107, 192, 1);
+  }
+}

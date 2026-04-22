@@ -1,7 +1,20 @@
-import express, { Request, Response } from 'express';
-import mongoose from 'mongoose';
-import dotenv from 'dotenv';
-import cors from 'cors';
+import express, { Request, Response } from "express";
+import mongoose from "mongoose";
+import dotenv from "dotenv";
+import cors from "cors";
+import authRouter from "./routers/authRoute";
+import roomRouter from "./routers/rooms/roomRoute";
+import { requireAuth } from "./middlewares/requireAuth";
+import roomTypeRouter from "./routers/rooms/roomTypeRoute";
+import guestRouter from "./routers/guestRoute";
+import serviceRouter from "./routers/serviceRoute";
+import bookingRouter from "./routers/bookingRoute";
+import invoiceRouter from "./routers/invoiceRoute";
+import dashboardRouter from "./routers/dashboardRoute";
+import path from "path";
+import userRouter from "./routers/userRoute";
+import chatRouter from "./routers/chatRoute";
+import hotelRouter from "./routers/hotelRouter";
 
 dotenv.config();
 
@@ -9,25 +22,41 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 const MONGODB_URI = process.env.MONGODB_URI;
 
-// Middlewares
 app.use(express.json());
 app.use(cors());
+app.use("/api/auth", authRouter);
+app.use("/api/room-types", requireAuth, roomTypeRouter);
+app.use("/api/rooms", requireAuth, roomRouter);
+app.use("/api/guests", requireAuth, guestRouter);
+app.use("/api/services", requireAuth, serviceRouter);
+app.use("/api/bookings", requireAuth, bookingRouter);
+app.use("/api/invoices", requireAuth, invoiceRouter);
+app.use("/api/dashboard", requireAuth, dashboardRouter);
+app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
+app.use("/api/users", userRouter);
+app.use("/api/chat", chatRouter);
+app.use("/api/hotel", hotelRouter);
 
-app.get('/', (req: Request, res: Response) => {
-    res.send('Hotel Management System API is running (TypeScript)...');
+app.get("/", (req: Request, res: Response) => {
+  res.send("Hotel Management System API is running (TypeScript)...");
+});
+
+app.use((req: Request, res: Response) => {
+  res.status(404).json({ error: "Route not found" });
 });
 
 if (MONGODB_URI) {
-    mongoose.connect(MONGODB_URI)
-        .then(() => {
-            console.log('✅ Connected to MongoDB successfully!');
-            app.listen(PORT, () => {
-                console.log(`🚀 Server running on port ${PORT}`);
-            });
-        })
-        .catch((err) => {
-            console.error('❌ MongoDB connection error:', err);
-        });
+  mongoose
+    .connect(MONGODB_URI)
+    .then(() => {
+      console.log("✅ Connected to MongoDB successfully!");
+      app.listen(PORT, () => {
+        console.log(`🚀 Server running on port ${PORT}`);
+      });
+    })
+    .catch((err) => {
+      console.error("❌ MongoDB connection error:", err);
+    });
 } else {
-    console.error('❌ MONGODB_URI is not defined in .env file!');
+  console.error("❌ MONGODB_URI is not defined in .env file!");
 }
