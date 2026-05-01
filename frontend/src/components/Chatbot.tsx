@@ -10,6 +10,7 @@ import {
   Slide,
   useTheme,
   useMediaQuery,
+  Tooltip,
 } from "@mui/material";
 import {
   Chat as ChatIcon,
@@ -21,6 +22,13 @@ import {
 } from "@mui/icons-material";
 import api from "../services/api";
 
+const AI_MODELS = [
+  { id: "gemma-4-31b-it", label: "Gemma 4", shortLabel: "Gemma" },
+  { id: "gemini-2.5-flash", label: "Gemini 2.5 Flash", shortLabel: "Flash" },
+] as const;
+
+type ModelId = (typeof AI_MODELS)[number]["id"];
+
 export const Chatbot = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [message, setMessage] = useState("");
@@ -29,13 +37,13 @@ export const Chatbot = () => {
   >([]);
   const [isLoading, setIsLoading] = useState(false);
   const [fabPulse, setFabPulse] = useState(true);
+  const [selectedModel, setSelectedModel] = useState<ModelId>("gemma-4-31b-it");
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const theme = useTheme();
   const isDark = theme.palette.mode === "dark";
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
-  // ── Stable session ID for this browser tab (persisted in sessionStorage) ──
   const sessionId = useRef<string>(() => {
     const existing = sessionStorage.getItem("chatSessionId");
     if (existing) return existing;
@@ -48,7 +56,6 @@ export const Chatbot = () => {
     return id;
   });
 
-  // Resolve the ref value once on mount
   useEffect(() => {
     const existing = sessionStorage.getItem("chatSessionId");
     if (!existing) {
@@ -80,17 +87,12 @@ export const Chatbot = () => {
     return () => clearTimeout(timer);
   }, []);
 
-  // ── Clear backend session memory when chat is closed ──
   const handleClose = async () => {
     setIsOpen(false);
     try {
       await api.post("/chat/clear", { sessionId: getSessionId() });
-    } catch {
-      // silently ignore — non-critical
-    }
-    // Also reset local chat history so next open starts fresh
+    } catch {}
     setChatHistory([]);
-    // Generate a new session ID for the next conversation
     const userId =
       localStorage.getItem("userId") || localStorage.getItem("id") || "";
     const newId = userId
@@ -114,6 +116,7 @@ export const Chatbot = () => {
         message: userMessage,
         role,
         sessionId: getSessionId(),
+        modelId: selectedModel,
       });
 
       const botReply =
@@ -190,6 +193,13 @@ export const Chatbot = () => {
     headerShadow: isDark
       ? "0 1px 0 rgba(20, 163, 180, 0.10)"
       : "0 1px 0 rgba(10, 112, 128, 0.12)",
+    modelPillBg: isDark ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.18)",
+    modelPillActiveBg: isDark
+      ? "rgba(20,163,180,0.35)"
+      : "rgba(255,255,255,0.35)",
+    modelPillBorder: isDark
+      ? "rgba(20,163,180,0.30)"
+      : "rgba(255,255,255,0.30)",
   };
 
   const drawerShadow = isDark
@@ -211,10 +221,6 @@ export const Chatbot = () => {
         @keyframes chatbot-typing-dot {
           0%, 80%, 100% { transform: scale(0.55); opacity: 0.4; }
           40% { transform: scale(1); opacity: 1; }
-        }
-        @keyframes chatbot-shimmer {
-          0% { background-position: -200% center; }
-          100% { background-position: 200% center; }
         }
         .chatbot-message-in {
           animation: chatbot-bounce-in 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
@@ -247,91 +253,151 @@ export const Chatbot = () => {
           {/* ── Header ── */}
           <Box
             sx={{
-              p: "14px 16px",
+              p: "12px 16px",
               background: colors.headerBg,
               display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
+              flexDirection: "column",
+              gap: 1,
               borderBottom: `1px solid rgba(255,255,255,0.07)`,
               boxShadow: colors.headerShadow,
               flexShrink: 0,
             }}
           >
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-              <Box sx={{ position: "relative" }}>
-                <Avatar
-                  sx={{
-                    background: "rgba(255,255,255,0.15)",
-                    backdropFilter: "blur(8px)",
-                    width: 40,
-                    height: 40,
-                    border: "1.5px solid rgba(255,255,255,0.20)",
-                  }}
-                >
-                  <BotIcon sx={{ fontSize: 22, color: "#FFFFFF" }} />
-                </Avatar>
-                <Box
-                  sx={{
-                    position: "absolute",
-                    bottom: 1,
-                    right: 1,
-                    width: 10,
-                    height: 10,
-                    borderRadius: "50%",
-                    bgcolor: colors.onlineIndicator,
-                    border: "2px solid #053F4A",
-                    boxShadow: `0 0 6px ${colors.onlineIndicator}`,
-                  }}
-                />
-              </Box>
-              <Box>
-                <Box sx={{ display: "flex", alignItems: "center", gap: 0.6 }}>
-                  <Typography
-                    sx={{
-                      fontFamily: '"Cormorant Garamond", Georgia, serif',
-                      fontWeight: 600,
-                      fontSize: "1.05rem",
-                      color: "#FFFFFF",
-                      letterSpacing: "0.02em",
-                      lineHeight: 1.2,
-                    }}
-                  >
-                    AMI AI
-                  </Typography>
-                  <SparkleIcon
-                    sx={{ fontSize: 14, color: "rgba(255,255,255,0.65)" }}
-                  />
-                </Box>
-                <Typography
-                  sx={{
-                    fontFamily: '"Jost", sans-serif',
-                    fontSize: "0.70rem",
-                    fontWeight: 400,
-                    letterSpacing: "0.06em",
-                    color: "rgba(255,255,255,0.60)",
-                    textTransform: "uppercase",
-                  }}
-                >
-                  Online · Hotel Concierge
-                </Typography>
-              </Box>
-            </Box>
-            <IconButton
-              size="small"
-              onClick={handleClose}
+            <Box
               sx={{
-                color: "rgba(255,255,255,0.55)",
-                width: 32,
-                height: 32,
-                "&:hover": {
-                  color: "#FFFFFF",
-                  bgcolor: "rgba(255,255,255,0.12)",
-                },
-                transition: "all 0.2s ease",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
               }}
             >
-              <CloseIcon sx={{ fontSize: 18 }} />
-            </IconButton>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                <Box sx={{ position: "relative" }}>
+                  <Avatar
+                    sx={{
+                      background: "rgba(255,255,255,0.15)",
+                      backdropFilter: "blur(8px)",
+                      width: 40,
+                      height: 40,
+                      border: "1.5px solid rgba(255,255,255,0.20)",
+                    }}
+                  >
+                    <BotIcon sx={{ fontSize: 22, color: "#FFFFFF" }} />
+                  </Avatar>
+                  <Box
+                    sx={{
+                      position: "absolute",
+                      bottom: 1,
+                      right: 1,
+                      width: 10,
+                      height: 10,
+                      borderRadius: "50%",
+                      bgcolor: colors.onlineIndicator,
+                      border: "2px solid #053F4A",
+                      boxShadow: `0 0 6px ${colors.onlineIndicator}`,
+                    }}
+                  />
+                </Box>
+                <Box>
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 0.6 }}>
+                    <Typography
+                      sx={{
+                        fontFamily: '"Cormorant Garamond", Georgia, serif',
+                        fontWeight: 600,
+                        fontSize: "1.05rem",
+                        color: "#FFFFFF",
+                        letterSpacing: "0.02em",
+                        lineHeight: 1.2,
+                      }}
+                    >
+                      AMI AI
+                    </Typography>
+                    <SparkleIcon
+                      sx={{ fontSize: 14, color: "rgba(255,255,255,0.65)" }}
+                    />
+                  </Box>
+                  <Typography
+                    sx={{
+                      fontFamily: '"Jost", sans-serif',
+                      fontSize: "0.70rem",
+                      fontWeight: 400,
+                      letterSpacing: "0.06em",
+                      color: "rgba(255,255,255,0.60)",
+                      textTransform: "uppercase",
+                    }}
+                  >
+                    Online · Hotel Concierge
+                  </Typography>
+                </Box>
+              </Box>
+              <IconButton
+                size="small"
+                onClick={handleClose}
+                sx={{
+                  color: "rgba(255,255,255,0.55)",
+                  width: 32,
+                  height: 32,
+                  "&:hover": {
+                    color: "#FFFFFF",
+                    bgcolor: "rgba(255,255,255,0.12)",
+                  },
+                  transition: "all 0.2s ease",
+                }}
+              >
+                <CloseIcon sx={{ fontSize: 18 }} />
+              </IconButton>
+            </Box>
+
+            {/* ── Model Selector Pills ── */}
+            <Box sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
+              <Typography
+                sx={{
+                  fontFamily: '"Jost", sans-serif',
+                  fontSize: "0.65rem",
+                  fontWeight: 400,
+                  color: "rgba(255,255,255,0.45)",
+                  letterSpacing: "0.05em",
+                  textTransform: "uppercase",
+                  mr: 0.5,
+                  flexShrink: 0,
+                }}
+              >
+                Model
+              </Typography>
+              {AI_MODELS.map((m) => {
+                const isActive = selectedModel === m.id;
+                return (
+                  <Tooltip key={m.id} title={m.label} placement="top">
+                    <Box
+                      onClick={() => setSelectedModel(m.id)}
+                      sx={{
+                        px: 1.2,
+                        py: 0.35,
+                        borderRadius: "20px",
+                        border: `1px solid ${isActive ? "rgba(255,255,255,0.55)" : colors.modelPillBorder}`,
+                        bgcolor: isActive
+                          ? colors.modelPillActiveBg
+                          : colors.modelPillBg,
+                        cursor: "pointer",
+                        fontFamily: '"Jost", sans-serif',
+                        fontSize: "0.68rem",
+                        fontWeight: isActive ? 600 : 400,
+                        letterSpacing: "0.03em",
+                        color: isActive ? "#FFFFFF" : "rgba(255,255,255,0.55)",
+                        transition: "all 0.18s ease",
+                        userSelect: "none",
+                        "&:hover": {
+                          bgcolor: colors.modelPillActiveBg,
+                          color: "#FFFFFF",
+                          borderColor: "rgba(255,255,255,0.45)",
+                        },
+                      }}
+                    >
+                      {m.shortLabel}
+                    </Box>
+                  </Tooltip>
+                );
+              })}
+            </Box>
           </Box>
 
           {/* ── Messages ── */}
@@ -457,7 +523,7 @@ export const Chatbot = () => {
               </Box>
             )}
 
-            {chatHistory.map((msg, index) => (
+            {chatHistory.map((msg: any, index: any) => (
               <Box
                 key={index}
                 className="chatbot-message-in"

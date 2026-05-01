@@ -10,7 +10,15 @@ import { HotelModel } from "../models/hotelModel";
 
 const conversationStore = new Map<string, Content[]>();
 
-const MAX_HISTORY_TURNS = 20; // keep last 20 turns (10 exchanges) per session
+const MAX_HISTORY_TURNS = 20;
+
+export const SUPPORTED_MODELS = {
+  GEMINI_FLASH: "gemini-2.5-flash",
+  GEMMA_31B: "gemma-4-31b-it",
+} as const;
+
+export type SupportedModelId =
+  (typeof SUPPORTED_MODELS)[keyof typeof SUPPORTED_MODELS];
 
 const addDays = (date: Date, days: number): Date => {
   const d = new Date(date);
@@ -19,10 +27,6 @@ const addDays = (date: Date, days: number): Date => {
 };
 
 const formatDate = (date: Date): string => date.toISOString().split("T")[0];
-
-// ─────────────────────────────────────────────
-// Context Builders
-// ─────────────────────────────────────────────
 
 const buildRoomsContext = async (): Promise<string> => {
   const allRooms = await RoomModel.find().populate("roomType");
@@ -293,7 +297,6 @@ const buildPredictiveContext = async (): Promise<string> => {
   const avgDailyRevLast7 =
     revenueLast7 > 0 ? (revenueLast7 / 7).toFixed(2) : "0.00";
 
-  // Only compute avg service spend if we have enough data (at least 3 invoices)
   const avgServiceSpendPerBooking =
     paidInvoicesLast30.length >= 3
       ? paidInvoicesLast30.reduce((s, inv) => s + inv.totalServiceCharge, 0) /
@@ -421,7 +424,6 @@ const buildPredictiveContext = async (): Promise<string> => {
     .map(([day, count]) => `${day}: ${count} check-in(s)`)
     .join(" | ");
 
-  // ── Revenue per room type ──
   const revenueByType: Record<string, number> = {};
   paidInvoicesLast30.forEach((inv) => {
     const typeName =
@@ -496,10 +498,6 @@ OPERATIONAL INSIGHTS
 `;
 };
 
-// ─────────────────────────────────────────────
-// Role-based context builder
-// ─────────────────────────────────────────────
-
 const buildContextForRole = async (role: UserRole): Promise<string> => {
   switch (role) {
     case UserRole.ADMIN: {
@@ -523,7 +521,6 @@ const buildContextForRole = async (role: UserRole): Promise<string> => {
         users,
       ].join("\n");
     }
-
     case UserRole.MANAGER: {
       const [rooms, bookings, invoices, services, predictions] =
         await Promise.all([
@@ -535,7 +532,6 @@ const buildContextForRole = async (role: UserRole): Promise<string> => {
         ]);
       return [rooms, bookings, invoices, services, predictions].join("\n");
     }
-
     case UserRole.RECEPTIONIST: {
       const [rooms, bookings, guests, services, predictions] =
         await Promise.all([
@@ -552,7 +548,6 @@ const buildContextForRole = async (role: UserRole): Promise<string> => {
         "\n",
       );
     }
-
     case UserRole.HOUSEKEEPING: {
       const [rooms, predictions] = await Promise.all([
         buildRoomsContext(),
@@ -563,15 +558,10 @@ const buildContextForRole = async (role: UserRole): Promise<string> => {
         "";
       return [rooms, todayBlock].join("\n");
     }
-
     default:
       return await buildRoomsContext();
   }
 };
-
-// ─────────────────────────────────────────────
-// Role instructions (improved with formatting + anti-hallucination rules)
-// ─────────────────────────────────────────────
 
 const getRoleInstructions = (role: UserRole): string => {
   const base = `
@@ -597,50 +587,52 @@ RESPONSE RULES (STRICTLY ENFORCED):
   const roleSpecific: Record<UserRole, string> = {
     [UserRole.ADMIN]: `
 ROLE: Admin
-• Full access: rooms, bookings, guests, invoices, services, forecasts, system users.
-• For predictions: use REVENUE INTELLIGENCE, OCCUPANCY TRENDS, DEMAND PATTERNS, and OPERATIONAL INSIGHTS.
-• Use SYSTEM USERS to answer questions about staff — NEVER reveal passwords.
-• Provide trend analysis and actionable recommendations backed by data.
-• When revenue data is limited (see DATA RELIABILITY note), flag this clearly in your response.
+- Full access: rooms, bookings, guests, invoices, services, forecasts, system users.
+- For predictions: use REVENUE INTELLIGENCE, OCCUPANCY TRENDS, DEMAND PATTERNS, and OPERATIONAL INSIGHTS.
+- Use SYSTEM USERS to answer questions about staff — NEVER reveal passwords.
+- Provide trend analysis and actionable recommendations backed by data.
+- When revenue data is limited (see DATA RELIABILITY note), flag this clearly in your response.
 `,
     [UserRole.MANAGER]: `
 ROLE: Manager
-• Access: rooms, bookings, invoices, services, forecasts.
-• Do NOT expose guest PII (email, phone, address, ID number).
-• For predictions: use REVENUE INTELLIGENCE, DEMAND PATTERNS, OCCUPANCY TRENDS, and OPERATIONAL INSIGHTS.
-• Focus on revenue projections, occupancy optimization, and cancellation trends.
-• Always cite the DATA RELIABILITY note when discussing revenue forecasts.
+- Access: rooms, bookings, invoices, services, forecasts.
+- Do NOT expose guest PII (email, phone, address, ID number).
+- For predictions: use REVENUE INTELLIGENCE, DEMAND PATTERNS, OCCUPANCY TRENDS, and OPERATIONAL INSIGHTS.
+- Focus on revenue projections, occupancy optimization, and cancellation trends.
+- Always cite the DATA RELIABILITY note when discussing revenue forecasts.
 `,
     [UserRole.RECEPTIONIST]: `
 ROLE: Receptionist
-• Access: room availability, bookings, check-ins/outs, guest info, services.
-• Use TODAY'S SNAPSHOT and NEXT 7-DAY FORECAST for operational questions.
-• Do NOT discuss revenue totals, invoice financials, or financial forecasts — redirect to management.
-• For guest lookup questions, confirm by name or booking ID only.
+- Access: room availability, bookings, check-ins/outs, guest info, services.
+- Use TODAY'S SNAPSHOT and NEXT 7-DAY FORECAST for operational questions.
+- Do NOT discuss revenue totals, invoice financials, or financial forecasts — redirect to management.
+- For guest lookup questions, confirm by name or booking ID only.
 `,
     [UserRole.HOUSEKEEPING]: `
 ROLE: Housekeeping Staff
-• Access limited to: room statuses, floor info, and today's cleaning workload.
-• Answer only about room numbers, floors, statuses, and expected checkouts (rooms needing cleaning).
-• Do NOT discuss bookings, guest names, prices, revenue, or any financial information.
-• For anything outside room status and cleaning, respond: "That information isn't available to me — please check with the front desk."
+- Access limited to: room statuses, floor info, and today's cleaning workload.
+- Answer only about room numbers, floors, statuses, and expected checkouts (rooms needing cleaning).
+- Do NOT discuss bookings, guest names, prices, revenue, or any financial information.
+- For anything outside room status and cleaning, respond: "That information isn't available to me — please check with the front desk."
 `,
   };
 
   return base + (roleSpecific[role] ?? "");
 };
 
-// ─────────────────────────────────────────────
-// Main chat processor — with multi-turn memory
-// ─────────────────────────────────────────────
-
 export const processChatWithAI = async (
   userMessage: string,
   role: UserRole,
   sessionId: string,
+  modelId: SupportedModelId = SUPPORTED_MODELS.GEMMA_31B,
 ): Promise<string> => {
   const API_KEY = process.env.GEMINI_API_KEY;
   if (!API_KEY) throw new Error("API Key missing");
+
+  const validModelIds = Object.values(SUPPORTED_MODELS) as string[];
+  const resolvedModel = validModelIds.includes(modelId)
+    ? modelId
+    : SUPPORTED_MODELS.GEMMA_31B;
 
   const hotel = await HotelModel.findOne().select("name taxRate currency");
 
@@ -693,16 +685,13 @@ FORMATTING REMINDER:
   }
   const history = conversationStore.get(sessionId)!;
 
-  // ── Build the Gemini client and chat session ──
   const genAI = new GoogleGenerativeAI(API_KEY);
   const model = genAI.getGenerativeModel({
-    model: "gemma-4-31b-it",
+    model: resolvedModel,
     systemInstruction: systemPrompt,
   });
 
-  const chat = model.startChat({
-    history,
-  });
+  const chat = model.startChat({ history });
 
   const MAX_RETRIES = 3;
   const RETRY_DELAY_MS = 10_000;
