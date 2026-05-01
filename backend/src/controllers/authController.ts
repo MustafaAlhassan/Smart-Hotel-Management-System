@@ -164,16 +164,26 @@ export const deleteUser = async (req: Request, res: Response) => {
     if (!userReq) {
       return res.status(401).json({ error: "Not authorized" });
     }
+
     if (userReq._id === id) {
       return res
         .status(400)
         .json({ error: "You cannot delete your own account" });
     }
-    const user = await UserModel.findByIdAndDelete(id);
+
+    const user = await UserModel.findById(id);
 
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
+
+    if (user.invoicesCreated >= 1) {
+      return res.status(400).json({
+        error: "Cannot delete this user because they have created invoices",
+      });
+    }
+
+    await UserModel.findByIdAndDelete(id);
 
     res.status(200).json({ message: "User deleted successfully" });
   } catch (error: any) {
@@ -186,13 +196,26 @@ export const updateUser = async (req: Request, res: Response) => {
   const { firstName, lastName, email, username, isActive } = req.body;
 
   try {
+    const userReq = (req as any).user;
+    if (!userReq) {
+      return res.status(401).json({ error: "Not authorized" });
+    }
+
     const user = await UserModel.findById(id);
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
 
+    if (userReq.role === UserRole.MANAGER && user.role === UserRole.ADMIN) {
+      return res
+        .status(403)
+        .json({ error: "Managers cannot update Admin accounts" });
+    }
+
     if (user.role === UserRole.ADMIN && isActive === false) {
-      return res.status(400).json({ error: "Cannot deactivate the Admin account." });
+      return res
+        .status(400)
+        .json({ error: "Cannot deactivate the Admin account." });
     }
 
     const existingUser = await UserModel.findOne({

@@ -94,6 +94,7 @@ const UsersPage = () => {
 
   const currentRole = localStorage.getItem("role") || "";
   const isAdmin = currentRole?.toUpperCase() === "ADMIN";
+  const isManager = currentRole?.toUpperCase() === "MANAGER";
 
   const [users, setUsers] = useState<IUser[]>([]);
   const [loading, setLoading] = useState(true);
@@ -132,7 +133,10 @@ const UsersPage = () => {
     setLoading(true);
     try {
       const response = await api.get("/auth/");
-      setUsers(response.data);
+      const filtered = isManager
+        ? response.data.filter((u: IUser) => u.role?.toLowerCase() !== "admin")
+        : response.data;
+      setUsers(filtered);
     } catch (error: any) {
       showSnackbar(
         error.response?.data?.error || "Failed to fetch users",
@@ -432,9 +436,13 @@ const UsersPage = () => {
                       </Box>
                       <Box display="flex" alignItems="center" gap={1}>
                         {user.isActive ? (
-                          <ActiveIcon sx={{ fontSize: 16, color: "success.main" }} />
+                          <ActiveIcon
+                            sx={{ fontSize: 16, color: "success.main" }}
+                          />
                         ) : (
-                          <InactiveIcon sx={{ fontSize: 16, color: "error.main" }} />
+                          <InactiveIcon
+                            sx={{ fontSize: 16, color: "error.main" }}
+                          />
                         )}
                         <Typography
                           variant="body2"
@@ -474,24 +482,30 @@ const UsersPage = () => {
           <Table sx={{ minWidth: 700 }}>
             <TableHead>
               <TableRow sx={{ bgcolor: theme.palette.action.hover }}>
-                {["Staff Member", "Username", "Email", "Role", "Status", "Invoices", "Actions"].map(
-                  (h) => (
-                    <TableCell
-                      key={h}
-                      align={h === "Actions" ? "right" : "left"}
-                      sx={{
-                        fontWeight: 700,
-                        fontSize: "0.75rem",
-                        textTransform: "uppercase",
-                        letterSpacing: "0.06em",
-                        color: "text.secondary",
-                        py: 2,
-                      }}
-                    >
-                      {h}
-                    </TableCell>
-                  ),
-                )}
+                {[
+                  "Staff Member",
+                  "Username",
+                  "Email",
+                  "Role",
+                  "Status",
+                  "Invoices",
+                  "Actions",
+                ].map((h) => (
+                  <TableCell
+                    key={h}
+                    align={h === "Actions" ? "right" : "left"}
+                    sx={{
+                      fontWeight: 700,
+                      fontSize: "0.75rem",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.06em",
+                      color: "text.secondary",
+                      py: 2,
+                    }}
+                  >
+                    {h}
+                  </TableCell>
+                ))}
               </TableRow>
             </TableHead>
             <TableBody>
@@ -559,9 +573,13 @@ const UsersPage = () => {
                         <Chip
                           icon={
                             user.isActive ? (
-                              <ActiveIcon sx={{ fontSize: "14px !important" }} />
+                              <ActiveIcon
+                                sx={{ fontSize: "14px !important" }}
+                              />
                             ) : (
-                              <InactiveIcon sx={{ fontSize: "14px !important" }} />
+                              <InactiveIcon
+                                sx={{ fontSize: "14px !important" }}
+                              />
                             )
                           }
                           label={user.isActive ? "Active" : "Inactive"}
@@ -577,7 +595,9 @@ const UsersPage = () => {
                       </TableCell>
                       <TableCell>
                         <Box display="flex" alignItems="center" gap={0.75}>
-                          <ReceiptIcon sx={{ fontSize: 15, color: "text.disabled" }} />
+                          <ReceiptIcon
+                            sx={{ fontSize: 15, color: "text.disabled" }}
+                          />
                           <Typography variant="body2" fontWeight={600}>
                             {user.invoicesCreated ?? 0}
                           </Typography>
