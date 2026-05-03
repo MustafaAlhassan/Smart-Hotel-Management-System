@@ -418,7 +418,6 @@ const DashboardPage = () => {
         mx: "auto",
       }}
     >
-      {/* Header */}
       <Box mb={5}>
         <Typography variant="h4" fontWeight={900} letterSpacing={-0.5}>
           Dashboard
@@ -433,7 +432,6 @@ const DashboardPage = () => {
         </Typography>
       </Box>
 
-      {/* Stat Cards */}
       <Box display="flex" justifyContent="center" mb={5}>
         <Box
           sx={{
@@ -450,7 +448,6 @@ const DashboardPage = () => {
         </Box>
       </Box>
 
-      {/* Admin / Manager View */}
       {!isHousekeeping && !isReceptionist && (
         <>
           <Grid container spacing={2.5} mb={3} justifyContent="center">
@@ -785,7 +782,6 @@ const DashboardPage = () => {
         </>
       )}
 
-      {/* Receptionist View */}
       {isReceptionist && (
         <Grid container spacing={2.5} mb={2.5} justifyContent="center">
           <Grid item xs={12} md={4} sx={{ minWidth: "300px" }}>
@@ -1024,7 +1020,6 @@ const DashboardPage = () => {
         </Grid>
       )}
 
-      {/* Table Section */}
       <TableContainer
         component={Paper}
         elevation={0}

@@ -5,7 +5,6 @@ import {
   useTheme,
   Collapse,
   Typography,
-  Chip,
   Box,
 } from "@mui/material";
 import List from "@mui/material/List";
@@ -31,6 +30,7 @@ import PersonAddIcon from "@mui/icons-material/PersonAdd";
 import RoomServiceIcon from "@mui/icons-material/RoomService";
 import React, { useState } from "react";
 import Logo from "../assets/Logo.png";
+import { DiscountRounded } from "@mui/icons-material";
 
 type UserRole = "ADMIN" | "MANAGER" | "RECEPTIONIST" | "HOUSEKEEPING";
 
@@ -51,6 +51,7 @@ export const PAGE_ROLES: Record<string, UserRole[]> = {
   "/guests": ["ADMIN", "MANAGER", "RECEPTIONIST"],
   "/services": ["ADMIN", "MANAGER"],
   "/invoices": ["ADMIN", "MANAGER", "RECEPTIONIST"],
+  "/discount": ["ADMIN", "MANAGER"],
   "/users": ["ADMIN", "MANAGER"],
   "/settings": ["ADMIN", "MANAGER", "RECEPTIONIST", "HOUSEKEEPING"],
 };
@@ -61,16 +62,6 @@ export const canAccess = (path: string, role: string | null): boolean => {
   if (!allowed) return true;
   const normalizedRole = role.toUpperCase() as UserRole;
   return allowed.includes(normalizedRole);
-};
-
-const ROLE_COLOR: Record<
-  string,
-  "success" | "primary" | "secondary" | "warning"
-> = {
-  ADMIN: "success",
-  MANAGER: "primary",
-  RECEPTIONIST: "secondary",
-  HOUSEKEEPING: "warning",
 };
 
 const Sidebar = ({
@@ -85,7 +76,6 @@ const Sidebar = ({
   const location = useLocation();
 
   const role = localStorage.getItem("role") as UserRole | null;
-  const username = localStorage.getItem("username") || "User";
 
   const [roomsOpen, setRoomsOpen] = useState(false);
   const [reservationsOpen, setReservationsOpen] = useState(false);
@@ -413,6 +403,23 @@ const Sidebar = ({
               </ListItemIcon>
               <ListItemText
                 primary="Invoices"
+                primaryTypographyProps={TEXT_PROPS}
+              />
+            </ListItemButton>
+          </ListItem>
+        )}
+
+        {allowed("/discount") && (
+          <ListItem disablePadding>
+            <ListItemButton
+              onClick={() => navigate("/discount")}
+              sx={navItemSx(isActive("/discount"))}
+            >
+              <ListItemIcon sx={{ minWidth: 36 }}>
+                <DiscountRounded sx={{ fontSize: 25, color: "white" }} />
+              </ListItemIcon>
+              <ListItemText
+                primary="discount"
                 primaryTypographyProps={TEXT_PROPS}
               />
             </ListItemButton>

@@ -3,6 +3,7 @@ import { BookingModel, BookingStatus } from "../models/bookingModel";
 import { ServiceModel, IService } from "../models/serviceModel";
 import { HotelModel } from "../models/hotelModel";
 import { UserModel } from "../models/userModel";
+import { validateDiscountCode } from "./hotelService";
 
 const calculateNights = (checkIn: Date, checkOut: Date): number => {
   const diffTime = Math.abs(
@@ -18,10 +19,45 @@ const getHotelTaxRate = async (): Promise<number> => {
   return hotel.taxRate;
 };
 
+const computeTotals = (
+  totalRoomCharge: number,
+  totalServiceCharge: number,
+  rawTaxAmount: number,
+  TAX_RATE: number,
+  discountAmount: number,
+): {
+  subtotal: number;
+  discountAmount: number;
+  taxableAmount: number;
+  taxAmount: number;
+  totalAmountDue: number;
+} => {
+  const subtotal = totalRoomCharge + totalServiceCharge;
+
+  const clampedDiscount = Math.min(discountAmount, subtotal);
+
+  const taxableAmount = parseFloat((subtotal - clampedDiscount).toFixed(2));
+  const taxAmount =
+    subtotal > 0
+      ? parseFloat(((rawTaxAmount / subtotal) * taxableAmount).toFixed(2))
+      : 0;
+
+  const totalAmountDue = parseFloat((taxableAmount + taxAmount).toFixed(2));
+
+  return {
+    subtotal: parseFloat(subtotal.toFixed(2)),
+    discountAmount: parseFloat(clampedDiscount.toFixed(2)),
+    taxableAmount,
+    taxAmount,
+    totalAmountDue,
+  };
+};
+
 export const createInvoice = async (
   bookingId: string,
   createdBy: string,
   serviceRequestItems: { serviceId: string; quantity: number }[] = [],
+  discountCode?: string,
 ) => {
   const existingInvoice = await InvoiceModel.findOne({ booking: bookingId });
   if (existingInvoice) {
@@ -48,19 +84,21 @@ export const createInvoice = async (
   const nights = calculateNights(booking.checkInDate, booking.checkOutDate);
   const totalRoomCharge = roomPrice * nights;
 
-  let totalTaxAmount = totalRoomCharge * TAX_RATE;
+  let rawTaxAmount = totalRoomCharge * TAX_RATE; // room is always taxable
   let totalServiceCharge = 0;
   const processedServices: IInvoiceServiceItem[] = [];
 
   for (const item of serviceRequestItems) {
-    const serviceDoc = (await ServiceModel.findById(item.serviceId)) as IService;
+    const serviceDoc = (await ServiceModel.findById(
+      item.serviceId,
+    )) as IService;
     if (!serviceDoc) throw new Error(`Service not found: ${item.serviceId}`);
 
     const itemTotal = serviceDoc.price * item.quantity;
     totalServiceCharge += itemTotal;
 
     if (serviceDoc.isTaxable) {
-      totalTaxAmount += itemTotal * TAX_RATE;
+      rawTaxAmount += itemTotal * TAX_RATE;
     }
 
     processedServices.push({
@@ -72,7 +110,39 @@ export const createInvoice = async (
     });
   }
 
-  const totalAmountDue = totalRoomCharge + totalServiceCharge + totalTaxAmount;
+  let appliedDiscount: {
+    code: string;
+    type: "percentage" | "fixed";
+    value: number;
+    discountAmount: number;
+  } | null = null;
+  let discountAmount = 0;
+
+  if (discountCode) {
+    const subtotal = totalRoomCharge + totalServiceCharge;
+    const result = await validateDiscountCode(discountCode, subtotal);
+
+    await HotelModel.updateOne(
+      { "discountCodes.code": result.discountCode.code },
+      { $inc: { "discountCodes.$.usedCount": 1 } },
+    );
+
+    discountAmount = result.discountAmount;
+    appliedDiscount = {
+      code: result.discountCode.code,
+      type: result.discountCode.type,
+      value: result.discountCode.value,
+      discountAmount: result.discountAmount,
+    };
+  }
+
+  const totals = computeTotals(
+    totalRoomCharge,
+    totalServiceCharge,
+    rawTaxAmount,
+    TAX_RATE,
+    discountAmount,
+  );
 
   const newInvoice = new InvoiceModel({
     booking: bookingId,
@@ -80,8 +150,12 @@ export const createInvoice = async (
     usedServices: processedServices,
     totalRoomCharge,
     totalServiceCharge,
-    taxAmount: totalTaxAmount,
-    totalAmountDue,
+    subtotal: totals.subtotal,
+    appliedDiscount,
+    discountAmount: totals.discountAmount,
+    taxableAmount: totals.taxableAmount,
+    taxAmount: totals.taxAmount,
+    totalAmountDue: totals.totalAmountDue,
     paymentStatus: "Pending",
   });
 
@@ -129,10 +203,6 @@ export const updateInvoiceStatus = async (
 
   if (!invoice) throw new Error("Invoice not found");
 
-  if (paymentStatus === "Paid" && invoice.booking) {
-    const booking: any = invoice.booking;
-  }
-
   return invoice;
 };
 
@@ -148,10 +218,11 @@ export const addServiceToInvoice = async (
   ]);
 
   if (!invoice) throw new Error("Invoice not found");
+  if (invoice.paymentStatus === "Paid")
+    throw new Error("Cannot add services to a paid invoice.");
   if (!serviceDoc) throw new Error("Service not found");
 
   const itemTotal = serviceDoc.price * quantity;
-  const taxOnItem = serviceDoc.isTaxable ? itemTotal * TAX_RATE : 0;
 
   invoice.usedServices.push({
     service: serviceDoc._id,
@@ -165,9 +236,129 @@ export const addServiceToInvoice = async (
     (sum, item) => sum + item.total,
     0,
   );
-  invoice.taxAmount += taxOnItem;
-  invoice.totalAmountDue =
-    invoice.totalRoomCharge + invoice.totalServiceCharge + invoice.taxAmount;
+
+  const rawTaxAmount =
+    invoice.totalRoomCharge * TAX_RATE +
+    invoice.usedServices.reduce((sum, item) => {
+      return sum;
+    }, 0) +
+    (serviceDoc.isTaxable ? itemTotal * TAX_RATE : 0) +
+    (invoice.taxableAmount > 0
+      ? (invoice.taxAmount / invoice.taxableAmount) *
+        (invoice.subtotal - invoice.totalRoomCharge * TAX_RATE)
+      : 0);
+
+  const correctRawTax =
+    invoice.totalRoomCharge * TAX_RATE +
+    (serviceDoc.isTaxable ? itemTotal * TAX_RATE : 0) +
+    invoice.taxAmount;
+
+  const totals = computeTotals(
+    invoice.totalRoomCharge,
+    invoice.totalServiceCharge,
+    correctRawTax,
+    TAX_RATE,
+    invoice.discountAmount,
+  );
+
+  invoice.subtotal = totals.subtotal;
+  invoice.taxableAmount = totals.taxableAmount;
+  invoice.taxAmount = totals.taxAmount;
+  invoice.totalAmountDue = totals.totalAmountDue;
+
+  return await invoice.save();
+};
+
+export const applyDiscountToInvoice = async (
+  invoiceId: string,
+  discountCode: string,
+) => {
+  const invoice = await InvoiceModel.findById(invoiceId);
+  if (!invoice) throw new Error("Invoice not found");
+
+  if (invoice.paymentStatus === "Paid") {
+    throw new Error("Cannot apply a discount to a paid invoice.");
+  }
+
+  if (invoice.appliedDiscount) {
+    throw new Error(
+      `A discount code "${invoice.appliedDiscount.code}" is already applied to this invoice.`,
+    );
+  }
+
+  const result = await validateDiscountCode(discountCode, invoice.subtotal);
+
+  await HotelModel.updateOne(
+    { "discountCodes.code": result.discountCode.code },
+    { $inc: { "discountCodes.$.usedCount": 1 } },
+  );
+
+  const recoveredRawTax =
+    invoice.taxableAmount > 0
+      ? (invoice.taxAmount / invoice.taxableAmount) * invoice.subtotal
+      : invoice.taxAmount;
+
+  const TAX_RATE = await getHotelTaxRate();
+
+  const totals = computeTotals(
+    invoice.totalRoomCharge,
+    invoice.totalServiceCharge,
+    recoveredRawTax,
+    TAX_RATE,
+    result.discountAmount,
+  );
+
+  invoice.appliedDiscount = {
+    code: result.discountCode.code,
+    type: result.discountCode.type,
+    value: result.discountCode.value,
+    discountAmount: result.discountAmount,
+  };
+  invoice.discountAmount = totals.discountAmount;
+  invoice.taxableAmount = totals.taxableAmount;
+  invoice.taxAmount = totals.taxAmount;
+  invoice.totalAmountDue = totals.totalAmountDue;
+
+  return await invoice.save();
+};
+
+export const removeDiscountFromInvoice = async (invoiceId: string) => {
+  const invoice = await InvoiceModel.findById(invoiceId);
+  if (!invoice) throw new Error("Invoice not found");
+
+  if (invoice.paymentStatus === "Paid") {
+    throw new Error("Cannot remove a discount from a paid invoice.");
+  }
+
+  if (!invoice.appliedDiscount) {
+    throw new Error("No discount code is applied to this invoice.");
+  }
+
+  await HotelModel.updateOne(
+    { "discountCodes.code": invoice.appliedDiscount.code },
+    { $inc: { "discountCodes.$.usedCount": -1 } },
+  );
+
+  const recoveredRawTax =
+    invoice.taxableAmount > 0
+      ? (invoice.taxAmount / invoice.taxableAmount) * invoice.subtotal
+      : invoice.taxAmount;
+
+  const TAX_RATE = await getHotelTaxRate();
+
+  const totals = computeTotals(
+    invoice.totalRoomCharge,
+    invoice.totalServiceCharge,
+    recoveredRawTax,
+    TAX_RATE,
+    0,
+  );
+
+  invoice.appliedDiscount;
+  invoice.discountAmount = 0;
+  invoice.taxableAmount = totals.taxableAmount;
+  invoice.taxAmount = totals.taxAmount;
+  invoice.totalAmountDue = totals.totalAmountDue;
 
   return await invoice.save();
 };

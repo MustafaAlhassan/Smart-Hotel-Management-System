@@ -23,6 +23,7 @@ import RoomTypesPage from "./pages/RoomsManagement/RoomTypePage";
 import GuestsPage from "./pages/GuestsPage";
 import ServicesPage from "./pages/ServicesPage";
 import { HotelProvider } from "./context/HotelContext";
+import DiscountPage from "./pages/DiscountPage";
 
 const sidebarWidth = 290;
 
@@ -63,6 +64,7 @@ function App() {
                 <Route path="/services" element={<ServicesPage />} />
                 <Route path="/invoices" element={<InvoicesPage />} />
                 <Route path="/users" element={<UsersPage />} />
+                <Route path="/discount" element={<DiscountPage />} />
                 <Route path="/settings" element={<SettingsPage />} />
               </Route>
             </Route>

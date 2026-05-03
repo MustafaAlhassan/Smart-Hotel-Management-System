@@ -49,14 +49,14 @@ if (MONGODB_URI) {
   mongoose
     .connect(MONGODB_URI)
     .then(() => {
-      console.log("✅ Connected to MongoDB successfully!");
+      console.log("Connected to MongoDB successfully!");
       app.listen(PORT, () => {
-        console.log(`🚀 Server running on port ${PORT}`);
+        console.log(`Server running on port ${PORT}`);
       });
     })
     .catch((err) => {
-      console.error("❌ MongoDB connection error:", err);
+      console.error("MongoDB connection error:", err);
     });
 } else {
-  console.error("❌ MONGODB_URI is not defined in .env file!");
+  console.error("MONGODB_URI is not defined in .env file!");
 }

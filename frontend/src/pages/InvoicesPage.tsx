@@ -50,6 +50,7 @@ import {
   AttachMoney as AttachMoneyIcon,
   CheckCircleOutline as CheckCircleOutlineIcon,
   HourglassEmpty as HourglassEmptyIcon,
+  LocalOffer as LocalOfferIcon,
 } from "@mui/icons-material";
 import api from "../services/api";
 import { useHotel } from "../context/HotelContext";
@@ -88,6 +89,28 @@ export interface ICreatedBy {
   role: string;
 }
 
+export interface IDiscountCode {
+  _id: string;
+  code: string;
+  type: "percentage" | "fixed";
+  value: number;
+  description?: string;
+  minBookingAmount?: number;
+  maxDiscountAmount?: number;
+  usageLimit?: number;
+  usedCount: number;
+  validFrom?: string;
+  validUntil?: string;
+  isActive: boolean;
+}
+
+export interface IAppliedDiscount {
+  code: string;
+  type: "percentage" | "fixed";
+  value: number;
+  discountAmount: number;
+}
+
 export interface IInvoice {
   _id: string;
   booking: any;
@@ -95,6 +118,10 @@ export interface IInvoice {
   usedServices: IInvoiceServiceItem[];
   totalRoomCharge: number;
   totalServiceCharge: number;
+  subtotal: number;
+  appliedDiscount?: IAppliedDiscount | null;
+  discountAmount: number;
+  taxableAmount: number;
   taxAmount: number;
   totalAmountDue: number;
   paymentStatus: "Paid" | "Pending";
@@ -147,8 +174,13 @@ const PRINT_STYLES = `
       -webkit-print-color-adjust: exact !important;
       print-color-adjust: exact !important;
     }
+    #invoice-print-area .p-discount-row td {
+      background-color: #f0fdf4 !important;
+      color: #166534 !important;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
     #invoice-print-area .p-status-paid    { color: #16a34a !important; }
-    #invoice-print-area .p-status-partial { color: #0284c7 !important; }
     #invoice-print-area .p-status-pending { color: #d97706 !important; }
     .no-print { display: none !important; }
   }
@@ -362,15 +394,49 @@ const InvoiceIdBadge = ({ id }: { id: string }) => {
   );
 };
 
+const DiscountTag = ({ discount }: { discount: IAppliedDiscount }) => (
+  <Box
+    component="span"
+    sx={{
+      display: "inline-flex",
+      alignItems: "center",
+      gap: 0.5,
+      px: 1,
+      py: 0.35,
+      borderRadius: 20,
+      fontSize: "0.68rem",
+      fontWeight: 700,
+      bgcolor: "#f0fdf4",
+      color: "#15803d",
+      border: "1px solid #bbf7d0",
+      whiteSpace: "nowrap",
+    }}
+  >
+    <LocalOfferIcon sx={{ fontSize: 11 }} />
+    {discount.code}
+    <Box component="span" sx={{ opacity: 0.75, fontWeight: 600 }}>
+      {discount.type === "percentage"
+        ? `−${discount.value}%`
+        : `−$${discount.discountAmount.toFixed(2)}`}
+    </Box>
+  </Box>
+);
+
 const InvoicesPage = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const { hotel } = useHotel();
-
   const currency = hotel?.currency ?? "$";
+
+  const currentUserRole = (localStorage.getItem("role") ?? "").toLowerCase();
+  const canManageDiscount = ["admin", "manager"].includes(currentUserRole);
+  const isReceptionist = currentUserRole === "receptionist";
 
   const [invoices, setInvoices] = useState<IInvoice[]>([]);
   const [availableServices, setAvailableServices] = useState<IService[]>([]);
+  const [availableDiscountCodes, setAvailableDiscountCodes] = useState<
+    IDiscountCode[]
+  >([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
 
@@ -388,12 +454,15 @@ const InvoicesPage = () => {
   const [openPaymentDialog, setOpenPaymentDialog] = useState(false);
   const [openPrintDialog, setOpenPrintDialog] = useState(false);
   const [openAddServiceDialog, setOpenAddServiceDialog] = useState(false);
+  const [openDiscountDialog, setOpenDiscountDialog] = useState(false);
 
   const [currentInvoice, setCurrentInvoice] = useState<IInvoice | null>(null);
   const [currentGuest, setCurrentGuest] = useState<IGuest | null>(null);
   const [printLoading, setPrintLoading] = useState(false);
   const [addServiceLoading, setAddServiceLoading] = useState(false);
   const [updatePaymentLoading, setUpdatePaymentLoading] = useState(false);
+  const [discountLoading, setDiscountLoading] = useState(false);
+  const [discountCodeInput, setDiscountCodeInput] = useState("");
 
   const [paymentData, setPaymentData] = useState({
     paymentStatus: "Pending",
@@ -410,7 +479,6 @@ const InvoicesPage = () => {
     message: "",
     severity: "success" as "success" | "error",
   });
-
   const showSnackbar = (message: string, severity: "success" | "error") =>
     setSnackbar({ open: true, message, severity });
 
@@ -474,15 +542,15 @@ const InvoicesPage = () => {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const [invoicesResult, servicesResult] = await Promise.allSettled([
-        api.get("/invoices"),
-        api.get("/services"),
-      ]);
+      const [invoicesResult, servicesResult, discountsResult] =
+        await Promise.allSettled([
+          api.get("/invoices"),
+          api.get("/services"),
+          api.get("/hotel"),
+        ]);
       if (invoicesResult.status === "rejected") {
-        const err = invoicesResult.reason;
         showSnackbar(
-          err?.response?.data?.message ||
-            err?.message ||
+          invoicesResult.reason?.response?.data?.message ||
             "Failed to fetch invoices",
           "error",
         );
@@ -493,6 +561,17 @@ const InvoicesPage = () => {
       if (servicesResult.status === "fulfilled") {
         const sData = servicesResult.value.data;
         setAvailableServices(sData.data || sData);
+      }
+      if (discountsResult.status === "fulfilled") {
+        const hotelData = discountsResult.value.data;
+        const codes: IDiscountCode[] = hotelData?.discountCodes ?? [];
+        const active = codes.filter((c) => {
+          if (!c.isActive) return false;
+          if (c.validUntil && new Date(c.validUntil) < new Date()) return false;
+          if (c.usageLimit != null && c.usedCount >= c.usageLimit) return false;
+          return true;
+        });
+        setAvailableDiscountCodes(active);
       }
       resolveGuestsForInvoices(fetchedInvoices);
     } catch (error: any) {
@@ -570,15 +649,10 @@ const InvoicesPage = () => {
     page * PAGE_SIZE,
   );
 
-  const getStatusPrintClass = (status: string) => {
-    if (status === "Paid") return "p-status-paid";
-    return "p-status-pending";
-  };
-
-  const getStatusHexColor = (status: string) => {
-    if (status === "Paid") return "#16a34a";
-    return "#d97706";
-  };
+  const getStatusPrintClass = (status: string) =>
+    status === "Paid" ? "p-status-paid" : "p-status-pending";
+  const getStatusHexColor = (status: string) =>
+    status === "Paid" ? "#16a34a" : "#d97706";
 
   const handleOpenPayment = (invoice: IInvoice) => {
     setCurrentInvoice(invoice);
@@ -602,9 +676,7 @@ const InvoicesPage = () => {
         const guest = await resolveGuest(invoice.booking);
         setCurrentGuest(guest);
       }
-    } catch (error) {
-      console.error("Failed to fetch invoice details", error);
-    } finally {
+    } catch {
       setPrintLoading(false);
     }
   };
@@ -614,6 +686,12 @@ const InvoicesPage = () => {
     setServiceData({ serviceId: "", quantity: 1 });
     setSelectedService(null);
     setOpenAddServiceDialog(true);
+  };
+
+  const handleOpenDiscount = (invoice: IInvoice) => {
+    setCurrentInvoice(invoice);
+    setDiscountCodeInput("");
+    setOpenDiscountDialog(true);
   };
 
   const handleUpdatePayment = async () => {
@@ -640,10 +718,7 @@ const InvoicesPage = () => {
     try {
       const response = await api.patch(
         `/invoices/${currentInvoice._id}/services`,
-        {
-          serviceId: serviceData.serviceId,
-          quantity: serviceData.quantity,
-        },
+        { serviceId: serviceData.serviceId, quantity: serviceData.quantity },
       );
       const updated: IInvoice = response.data.data || response.data;
       setCurrentInvoice(updated);
@@ -661,6 +736,57 @@ const InvoicesPage = () => {
       );
     } finally {
       setAddServiceLoading(false);
+    }
+  };
+
+  const handleApplyDiscount = async (code: string) => {
+    if (!currentInvoice) return;
+    setDiscountLoading(true);
+    try {
+      const response = await api.patch(
+        `/invoices/${currentInvoice._id}/discount`,
+        { discountCode: code },
+      );
+      const updated: IInvoice = response.data.invoice || response.data;
+      setInvoices((prev) =>
+        prev.map((inv) => (inv._id === updated._id ? updated : inv)),
+      );
+      setCurrentInvoice(updated);
+      showSnackbar("Discount applied successfully", "success");
+      setOpenDiscountDialog(false);
+      fetchData();
+    } catch (error: any) {
+      showSnackbar(
+        error.response?.data?.message || "Failed to apply discount",
+        "error",
+      );
+    } finally {
+      setDiscountLoading(false);
+    }
+  };
+
+  const handleRemoveDiscount = async () => {
+    if (!currentInvoice) return;
+    setDiscountLoading(true);
+    try {
+      const response = await api.delete(
+        `/invoices/${currentInvoice._id}/discount`,
+      );
+      const updated: IInvoice = response.data.invoice || response.data;
+      setInvoices((prev) =>
+        prev.map((inv) => (inv._id === updated._id ? updated : inv)),
+      );
+      setCurrentInvoice(updated);
+      showSnackbar("Discount removed successfully", "success");
+      setOpenDiscountDialog(false);
+      fetchData();
+    } catch (error: any) {
+      showSnackbar(
+        error.response?.data?.message || "Failed to remove discount",
+        "error",
+      );
+    } finally {
+      setDiscountLoading(false);
     }
   };
 
@@ -682,6 +808,63 @@ const InvoicesPage = () => {
       </Box>
     );
   }
+
+  const renderDiscountCell = (invoice: IInvoice) => {
+    const isPaid = invoice.paymentStatus === "Paid";
+    const hasDiscount = !!invoice.appliedDiscount;
+
+    if (isReceptionist) {
+      return hasDiscount ? (
+        <DiscountTag discount={invoice.appliedDiscount!} />
+      ) : (
+        <Typography variant="caption" color="text.disabled" fontSize="0.72rem">
+          —
+        </Typography>
+      );
+    }
+
+    if (canManageDiscount) {
+      return (
+        <Tooltip
+          title={
+            isPaid
+              ? "Cannot modify discount on paid invoice"
+              : hasDiscount
+                ? "Manage discount"
+                : "Apply discount"
+          }
+          arrow
+        >
+          <span>
+            <IconButton
+              size="small"
+              disabled={isPaid}
+              onClick={() => handleOpenDiscount(invoice)}
+              sx={{
+                width: 32,
+                height: 32,
+                borderRadius: 1.5,
+                border: "1px solid",
+                borderColor: hasDiscount ? "#bbf7d0" : "divider",
+                color: hasDiscount ? "#15803d" : "text.secondary",
+                bgcolor: hasDiscount ? "#f0fdf4" : "transparent",
+                "&:hover": {
+                  bgcolor: hasDiscount ? "#dcfce7" : "#f8fafc",
+                  borderColor: hasDiscount ? "#86efac" : "text.secondary",
+                },
+                "&.Mui-disabled": { opacity: 0.35 },
+                transition: "all 0.15s",
+              }}
+            >
+              <LocalOfferIcon sx={{ fontSize: 15 }} />
+            </IconButton>
+          </span>
+        </Tooltip>
+      );
+    }
+
+    return null;
+  };
 
   return (
     <Box
@@ -729,7 +912,6 @@ const InvoicesPage = () => {
       </Box>
 
       <Stack
-        direction={{ xs: "grid", sm: "row" } as any}
         sx={{
           display: "grid",
           gridTemplateColumns: { xs: "1fr 1fr", sm: "repeat(4, 1fr)" },
@@ -745,14 +927,16 @@ const InvoicesPage = () => {
           iconBg="#eff6ff"
           iconColor="#2563eb"
         />
-        <StatCard
-          icon={<AttachMoneyIcon fontSize="small" />}
-          label="Total Revenue"
-          value={`${currency}${stats.revenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-          iconBg="#f0fdf4"
-          iconColor="#16a34a"
-          valueColor="#15803d"
-        />
+        {!isReceptionist && (
+          <StatCard
+            icon={<AttachMoneyIcon fontSize="small" />}
+            label="Total Revenue"
+            value={`${currency}${stats.revenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+            iconBg="#f0fdf4"
+            iconColor="#16a34a"
+            valueColor="#15803d"
+          />
+        )}
         <StatCard
           icon={<CheckCircleOutlineIcon fontSize="small" />}
           label="Paid"
@@ -804,7 +988,6 @@ const InvoicesPage = () => {
             </Button>
           )}
         </Box>
-
         <Stack
           direction={{ xs: "column", sm: "row" }}
           spacing={2}
@@ -839,7 +1022,6 @@ const InvoicesPage = () => {
               ) : null,
             }}
           />
-
           <FormControl
             size="small"
             sx={{
@@ -895,7 +1077,6 @@ const InvoicesPage = () => {
               </MenuItem>
             </Select>
           </FormControl>
-
           <FormControl
             size="small"
             sx={{
@@ -956,7 +1137,6 @@ const InvoicesPage = () => {
             </Select>
           </FormControl>
         </Stack>
-
         {hasActiveFilters && (
           <Box display="flex" gap={1} flexWrap="wrap" mt={1.5}>
             {filterInvoiceId && (
@@ -1006,6 +1186,7 @@ const InvoicesPage = () => {
               {paginated.map((invoice) => {
                 const guest = invoiceGuests[invoice._id];
                 const isGuestLoading = guestsLoading[invoice._id];
+                const hasDiscount = !!invoice.appliedDiscount;
                 return (
                   <Card
                     key={invoice._id}
@@ -1101,6 +1282,30 @@ const InvoicesPage = () => {
                           </Box>
                           <CreatedByBadge user={invoice.createdBy} />
                         </Box>
+
+                        {(canManageDiscount ||
+                          (isReceptionist && hasDiscount)) && (
+                          <Box
+                            display="flex"
+                            justifyContent="space-between"
+                            alignItems="center"
+                          >
+                            <Box display="flex" alignItems="center" gap={0.8}>
+                              <LocalOfferIcon
+                                sx={{ fontSize: 14, opacity: 0.55 }}
+                              />
+                              <Typography
+                                variant="caption"
+                                color="text.secondary"
+                                fontWeight={600}
+                              >
+                                DISCOUNT
+                              </Typography>
+                            </Box>
+                            {renderDiscountCell(invoice)}
+                          </Box>
+                        )}
+
                         <Divider />
                         <Box
                           display="flex"
@@ -1114,15 +1319,36 @@ const InvoicesPage = () => {
                           >
                             TOTAL
                           </Typography>
-                          <Typography
-                            variant="h6"
-                            fontWeight={900}
-                            color="success.main"
-                            lineHeight={1}
-                          >
-                            {currency}
-                            {invoice.totalAmountDue.toFixed(2)}
-                          </Typography>
+                          <Box textAlign="right">
+                            {hasDiscount && (
+                              <Typography
+                                variant="caption"
+                                sx={{
+                                  textDecoration: "line-through",
+                                  color: "text.disabled",
+                                  display: "block",
+                                  fontSize: "0.7rem",
+                                }}
+                              >
+                                {currency}
+                                {(
+                                  invoice.totalAmountDue +
+                                  (invoice.discountAmount ?? 0)
+                                ).toFixed(2)}
+                              </Typography>
+                            )}
+                            <Typography
+                              variant="h6"
+                              fontWeight={900}
+                              color={
+                                hasDiscount ? "error.main" : "success.main"
+                              }
+                              lineHeight={1}
+                            >
+                              {currency}
+                              {invoice.totalAmountDue.toFixed(2)}
+                            </Typography>
+                          </Box>
                         </Box>
                       </Stack>
                       <Stack
@@ -1131,6 +1357,35 @@ const InvoicesPage = () => {
                         justifyContent="flex-end"
                         mt={1.5}
                       >
+                        {(canManageDiscount || isReceptionist) && (
+                          <Tooltip
+                            title={
+                              invoice.paymentStatus === "Paid"
+                                ? "Paid invoice"
+                                : "Discount"
+                            }
+                          >
+                            <span>
+                              <IconButton
+                                size="small"
+                                disabled={invoice.paymentStatus === "Paid"}
+                                onClick={() => handleOpenDiscount(invoice)}
+                                sx={{
+                                  bgcolor: hasDiscount
+                                    ? "#f0fdf4"
+                                    : "action.hover",
+                                  borderRadius: "8px",
+                                  color: hasDiscount
+                                    ? "#15803d"
+                                    : "warning.main",
+                                  "&.Mui-disabled": { opacity: 0.35 },
+                                }}
+                              >
+                                <LocalOfferIcon fontSize="small" />
+                              </IconButton>
+                            </span>
+                          </Tooltip>
+                        )}
                         <Tooltip title="Add service">
                           <IconButton
                             size="small"
@@ -1194,335 +1449,682 @@ const InvoicesPage = () => {
           )}
         </Box>
       ) : (
-        <>
-          <TableContainer
-            component={Paper}
-            elevation={0}
-            sx={{
-              borderRadius: 3,
-              border: `1px solid ${theme.palette.divider}`,
-              overflowX: "auto",
-              "@media print": { display: "none" },
-            }}
-          >
-            <Table sx={{ minWidth: 900 }}>
-              <TableHead>
-                <TableRow
-                  sx={{
-                    bgcolor:
-                      theme.palette.mode === "dark"
-                        ? "rgba(255,255,255,0.04)"
-                        : "#f8fafc",
-                    "& th": {
-                      borderBottom: `2px solid ${theme.palette.divider}`,
-                    },
-                  }}
-                >
-                  {[
-                    "Invoice ID",
-                    "Guest",
-                    "Issue Date",
-                    "Created By",
-                    "Amount",
-                    "Status",
-                    "Actions",
-                  ].map((label, i) => (
-                    <TableCell
-                      key={label}
-                      align={
-                        i === 4
-                          ? "right"
-                          : i === 5
-                            ? "center"
-                            : i === 6
-                              ? "right"
-                              : "left"
-                      }
+        <TableContainer
+          component={Paper}
+          elevation={0}
+          sx={{
+            borderRadius: 3,
+            border: `1px solid ${theme.palette.divider}`,
+            overflowX: "auto",
+            "@media print": { display: "none" },
+          }}
+        >
+          <Table sx={{ minWidth: 900 }}>
+            <TableHead>
+              <TableRow
+                sx={{
+                  bgcolor:
+                    theme.palette.mode === "dark"
+                      ? "rgba(255,255,255,0.04)"
+                      : "#f8fafc",
+                  "& th": {
+                    borderBottom: `2px solid ${theme.palette.divider}`,
+                  },
+                }}
+              >
+                {[
+                  "Invoice ID",
+                  "Guest",
+                  "Issue Date",
+                  "Created By",
+                  "Amount",
+                  "Status",
+                  "Actions",
+                ].map((label, i) => (
+                  <TableCell
+                    key={label}
+                    align={
+                      i === 5
+                        ? "right"
+                        : i === 6
+                          ? "center"
+                          : i === 7
+                            ? "right"
+                            : "left"
+                    }
+                    sx={{
+                      py: 1.5,
+                      fontWeight: 700,
+                      fontSize: "0.7rem",
+                      letterSpacing: "0.06em",
+                      textTransform: "uppercase",
+                      color: "text.secondary",
+                      whiteSpace: "nowrap",
+                      ...(i === 0 && { pl: 2.5 }),
+                      ...(i === 7 && { pr: 2.5 }),
+                    }}
+                  >
+                    {label}
+                  </TableCell>
+                ))}
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {filteredInvoices.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={8} align="center" sx={{ py: 8 }}>
+                    <Box
+                      display="flex"
+                      flexDirection="column"
+                      alignItems="center"
+                      gap={1}
+                    >
+                      <ReceiptIcon
+                        sx={{ fontSize: 40, color: "text.disabled" }}
+                      />
+                      <Typography
+                        variant="body1"
+                        color="text.secondary"
+                        fontWeight={500}
+                      >
+                        No invoices found
+                      </Typography>
+                      {hasActiveFilters && (
+                        <Button
+                          size="small"
+                          onClick={handleClearFilters}
+                          sx={{ mt: 0.5, textTransform: "none" }}
+                        >
+                          Clear filters
+                        </Button>
+                      )}
+                    </Box>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                paginated.map((invoice, rowIdx) => {
+                  const guest = invoiceGuests[invoice._id];
+                  const isGuestLoading = guestsLoading[invoice._id];
+                  const isEven = rowIdx % 2 === 0;
+                  const hasDiscount = !!invoice.appliedDiscount;
+
+                  return (
+                    <TableRow
+                      key={invoice._id}
                       sx={{
-                        py: 1.5,
-                        fontWeight: 700,
-                        fontSize: "0.7rem",
-                        letterSpacing: "0.06em",
-                        textTransform: "uppercase",
-                        color: "text.secondary",
-                        whiteSpace: "nowrap",
-                        ...(i === 0 && { pl: 2.5 }),
-                        ...(i === 6 && { pr: 2.5 }),
+                        bgcolor: isEven
+                          ? "transparent"
+                          : theme.palette.mode === "dark"
+                            ? "rgba(255,255,255,0.015)"
+                            : "rgba(0,0,0,0.012)",
+                        "&:last-child td": { border: 0 },
+                        "&:hover": {
+                          bgcolor:
+                            theme.palette.mode === "dark"
+                              ? "rgba(255,255,255,0.06)"
+                              : "rgba(59,130,246,0.04)",
+                        },
+                        transition: "background 0.12s",
+                        "& td": {
+                          borderBottom: `1px solid ${theme.palette.divider}`,
+                        },
                       }}
                     >
-                      {label}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              </TableHead>
-
-              <TableBody>
-                {filteredInvoices.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={7} align="center" sx={{ py: 8 }}>
-                      <Box
-                        display="flex"
-                        flexDirection="column"
-                        alignItems="center"
-                        gap={1}
-                      >
-                        <ReceiptIcon
-                          sx={{ fontSize: 40, color: "text.disabled" }}
-                        />
-                        <Typography
-                          variant="body1"
-                          color="text.secondary"
-                          fontWeight={500}
-                        >
-                          No invoices found
-                        </Typography>
-                        {hasActiveFilters && (
-                          <Button
-                            size="small"
-                            onClick={handleClearFilters}
-                            sx={{ mt: 0.5, textTransform: "none" }}
-                          >
-                            Clear filters
-                          </Button>
-                        )}
-                      </Box>
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  paginated.map((invoice, rowIdx) => {
-                    const guest = invoiceGuests[invoice._id];
-                    const isGuestLoading = guestsLoading[invoice._id];
-                    const isEven = rowIdx % 2 === 0;
-
-                    return (
-                      <TableRow
-                        key={invoice._id}
-                        sx={{
-                          bgcolor: isEven
-                            ? "transparent"
-                            : theme.palette.mode === "dark"
-                              ? "rgba(255,255,255,0.015)"
-                              : "rgba(0,0,0,0.012)",
-                          "&:last-child td": { border: 0 },
-                          "&:hover": {
-                            bgcolor:
-                              theme.palette.mode === "dark"
-                                ? "rgba(255,255,255,0.06)"
-                                : "rgba(59,130,246,0.04)",
-                          },
-                          transition: "background 0.12s",
-                          "& td": {
-                            borderBottom: `1px solid ${theme.palette.divider}`,
-                          },
-                        }}
-                      >
-                        <TableCell sx={{ pl: 2.5, py: 1.75 }}>
-                          <InvoiceIdBadge id={invoice._id} />
-                        </TableCell>
-
-                        <TableCell sx={{ py: 1.75 }}>
-                          {isGuestLoading ? (
-                            <Box>
-                              <Skeleton
-                                variant="text"
-                                width={130}
-                                height={18}
-                              />
-                              <Skeleton
-                                variant="text"
-                                width={90}
-                                height={14}
-                                sx={{ mt: 0.5 }}
-                              />
-                            </Box>
-                          ) : guest ? (
-                            <Box>
-                              <Typography
-                                variant="body2"
-                                fontWeight={600}
-                                fontSize="0.85rem"
-                                lineHeight={1.3}
-                              >
-                                {guest.firstName} {guest.lastName}
-                              </Typography>
-                              <Typography
-                                variant="caption"
-                                color="text.secondary"
-                                fontSize="0.72rem"
-                              >
-                                {guest.email}
-                              </Typography>
-                            </Box>
-                          ) : (
+                      <TableCell sx={{ pl: 2.5, py: 1.75 }}>
+                        <InvoiceIdBadge id={invoice._id} />
+                      </TableCell>
+                      <TableCell sx={{ py: 1.75 }}>
+                        {isGuestLoading ? (
+                          <Box>
+                            <Skeleton variant="text" width={130} height={18} />
+                            <Skeleton
+                              variant="text"
+                              width={90}
+                              height={14}
+                              sx={{ mt: 0.5 }}
+                            />
+                          </Box>
+                        ) : guest ? (
+                          <Box>
                             <Typography
                               variant="body2"
-                              color="text.disabled"
-                              fontSize="0.82rem"
+                              fontWeight={600}
+                              fontSize="0.85rem"
+                              lineHeight={1.3}
                             >
-                              Unknown Guest
+                              {guest.firstName} {guest.lastName}
                             </Typography>
-                          )}
-                        </TableCell>
-
-                        <TableCell sx={{ py: 1.75 }}>
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                              fontSize="0.72rem"
+                            >
+                              {guest.email}
+                            </Typography>
+                          </Box>
+                        ) : (
                           <Typography
                             variant="body2"
-                            color="text.secondary"
+                            color="text.disabled"
                             fontSize="0.82rem"
                           >
-                            {new Date(invoice.issueDate).toLocaleDateString(
-                              undefined,
-                              {
-                                year: "numeric",
-                                month: "short",
-                                day: "numeric",
-                              },
-                            )}
+                            Unknown Guest
                           </Typography>
-                        </TableCell>
-
-                        <TableCell sx={{ py: 1.75 }}>
-                          <CreatedByBadge user={invoice.createdBy} />
-                        </TableCell>
-
-                        <TableCell align="right" sx={{ py: 1.75 }}>
+                        )}
+                      </TableCell>
+                      <TableCell sx={{ py: 1.75 }}>
+                        <Typography
+                          variant="body2"
+                          color="text.secondary"
+                          fontSize="0.82rem"
+                        >
+                          {new Date(invoice.issueDate).toLocaleDateString(
+                            undefined,
+                            { year: "numeric", month: "short", day: "numeric" },
+                          )}
+                        </Typography>
+                      </TableCell>
+                      <TableCell sx={{ py: 1.75 }}>
+                        <CreatedByBadge user={invoice.createdBy} />
+                      </TableCell>
+                      <TableCell align="right" sx={{ py: 1.75 }}>
+                        <Box>
+                          {hasDiscount && (
+                            <Typography
+                              variant="caption"
+                              sx={{
+                                textDecoration: "line-through",
+                                color: "text.disabled",
+                                display: "block",
+                                fontSize: "0.7rem",
+                              }}
+                            >
+                              {currency}
+                              {(
+                                invoice.totalAmountDue +
+                                (invoice.discountAmount ?? 0)
+                              ).toFixed(2)}
+                            </Typography>
+                          )}
                           <Typography
                             variant="body2"
                             fontWeight={700}
                             fontSize="0.9rem"
-                            color="text.primary"
+                            color={hasDiscount ? "error.main" : "text.primary"}
                           >
                             {currency}
                             {invoice.totalAmountDue.toFixed(2)}
                           </Typography>
-                        </TableCell>
-
-                        <TableCell align="center" sx={{ py: 1.75 }}>
-                          <StatusChip status={invoice.paymentStatus} />
-                        </TableCell>
-
-                        <TableCell align="right" sx={{ py: 1.75, pr: 2.5 }}>
-                          <Stack
-                            direction="row"
-                            justifyContent="flex-end"
-                            spacing={0.75}
-                          >
-                            <Tooltip title="Add service" arrow>
-                              <IconButton
-                                size="small"
-                                onClick={() => handleOpenAddService(invoice)}
-                                sx={{
-                                  width: 32,
-                                  height: 32,
-                                  borderRadius: 1.5,
-                                  border: "1px solid",
-                                  borderColor: "divider",
-                                  color: "#16a34a",
-                                  bgcolor: "transparent",
-                                  "&:hover": {
-                                    bgcolor: "#f0fdf4",
-                                    borderColor: "#bbf7d0",
-                                  },
-                                  transition: "all 0.15s",
-                                }}
-                              >
-                                <AddCircleOutlineIcon sx={{ fontSize: 16 }} />
-                              </IconButton>
+                        </Box>
+                      </TableCell>
+                      <TableCell align="center" sx={{ py: 1.75 }}>
+                        <StatusChip status={invoice.paymentStatus} />
+                      </TableCell>
+                      <TableCell align="right" sx={{ py: 1.75, pr: 2.5 }}>
+                        <Stack
+                          direction="row"
+                          justifyContent="flex-end"
+                          spacing={0.75}
+                        >
+                          {(canManageDiscount || isReceptionist) && (
+                            <Tooltip
+                              title={
+                                invoice.paymentStatus === "Paid"
+                                  ? "Paid invoice"
+                                  : hasDiscount
+                                    ? "Manage discount"
+                                    : "Apply discount"
+                              }
+                              arrow
+                            >
+                              <span>
+                                <IconButton
+                                  size="small"
+                                  disabled={invoice.paymentStatus === "Paid"}
+                                  onClick={() => handleOpenDiscount(invoice)}
+                                  sx={{
+                                    width: 32,
+                                    height: 32,
+                                    borderRadius: 1.5,
+                                    border: "1px solid",
+                                    borderColor: hasDiscount
+                                      ? "#bbf7d0"
+                                      : "divider",
+                                    color: hasDiscount
+                                      ? "#15803d"
+                                      : "text.secondary",
+                                    bgcolor: hasDiscount
+                                      ? "#f0fdf4"
+                                      : "transparent",
+                                    "&:hover": {
+                                      bgcolor: hasDiscount
+                                        ? "#dcfce7"
+                                        : "#f8fafc",
+                                      borderColor: hasDiscount
+                                        ? "#86efac"
+                                        : "divider",
+                                    },
+                                    "&.Mui-disabled": { opacity: 0.35 },
+                                    transition: "all 0.15s",
+                                  }}
+                                >
+                                  <LocalOfferIcon sx={{ fontSize: 15 }} />
+                                </IconButton>
+                              </span>
                             </Tooltip>
+                          )}
+                          <Tooltip title="Add service" arrow>
+                            <IconButton
+                              size="small"
+                              onClick={() => handleOpenAddService(invoice)}
+                              sx={{
+                                width: 32,
+                                height: 32,
+                                borderRadius: 1.5,
+                                border: "1px solid",
+                                borderColor: "divider",
+                                color: "#16a34a",
+                                bgcolor: "transparent",
+                                "&:hover": {
+                                  bgcolor: "#f0fdf4",
+                                  borderColor: "#bbf7d0",
+                                },
+                                transition: "all 0.15s",
+                              }}
+                            >
+                              <AddCircleOutlineIcon sx={{ fontSize: 16 }} />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Update payment" arrow>
+                            <IconButton
+                              size="small"
+                              onClick={() => handleOpenPayment(invoice)}
+                              sx={{
+                                width: 32,
+                                height: 32,
+                                borderRadius: 1.5,
+                                border: "1px solid",
+                                borderColor: "divider",
+                                color: "#2563eb",
+                                bgcolor: "transparent",
+                                "&:hover": {
+                                  bgcolor: "#eff6ff",
+                                  borderColor: "#bfdbfe",
+                                },
+                                transition: "all 0.15s",
+                              }}
+                            >
+                              <PaymentIcon sx={{ fontSize: 16 }} />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="View invoice" arrow>
+                            <IconButton
+                              size="small"
+                              onClick={() => handleOpenPrint(invoice)}
+                              sx={{
+                                width: 32,
+                                height: 32,
+                                borderRadius: 1.5,
+                                border: "1px solid",
+                                borderColor: "divider",
+                                color: "#7c3aed",
+                                bgcolor: "transparent",
+                                "&:hover": {
+                                  bgcolor: "#f5f3ff",
+                                  borderColor: "#ddd6fe",
+                                },
+                                transition: "all 0.15s",
+                              }}
+                            >
+                              <VisibilityIcon sx={{ fontSize: 16 }} />
+                            </IconButton>
+                          </Tooltip>
+                        </Stack>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
+              )}
+            </TableBody>
+          </Table>
+          {totalPages > 1 && (
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                px: 2.5,
+                py: 1.5,
+                borderTop: `1px solid ${theme.palette.divider}`,
+                bgcolor:
+                  theme.palette.mode === "dark"
+                    ? "rgba(255,255,255,0.02)"
+                    : "#fafafa",
+              }}
+            >
+              <Typography variant="caption" color="text.secondary">
+                Showing{" "}
+                <strong>
+                  {(page - 1) * PAGE_SIZE + 1}–
+                  {Math.min(page * PAGE_SIZE, filteredInvoices.length)}
+                </strong>{" "}
+                of <strong>{filteredInvoices.length}</strong> invoices
+              </Typography>
+              <Pagination
+                count={totalPages}
+                page={page}
+                onChange={(_, value) => {
+                  setPage(value);
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }}
+                color="primary"
+                shape="rounded"
+                size="small"
+              />
+            </Box>
+          )}
+        </TableContainer>
+      )}
 
-                            <Tooltip title="Update payment" arrow>
-                              <IconButton
-                                size="small"
-                                onClick={() => handleOpenPayment(invoice)}
-                                sx={{
-                                  width: 32,
-                                  height: 32,
-                                  borderRadius: 1.5,
-                                  border: "1px solid",
-                                  borderColor: "divider",
-                                  color: "#2563eb",
-                                  bgcolor: "transparent",
-                                  "&:hover": {
-                                    bgcolor: "#eff6ff",
-                                    borderColor: "#bfdbfe",
-                                  },
-                                  transition: "all 0.15s",
-                                }}
-                              >
-                                <PaymentIcon sx={{ fontSize: 16 }} />
-                              </IconButton>
-                            </Tooltip>
-
-                            <Tooltip title="View invoice" arrow>
-                              <IconButton
-                                size="small"
-                                onClick={() => handleOpenPrint(invoice)}
-                                sx={{
-                                  width: 32,
-                                  height: 32,
-                                  borderRadius: 1.5,
-                                  border: "1px solid",
-                                  borderColor: "divider",
-                                  color: "#7c3aed",
-                                  bgcolor: "transparent",
-                                  "&:hover": {
-                                    bgcolor: "#f5f3ff",
-                                    borderColor: "#ddd6fe",
-                                  },
-                                  transition: "all 0.15s",
-                                }}
-                              >
-                                <VisibilityIcon sx={{ fontSize: 16 }} />
-                              </IconButton>
-                            </Tooltip>
-                          </Stack>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })
-                )}
-              </TableBody>
-            </Table>
-
-            {totalPages > 1 && (
+      <Dialog
+        open={openDiscountDialog}
+        onClose={() => !discountLoading && setOpenDiscountDialog(false)}
+        maxWidth="xs"
+        fullWidth
+        PaperProps={{ sx: { borderRadius: 3 } }}
+      >
+        <DialogTitle fontWeight={800} sx={{ pb: 1 }}>
+          <Box display="flex" alignItems="center" gap={1}>
+            <Box
+              sx={{
+                width: 34,
+                height: 34,
+                borderRadius: 1.5,
+                bgcolor: "#f0fdf4",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#15803d",
+              }}
+            >
+              <LocalOfferIcon fontSize="small" />
+            </Box>
+            {currentInvoice?.appliedDiscount
+              ? "Applied Discount"
+              : "Apply Discount"}
+          </Box>
+        </DialogTitle>
+        <DialogContent dividers>
+          {currentInvoice?.appliedDiscount ? (
+            <Box>
               <Box
                 sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  px: 2.5,
-                  py: 1.5,
-                  borderTop: `1px solid ${theme.palette.divider}`,
-                  bgcolor:
-                    theme.palette.mode === "dark"
-                      ? "rgba(255,255,255,0.02)"
-                      : "#fafafa",
+                  p: 2,
+                  borderRadius: 2,
+                  bgcolor: "#f0fdf4",
+                  border: "1px solid #bbf7d0",
+                  mb: 2,
                 }}
               >
-                <Typography variant="caption" color="text.secondary">
-                  Showing{" "}
-                  <strong>
-                    {(page - 1) * PAGE_SIZE + 1}–
-                    {Math.min(page * PAGE_SIZE, filteredInvoices.length)}
-                  </strong>{" "}
-                  of <strong>{filteredInvoices.length}</strong> invoices
+                <Typography
+                  variant="caption"
+                  color="#15803d"
+                  fontWeight={700}
+                  textTransform="uppercase"
+                  display="block"
+                  mb={1}
+                >
+                  Applied Discount
                 </Typography>
-                <Pagination
-                  count={totalPages}
-                  page={page}
-                  onChange={(_, value) => {
-                    setPage(value);
-                    window.scrollTo({ top: 0, behavior: "smooth" });
-                  }}
-                  color="primary"
-                  shape="rounded"
-                  size="small"
-                />
+                <Box display="flex" justifyContent="space-between" mb={0.75}>
+                  <Typography variant="body2" color="text.secondary">
+                    Code
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    fontWeight={800}
+                    fontFamily="monospace"
+                    letterSpacing="0.08em"
+                    color="#15803d"
+                  >
+                    {currentInvoice.appliedDiscount.code}
+                  </Typography>
+                </Box>
+                <Box display="flex" justifyContent="space-between" mb={0.75}>
+                  <Typography variant="body2" color="text.secondary">
+                    Type
+                  </Typography>
+                  <Typography variant="body2" fontWeight={600}>
+                    {currentInvoice.appliedDiscount.type === "percentage"
+                      ? `${currentInvoice.appliedDiscount.value}% off`
+                      : `Fixed ${currency}${currentInvoice.appliedDiscount.value} off`}
+                  </Typography>
+                </Box>
+                <Box display="flex" justifyContent="space-between">
+                  <Typography variant="body2" color="text.secondary">
+                    Saved
+                  </Typography>
+                  <Typography variant="body2" fontWeight={800} color="#15803d">
+                    −{currency}
+                    {currentInvoice.appliedDiscount.discountAmount.toFixed(2)}
+                  </Typography>
+                </Box>
               </Box>
+              {canManageDiscount && (
+                <Typography variant="body2" color="text.secondary">
+                  Remove this discount to apply a different one.
+                </Typography>
+              )}
+              {isReceptionist && (
+                <Typography variant="body2" color="text.secondary">
+                  This discount has been applied to the invoice.
+                </Typography>
+              )}
+            </Box>
+          ) : (
+            <Box pt={0.5}>
+              {canManageDiscount && (
+                <Box mb={2}>
+                  <TextField
+                    label="Discount Code"
+                    placeholder="e.g. SUMMER20"
+                    fullWidth
+                    autoFocus
+                    value={discountCodeInput}
+                    onChange={(e) =>
+                      setDiscountCodeInput(e.target.value.toUpperCase())
+                    }
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && discountCodeInput.trim())
+                        handleApplyDiscount(discountCodeInput.trim());
+                    }}
+                    inputProps={{
+                      style: {
+                        fontFamily: "monospace",
+                        letterSpacing: "0.08em",
+                        fontWeight: 700,
+                      },
+                    }}
+                    sx={{
+                      "& .MuiOutlinedInput-root": { borderRadius: "10px" },
+                      mb: 0,
+                    }}
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <LocalOfferIcon fontSize="small" color="action" />
+                        </InputAdornment>
+                      ),
+                    }}
+                  />
+                </Box>
+              )}
+
+              {availableDiscountCodes.length > 0 ? (
+                <Box>
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    fontWeight={700}
+                    textTransform="uppercase"
+                    display="block"
+                    mb={1.25}
+                  >
+                    {isReceptionist
+                      ? "Available Discount Codes"
+                      : "Or choose from available codes"}
+                  </Typography>
+                  <Stack spacing={1}>
+                    {availableDiscountCodes.map((dc) => (
+                      <Box
+                        key={dc._id}
+                        onClick={() => {
+                          if (!discountLoading) handleApplyDiscount(dc.code);
+                        }}
+                        sx={{
+                          p: 1.5,
+                          borderRadius: 2,
+                          border: "1px solid #bbf7d0",
+                          bgcolor: "#f0fdf4",
+                          cursor: discountLoading ? "not-allowed" : "pointer",
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          gap: 1,
+                          transition: "all 0.15s",
+                          "&:hover": {
+                            bgcolor: "#dcfce7",
+                            borderColor: "#86efac",
+                            transform: "translateY(-1px)",
+                            boxShadow: "0 2px 8px rgba(34,197,94,0.15)",
+                          },
+                        }}
+                      >
+                        <Box display="flex" alignItems="center" gap={1}>
+                          <LocalOfferIcon
+                            sx={{ fontSize: 16, color: "#15803d" }}
+                          />
+                          <Box>
+                            <Typography
+                              fontFamily="monospace"
+                              fontWeight={800}
+                              fontSize="0.9rem"
+                              color="#15803d"
+                              letterSpacing="0.06em"
+                            >
+                              {dc.code}
+                            </Typography>
+                            {dc.description && (
+                              <Typography
+                                variant="caption"
+                                color="text.secondary"
+                                fontSize="0.67rem"
+                              >
+                                {dc.description}
+                              </Typography>
+                            )}
+                          </Box>
+                        </Box>
+                        <Box
+                          display="flex"
+                          alignItems="center"
+                          gap={0.75}
+                          flexShrink={0}
+                        >
+                          <Chip
+                            label={
+                              dc.type === "percentage"
+                                ? `${dc.value}% OFF`
+                                : `${currency}${dc.value.toFixed(2)} OFF`
+                            }
+                            size="small"
+                            sx={{
+                              height: 22,
+                              fontSize: "0.68rem",
+                              fontWeight: 800,
+                              bgcolor: "#15803d",
+                              color: "#fff",
+                              borderRadius: 1.5,
+                            }}
+                          />
+                          {dc.usageLimit && (
+                            <Typography
+                              variant="caption"
+                              color="text.disabled"
+                              fontSize="0.62rem"
+                              sx={{ whiteSpace: "nowrap" }}
+                            >
+                              {dc.usedCount}/{dc.usageLimit}
+                            </Typography>
+                          )}
+                        </Box>
+                      </Box>
+                    ))}
+                  </Stack>
+                </Box>
+              ) : (
+                <Box sx={{ py: 3, textAlign: "center" }}>
+                  <LocalOfferIcon
+                    sx={{ fontSize: 36, color: "text.disabled", mb: 1 }}
+                  />
+                  <Typography variant="body2" color="text.secondary">
+                    No active discount codes available
+                  </Typography>
+                </Box>
+              )}
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ p: 2, px: 3, gap: 1 }}>
+          <Button
+            onClick={() => setOpenDiscountDialog(false)}
+            color="inherit"
+            disabled={discountLoading}
+            sx={{ fontWeight: 600 }}
+          >
+            {currentInvoice?.appliedDiscount && isReceptionist
+              ? "Close"
+              : "Cancel"}
+          </Button>
+          {currentInvoice?.appliedDiscount && canManageDiscount && (
+            <Button
+              onClick={handleRemoveDiscount}
+              variant="outlined"
+              color="error"
+              disabled={discountLoading}
+              sx={{ borderRadius: 2, fontWeight: 700, minWidth: 100 }}
+            >
+              {discountLoading ? (
+                <CircularProgress size={18} color="inherit" />
+              ) : (
+                "Remove"
+              )}
+            </Button>
+          )}
+          {!currentInvoice?.appliedDiscount &&
+            canManageDiscount &&
+            discountCodeInput.trim() && (
+              <Button
+                onClick={() => handleApplyDiscount(discountCodeInput.trim())}
+                variant="contained"
+                disabled={discountLoading}
+                sx={{
+                  borderRadius: 2,
+                  fontWeight: 700,
+                  minWidth: 100,
+                  bgcolor: "#15803d",
+                  "&:hover": { bgcolor: "#166534" },
+                }}
+              >
+                {discountLoading ? (
+                  <CircularProgress size={18} color="inherit" />
+                ) : (
+                  "Apply"
+                )}
+              </Button>
             )}
-          </TableContainer>
-        </>
-      )}
+        </DialogActions>
+      </Dialog>
 
       <Dialog
         open={openPaymentDialog}
@@ -1953,7 +2555,7 @@ const InvoicesPage = () => {
                       <TableRow key={index}>
                         <TableCell sx={{ py: 2 }}>
                           {typeof item.service === "object"
-                            ? item.service.name
+                            ? (item.service as any).name
                             : item.name || "Service"}
                         </TableCell>
                         <TableCell align="center">{item.quantity}</TableCell>
@@ -1967,6 +2569,36 @@ const InvoicesPage = () => {
                         </TableCell>
                       </TableRow>
                     ))}
+                    {currentInvoice.appliedDiscount && (
+                      <TableRow
+                        className="p-discount-row"
+                        sx={{ bgcolor: "#f0fdf4" }}
+                      >
+                        <TableCell
+                          colSpan={3}
+                          sx={{ py: 1.5, color: "#15803d", fontWeight: 600 }}
+                        >
+                          <Box display="flex" alignItems="center" gap={0.75}>
+                            <LocalOfferIcon sx={{ fontSize: 14 }} />
+                            Discount ({currentInvoice.appliedDiscount.code}
+                            {currentInvoice.appliedDiscount.type ===
+                            "percentage"
+                              ? ` · ${currentInvoice.appliedDiscount.value}% off`
+                              : ""}
+                            )
+                          </Box>
+                        </TableCell>
+                        <TableCell
+                          align="right"
+                          sx={{ color: "#15803d", fontWeight: 700 }}
+                        >
+                          −{currency}
+                          {currentInvoice.appliedDiscount.discountAmount.toFixed(
+                            2,
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    )}
                     <TableRow>
                       <TableCell
                         colSpan={3}
