@@ -455,6 +455,7 @@ const InvoicesPage = () => {
   const [openPrintDialog, setOpenPrintDialog] = useState(false);
   const [openAddServiceDialog, setOpenAddServiceDialog] = useState(false);
   const [openDiscountDialog, setOpenDiscountDialog] = useState(false);
+  const [showDiscountConfirm, setShowDiscountConfirm] = useState(false);
 
   const [currentInvoice, setCurrentInvoice] = useState<IInvoice | null>(null);
   const [currentGuest, setCurrentGuest] = useState<IGuest | null>(null);
@@ -463,6 +464,7 @@ const InvoicesPage = () => {
   const [updatePaymentLoading, setUpdatePaymentLoading] = useState(false);
   const [discountLoading, setDiscountLoading] = useState(false);
   const [discountCodeInput, setDiscountCodeInput] = useState("");
+  const [pendingDiscountCode, setPendingDiscountCode] = useState("");
 
   const [paymentData, setPaymentData] = useState({
     paymentStatus: "Pending",
@@ -613,7 +615,6 @@ const InvoicesPage = () => {
   }, [invoices]);
 
   const hasActiveFilters = filterStatus || filterCreatedBy || filterInvoiceId;
-
   const handleClearFilters = () => {
     setFilterStatus("");
     setFilterCreatedBy("");
@@ -677,6 +678,7 @@ const InvoicesPage = () => {
         setCurrentGuest(guest);
       }
     } catch {
+    } finally {
       setPrintLoading(false);
     }
   };
@@ -765,6 +767,21 @@ const InvoicesPage = () => {
     }
   };
 
+  const handleRequestApplyDiscount = (code: string) => {
+    if (isReceptionist) {
+      setPendingDiscountCode(code);
+      setShowDiscountConfirm(true);
+    } else {
+      handleApplyDiscount(code);
+    }
+  };
+
+  const handleConfirmApplyDiscount = () => {
+    setShowDiscountConfirm(false);
+    handleApplyDiscount(pendingDiscountCode);
+    setPendingDiscountCode("");
+  };
+
   const handleRemoveDiscount = async () => {
     if (!currentInvoice) return;
     setDiscountLoading(true);
@@ -777,8 +794,8 @@ const InvoicesPage = () => {
         prev.map((inv) => (inv._id === updated._id ? updated : inv)),
       );
       setCurrentInvoice(updated);
+      setDiscountCodeInput("");
       showSnackbar("Discount removed successfully", "success");
-      setOpenDiscountDialog(false);
       fetchData();
     } catch (error: any) {
       showSnackbar(
@@ -1282,7 +1299,6 @@ const InvoicesPage = () => {
                           </Box>
                           <CreatedByBadge user={invoice.createdBy} />
                         </Box>
-
                         {(canManageDiscount ||
                           (isReceptionist && hasDiscount)) && (
                           <Box
@@ -1305,7 +1321,6 @@ const InvoicesPage = () => {
                             {renderDiscountCell(invoice)}
                           </Box>
                         )}
-
                         <Divider />
                         <Box
                           display="flex"
@@ -1547,7 +1562,6 @@ const InvoicesPage = () => {
                   const isGuestLoading = guestsLoading[invoice._id];
                   const isEven = rowIdx % 2 === 0;
                   const hasDiscount = !!invoice.appliedDiscount;
-
                   return (
                     <TableRow
                       key={invoice._id}
@@ -1916,9 +1930,50 @@ const InvoicesPage = () => {
                 </Typography>
               )}
               {isReceptionist && (
-                <Typography variant="body2" color="text.secondary">
-                  This discount has been applied to the invoice.
-                </Typography>
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "flex-start",
+                    gap: 1.25,
+                    p: 1.75,
+                    borderRadius: 2,
+                    bgcolor: "#fffbeb",
+                    border: "1px solid #fde68a",
+                  }}
+                >
+                  <Box
+                    sx={{
+                      width: 20,
+                      height: 20,
+                      borderRadius: "50%",
+                      bgcolor: "#d97706",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexShrink: 0,
+                      mt: 0.1,
+                    }}
+                  >
+                    <Typography
+                      sx={{
+                        color: "#fff",
+                        fontSize: "0.7rem",
+                        fontWeight: 900,
+                        lineHeight: 1,
+                      }}
+                    >
+                      !
+                    </Typography>
+                  </Box>
+                  <Typography
+                    variant="body2"
+                    color="#92400e"
+                    fontSize="0.82rem"
+                  >
+                    This discount has been applied. Only a manager or admin can
+                    remove or change it.
+                  </Typography>
+                </Box>
               )}
             </Box>
           ) : (
@@ -1936,7 +1991,7 @@ const InvoicesPage = () => {
                     }
                     onKeyDown={(e) => {
                       if (e.key === "Enter" && discountCodeInput.trim())
-                        handleApplyDiscount(discountCodeInput.trim());
+                        handleRequestApplyDiscount(discountCodeInput.trim());
                     }}
                     inputProps={{
                       style: {
@@ -1959,7 +2014,6 @@ const InvoicesPage = () => {
                   />
                 </Box>
               )}
-
               {availableDiscountCodes.length > 0 ? (
                 <Box>
                   <Typography
@@ -1979,7 +2033,8 @@ const InvoicesPage = () => {
                       <Box
                         key={dc._id}
                         onClick={() => {
-                          if (!discountLoading) handleApplyDiscount(dc.code);
+                          if (!discountLoading)
+                            handleRequestApplyDiscount(dc.code);
                         }}
                         sx={{
                           p: 1.5,
@@ -2105,7 +2160,9 @@ const InvoicesPage = () => {
             canManageDiscount &&
             discountCodeInput.trim() && (
               <Button
-                onClick={() => handleApplyDiscount(discountCodeInput.trim())}
+                onClick={() =>
+                  handleRequestApplyDiscount(discountCodeInput.trim())
+                }
                 variant="contained"
                 disabled={discountLoading}
                 sx={{
@@ -2123,6 +2180,153 @@ const InvoicesPage = () => {
                 )}
               </Button>
             )}
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={showDiscountConfirm}
+        onClose={() => !discountLoading && setShowDiscountConfirm(false)}
+        maxWidth="xs"
+        fullWidth
+        PaperProps={{ sx: { borderRadius: 3 } }}
+      >
+        <DialogTitle fontWeight={800} sx={{ pb: 1 }}>
+          <Box display="flex" alignItems="center" gap={1}>
+            <Box
+              sx={{
+                width: 34,
+                height: 34,
+                borderRadius: 1.5,
+                bgcolor: "#fffbeb",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#d97706",
+                flexShrink: 0,
+              }}
+            >
+              <LocalOfferIcon fontSize="small" />
+            </Box>
+            Confirm Discount
+          </Box>
+        </DialogTitle>
+        <DialogContent dividers>
+          <Box pt={0.5}>
+            <Box
+              sx={{
+                p: 2,
+                borderRadius: 2,
+                bgcolor: "#fffbeb",
+                border: "1px solid #fde68a",
+                mb: 2,
+              }}
+            >
+              <Typography
+                fontFamily="monospace"
+                fontWeight={900}
+                fontSize="1.1rem"
+                letterSpacing="0.08em"
+                color="#92400e"
+                display="block"
+                mb={0.5}
+              >
+                {pendingDiscountCode}
+              </Typography>
+              <Typography variant="body2" color="#78350f" fontWeight={600}>
+                {(() => {
+                  const dc = availableDiscountCodes.find(
+                    (d) => d.code === pendingDiscountCode,
+                  );
+                  if (!dc) return "";
+                  return dc.type === "percentage"
+                    ? `${dc.value}% off`
+                    : `${currency}${dc.value.toFixed(2)} off`;
+                })()}
+              </Typography>
+            </Box>
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "flex-start",
+                gap: 1.25,
+                p: 1.75,
+                borderRadius: 2,
+                bgcolor: "#fef2f2",
+                border: "1px solid #fecaca",
+              }}
+            >
+              <Box
+                sx={{
+                  width: 20,
+                  height: 20,
+                  borderRadius: "50%",
+                  bgcolor: "#dc2626",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                  mt: 0.1,
+                }}
+              >
+                <Typography
+                  sx={{
+                    color: "#fff",
+                    fontSize: "0.7rem",
+                    fontWeight: 900,
+                    lineHeight: 1,
+                  }}
+                >
+                  !
+                </Typography>
+              </Box>
+              <Box>
+                <Typography
+                  variant="body2"
+                  fontWeight={700}
+                  color="#991b1b"
+                  mb={0.4}
+                >
+                  This action cannot be undone
+                </Typography>
+                <Typography variant="body2" color="#b91c1c" fontSize="0.82rem">
+                  Once you apply this discount code, you will not be able to
+                  remove or change it. Only a manager or admin can modify
+                  applied discounts.
+                </Typography>
+              </Box>
+            </Box>
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ p: 2, px: 3, gap: 1 }}>
+          <Button
+            onClick={() => {
+              setShowDiscountConfirm(false);
+              setPendingDiscountCode("");
+            }}
+            color="inherit"
+            disabled={discountLoading}
+            sx={{ fontWeight: 600 }}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleConfirmApplyDiscount}
+            variant="contained"
+            disabled={discountLoading}
+            sx={{
+              borderRadius: 2,
+              fontWeight: 700,
+              minWidth: 150,
+              bgcolor: "#d97706",
+              "&:hover": { bgcolor: "#b45309" },
+            }}
+          >
+            {discountLoading ? (
+              <CircularProgress size={18} color="inherit" />
+            ) : (
+              "Yes, Apply Discount"
+            )}
+          </Button>
         </DialogActions>
       </Dialog>
 

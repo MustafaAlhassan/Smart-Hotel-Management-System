@@ -354,7 +354,7 @@ export const removeDiscountFromInvoice = async (invoiceId: string) => {
     0,
   );
 
-  invoice.appliedDiscount;
+  invoice.appliedDiscount = undefined;
   invoice.discountAmount = 0;
   invoice.taxableAmount = totals.taxableAmount;
   invoice.taxAmount = totals.taxAmount;
